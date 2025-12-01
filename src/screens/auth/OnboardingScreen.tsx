@@ -115,33 +115,13 @@ export function OnboardingScreen() {
   const renderPagination = () => (
     <View style={styles.pagination}>
       {slides.map((_, index) => {
-        const inputRange = [
-          (index - 1) * SCREEN_WIDTH,
-          index * SCREEN_WIDTH,
-          (index + 1) * SCREEN_WIDTH,
-        ];
-
-        const dotWidth = scrollX.interpolate({
-          inputRange,
-          outputRange: [8, 24, 8],
-          extrapolate: 'clamp',
-        });
-
-        const opacity = scrollX.interpolate({
-          inputRange,
-          outputRange: [0.3, 1, 0.3],
-          extrapolate: 'clamp',
-        });
-
+        const isActive = index === currentIndex;
         return (
-          <Animated.View
+          <View
             key={index}
             style={[
               styles.dot,
-              {
-                width: dotWidth,
-                opacity,
-              },
+              isActive && styles.dotActive,
             ]}
           />
         );
@@ -257,10 +237,17 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
   },
   dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: authColors.dotInactive,
+    marginHorizontal: 4,
+  },
+  dotActive: {
+    width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: authColors.dotActive,
-    marginHorizontal: 4,
   },
   buttonContainer: {
     paddingHorizontal: 24,
