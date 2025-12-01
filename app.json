@@ -1,0 +1,82 @@
+{
+  "expo": {
+    "name": "Tonight",
+    "slug": "tonight-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "scheme": "tonight",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.tonight.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Tonight needs camera access to take photos and videos to share with friends.",
+        "NSMicrophoneUsageDescription": "Tonight needs microphone access to record videos with audio.",
+        "NSPhotoLibraryUsageDescription": "Tonight needs photo library access to save your posts.",
+        "NSLocationWhenInUseUsageDescription": "Tonight uses your location to show where your posts are from."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.tonight.app",
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Tonight needs camera access to take photos and videos to share with friends.",
+          "microphonePermission": "Tonight needs microphone access to record videos with audio.",
+          "recordAudioAndroid": true
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Tonight uses your location to show where your posts are from."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Tonight needs access to your photos to let you share them.",
+          "cameraPermission": "Tonight needs camera access to take photos."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#007AFF"
+        }
+      ],
+      "expo-av"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "your-project-id"
+      }
+    }
+  }
+}

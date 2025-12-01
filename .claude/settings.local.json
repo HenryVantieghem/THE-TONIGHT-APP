@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__filesystem__list_directory",
+      "Bash(npx create-expo-app@latest . --template blank-typescript --yes)",
+      "Bash(npm cache clean:*)",
+      "Bash(npm install:*)",
+      "Bash(npx expo install:*)",
+      "Bash(npx tsc:*)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__get-library-docs",
+      "Bash(npx expo-doctor@latest)",
+      "Bash(npm ls:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
