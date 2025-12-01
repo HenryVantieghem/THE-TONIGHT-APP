@@ -602,7 +602,9 @@ export function PostPreviewScreen() {
                     </Text>
                   )}
                   </View>
-                  <Text style={styles.changeText}>Change</Text>
+                  <TouchableOpacity onPress={handleSelectLocation} activeOpacity={0.7}>
+                    <Text style={styles.changeText}>Change Location</Text>
+                  </TouchableOpacity>
                 </>
               ) : (
                 <>
@@ -626,7 +628,7 @@ export function PostPreviewScreen() {
         <View style={styles.captionContainer}>
           <TextInput
             style={styles.captionInput}
-            placeholder="What's happening tonight?"
+            placeholder="Add a caption..."
             placeholderTextColor={colors.textTertiary}
             value={caption}
             onChangeText={setCaption}
@@ -667,7 +669,7 @@ export function PostPreviewScreen() {
       {/* Footer with Post button */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
         <Button
-          title={isPosting ? 'Sharing...' : 'Share with Friends'}
+          title={isPosting ? 'Posting...' : 'Post 🚀'}
           onPress={handlePost}
           loading={isPosting}
           disabled={!canPost}
