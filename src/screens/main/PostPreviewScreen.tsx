@@ -232,6 +232,18 @@ export function PostPreviewScreen() {
   const characterCount = caption.length;
   const isOverLimit = characterCount > config.MAX_CAPTION_LENGTH;
 
+  // Define handleSelectLocation early so it can be used in handlePost
+  const handleSelectLocation = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    navigation.navigate('LocationSearch', {
+      currentLocation: selectedLocation,
+      onLocationSelect: (loc: LocationData) => {
+        setSelectedLocation(loc);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      },
+    });
+  }, [navigation, selectedLocation]);
+
   const handlePost = useCallback(async () => {
     if (isOverLimit) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
