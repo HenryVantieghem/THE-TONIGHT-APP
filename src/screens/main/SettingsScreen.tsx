@@ -350,13 +350,15 @@ export function SettingsScreen() {
 
         {/* Developer Section */}
         <AnimatedSection title="Developer" index={2}>
-          <SettingItem
-            icon="🧪"
-            title="Mock Data Generator"
-            subtitle="Create test users and posts"
-            onPress={() => navigation.navigate('MockData')}
-            showArrow
-          />
+          <Card style={styles.card}>
+            <TappableRow
+              icon="🧪"
+              label="Mock Data Generator"
+              value="Create test users and posts"
+              onPress={() => navigation.navigate('MockData')}
+              isLink
+            />
+          </Card>
         </AnimatedSection>
 
         {/* About Section */}
