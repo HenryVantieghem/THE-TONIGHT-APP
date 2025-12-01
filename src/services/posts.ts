@@ -1,5 +1,6 @@
 import { supabase, TABLES, BUCKETS } from './supabase';
 import { config } from '../constants/config';
+import * as FileSystem from 'expo-file-system';
 import type { Post, Reaction, ReactionEmoji, CreatePostPayload, ApiResponse } from '../types';
 
 // Create a new post
@@ -12,23 +13,68 @@ export async function createPost(
     // Upload media to storage
     const fileExtension = mediaType === 'video' ? 'mp4' : 'jpg';
     const fileName = `${userId}/${Date.now()}.${fileExtension}`;
+    const contentType = mediaType === 'video' ? 'video/mp4' : 'image/jpeg';
 
-    // Fetch the file as a blob
-    const response = await fetch(mediaUri);
-    const blob = await response.blob();
+    // Get session for authentication
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session) {
+      return {
+        data: null,
+        error: { message: 'Not authenticated. Please log in again.' },
+      };
+    }
 
+    // Read file as base64 (works reliably in React Native)
+    let base64: string;
+    try {
+      base64 = await FileSystem.readAsStringAsync(mediaUri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      if (!base64 || base64.length === 0) {
+        return {
+          data: null,
+          error: { message: 'Media file is empty. Please try capturing again.' },
+        };
+      }
+    } catch (fileError: any) {
+      console.error('File read error:', fileError);
+      const errorMessage = mediaType === 'video' 
+        ? 'Failed to read video file. Please try recording again.'
+        : 'Failed to read image file. Please try capturing again.';
+      return {
+        data: null,
+        error: { message: errorMessage },
+      };
+    }
+
+    // Convert base64 directly to Uint8Array (React Native compatible)
+    // This avoids using Blob which doesn't exist in React Native
+    const binaryString = atob(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+
+    // Upload to Supabase storage using Uint8Array
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(BUCKETS.POST_MEDIA)
-      .upload(fileName, blob, {
-        contentType: mediaType === 'video' ? 'video/mp4' : 'image/jpeg',
+      .upload(fileName, bytes, {
+        contentType,
         cacheControl: '3600',
+        upsert: false,
       });
 
     if (uploadError) {
       console.error('Upload error:', uploadError);
+      const errorMessage = uploadError.message?.includes('duplicate') 
+        ? 'A file with this name already exists. Please try again.'
+        : mediaType === 'video'
+        ? 'Failed to upload video. The file may be too large. Please try again.'
+        : 'Failed to upload image. Please try again.';
       return {
         data: null,
-        error: { message: 'Failed to upload media. Please try again.' },
+        error: { message: errorMessage },
       };
     }
 
@@ -82,8 +128,17 @@ export async function createPost(
       };
     }
 
-    // Update user stats
-    await supabase.rpc('increment_user_posts', { user_id: userId });
+    // Update user stats (non-blocking, don't fail if this errors)
+    try {
+      const { error: statsError } = await supabase.rpc('increment_user_posts', { user_id: userId });
+      if (statsError) {
+        console.warn('Failed to increment user posts count:', statsError);
+        // Don't fail the post creation if stats update fails
+      }
+    } catch (statsErr) {
+      console.warn('Error updating user stats:', statsErr);
+      // Continue even if stats update fails
+    }
 
     return { data: postData as Post, error: null };
   } catch (err) {
@@ -255,8 +310,17 @@ export async function deletePost(
       };
     }
 
-    // Update user stats
-    await supabase.rpc('decrement_user_posts', { user_id: userId });
+    // Update user stats (non-blocking, don't fail if this errors)
+    try {
+      const { error: statsError } = await supabase.rpc('decrement_user_posts', { user_id: userId });
+      if (statsError) {
+        console.warn('Failed to decrement user posts count:', statsError);
+        // Don't fail the deletion if stats update fails
+      }
+    } catch (statsErr) {
+      console.warn('Error updating user stats:', statsErr);
+      // Continue even if stats update fails
+    }
 
     return { data: null, error: null };
   } catch (err) {
@@ -373,9 +437,13 @@ export async function getPostReactions(
 // Increment view count
 export async function incrementViewCount(postId: string): Promise<void> {
   try {
-    await supabase.rpc('increment_post_views', { post_id: postId });
+    const { error } = await supabase.rpc('increment_post_views', { post_id: postId });
+    if (error) {
+      console.warn('Failed to increment view count:', error);
+    }
   } catch (err) {
-    console.error('Increment view count error:', err);
+    console.warn('Increment view count error:', err);
+    // Silently fail - view count is not critical
   }
 }
 
@@ -386,42 +454,63 @@ export function subscribeToNewPosts(
   onNewPost: (post: Post) => void
 ) {
   const allIds = [...friendIds, userId];
+  
+  // Format UUIDs properly for the filter (wrap in quotes if needed)
+  const formattedIds = allIds.map(id => `"${id}"`).join(',');
 
-  return supabase
-    .channel('posts-realtime')
+  const channel = supabase
+    .channel(`posts-realtime-${userId}-${Date.now()}`)
     .on(
       'postgres_changes',
       {
         event: 'INSERT',
         schema: 'public',
         table: TABLES.POSTS,
-        filter: `user_id=in.(${allIds.join(',')})`,
+        filter: `user_id=in.(${formattedIds})`,
       },
       async (payload) => {
-        // Fetch the complete post with user data
-        const { data } = await supabase
-          .from(TABLES.POSTS)
-          .select(`
-            *,
-            user:profiles(*)
-          `)
-          .eq('id', payload.new.id)
-          .single();
+        try {
+          // Fetch the complete post with user data
+          const { data, error } = await supabase
+            .from(TABLES.POSTS)
+            .select(`
+              *,
+              user:profiles(*)
+            `)
+            .eq('id', payload.new.id)
+            .single();
 
-        if (data) {
-          onNewPost(data as Post);
+          if (data && !error) {
+            onNewPost(data as Post);
+          } else if (error) {
+            console.error('Error fetching new post:', error);
+          }
+        } catch (err) {
+          console.error('Error processing new post:', err);
         }
       }
     )
-    .subscribe();
+    .subscribe((status, err) => {
+      if (status === 'SUBSCRIBED') {
+        console.log('Subscribed to new posts');
+      } else if (status === 'CHANNEL_ERROR') {
+        console.error('Channel error:', err);
+      } else if (status === 'TIMED_OUT') {
+        console.warn('Subscription timed out, retrying...');
+      } else if (status === 'CLOSED') {
+        console.warn('Subscription closed');
+      }
+    });
+
+  return channel;
 }
 
 // Subscribe to post deletions
 export function subscribeToPostDeletions(
   onPostDeleted: (postId: string) => void
 ) {
-  return supabase
-    .channel('posts-deletions')
+  const channel = supabase
+    .channel(`posts-deletions-${Date.now()}`)
     .on(
       'postgres_changes',
       {
@@ -430,12 +519,24 @@ export function subscribeToPostDeletions(
         table: TABLES.POSTS,
       },
       (payload) => {
-        if (payload.old && payload.old.id) {
-          onPostDeleted(payload.old.id);
+        try {
+          if (payload.old && payload.old.id) {
+            onPostDeleted(payload.old.id as string);
+          }
+        } catch (err) {
+          console.error('Error processing post deletion:', err);
         }
       }
     )
-    .subscribe();
+    .subscribe((status, err) => {
+      if (status === 'SUBSCRIBED') {
+        console.log('Subscribed to post deletions');
+      } else if (status === 'CHANNEL_ERROR') {
+        console.error('Deletion channel error:', err);
+      }
+    });
+
+  return channel;
 }
 
 // Subscribe to reactions on posts
@@ -445,35 +546,52 @@ export function subscribeToReactions(
 ) {
   if (postIds.length === 0) return null;
 
-  return supabase
-    .channel('reactions-realtime')
+  // Format UUIDs properly for the filter
+  const formattedIds = postIds.map(id => `"${id}"`).join(',');
+
+  const channel = supabase
+    .channel(`reactions-realtime-${Date.now()}`)
     .on(
       'postgres_changes',
       {
         event: '*',
         schema: 'public',
         table: TABLES.REACTIONS,
-        filter: `post_id=in.(${postIds.join(',')})`,
+        filter: `post_id=in.(${formattedIds})`,
       },
       async (payload) => {
-        const postId = (payload.new as any)?.post_id || (payload.old as any)?.post_id;
-        if (!postId) return;
+        try {
+          const postId = (payload.new as any)?.post_id || (payload.old as any)?.post_id;
+          if (!postId) return;
 
-        // Fetch updated reactions for the post
-        const { data } = await supabase
-          .from(TABLES.REACTIONS)
-          .select(`
-            *,
-            user:profiles(*)
-          `)
-          .eq('post_id', postId);
+          // Fetch updated reactions for the post
+          const { data, error } = await supabase
+            .from(TABLES.REACTIONS)
+            .select(`
+              *,
+              user:profiles(*)
+            `)
+            .eq('post_id', postId);
 
-        if (data) {
-          onReactionChange(postId, data as Reaction[]);
+          if (data && !error) {
+            onReactionChange(postId as string, data as Reaction[]);
+          } else if (error) {
+            console.error('Error fetching reactions:', error);
+          }
+        } catch (err) {
+          console.error('Error processing reaction change:', err);
         }
       }
     )
-    .subscribe();
+    .subscribe((status, err) => {
+      if (status === 'SUBSCRIBED') {
+        console.log('Subscribed to reactions');
+      } else if (status === 'CHANNEL_ERROR') {
+        console.error('Reactions channel error:', err);
+      }
+    });
+
+  return channel;
 }
 
 // Get a single post by ID

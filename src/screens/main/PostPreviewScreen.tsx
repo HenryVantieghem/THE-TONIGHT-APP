@@ -11,6 +11,7 @@ import {
   Dimensions,
   Animated,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -22,6 +23,7 @@ import * as Haptics from 'expo-haptics';
 import { Button } from '../../components/ui/Button';
 import { LocationStripCompact } from '../../components/camera/LocationStrip';
 import { usePosts } from '../../hooks/usePosts';
+import { useLocation } from '../../hooks/useLocation';
 import { validateCaption } from '../../utils/validation';
 import { colors } from '../../constants/colors';
 import { typography } from '../../constants/typography';
@@ -167,11 +169,36 @@ export function PostPreviewScreen() {
 
   const insets = useSafeAreaInsets();
   const { createPost } = usePosts();
+  const { getCurrentLocation: refreshLocation } = useLocation();
 
   const [caption, setCaption] = useState('');
   const [isPosting, setIsPosting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<LocationData>(location);
+  const [isRefreshingLocation, setIsRefreshingLocation] = useState(false);
+
+  // Auto-refresh location on mount if location is invalid
+  useEffect(() => {
+    const refreshIfNeeded = async () => {
+      // If location is default/unknown, try to get real location
+      if (!selectedLocation || selectedLocation.name === 'Location Unknown' || 
+          (selectedLocation.lat === 0 && selectedLocation.lng === 0)) {
+        setIsRefreshingLocation(true);
+        try {
+          const newLocation = await refreshLocation();
+          if (newLocation) {
+            setSelectedLocation(newLocation);
+          }
+        } catch (error) {
+          console.error('Failed to refresh location:', error);
+        } finally {
+          setIsRefreshingLocation(false);
+        }
+      }
+    };
+
+    refreshIfNeeded();
+  }, []);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -255,9 +282,17 @@ export function PostPreviewScreen() {
   }, [isOverLimit, createPost, mediaUri, mediaType, caption, selectedLocation]);
 
   const handleSuccessComplete = useCallback(() => {
-    // Navigate back to feed and refresh
-    navigation.popToTop();
-    // The feed will automatically refresh via realtime subscription or on focus
+    // Reset posting state
+    setIsPosting(false);
+    setShowSuccess(false);
+    // Navigate back to feed
+    // Post is already added to store via usePosts hook, so it will appear immediately
+    // popToTop() will return to Feed screen, and focus listener will refresh if needed
+    if (navigation.canGoBack()) {
+      navigation.popToTop();
+    } else {
+      navigation.navigate('Feed');
+    }
   }, [navigation]);
 
   const handleCancel = useCallback(() => {
@@ -356,21 +391,69 @@ export function PostPreviewScreen() {
         </View>
 
         {/* Location */}
-        <TouchableOpacity
-          style={styles.locationContainer}
-          onPress={() => {
-            navigation.navigate('LocationSearch', {
-              currentLocation: selectedLocation,
-              onLocationSelect: (loc) => {
-                setSelectedLocation(loc);
-              },
-            });
-          }}
-          activeOpacity={0.7}
-        >
-          <LocationStripCompact location={selectedLocation} />
-          <Text style={styles.editLocationText}>Edit</Text>
-        </TouchableOpacity>
+        <View style={styles.locationContainer}>
+          <TouchableOpacity
+            style={styles.locationContent}
+            onPress={() => {
+              navigation.navigate('LocationSearch', {
+                currentLocation: selectedLocation,
+                onLocationSelect: (loc) => {
+                  setSelectedLocation(loc);
+                },
+              });
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={styles.locationIconContainer}>
+              <Text style={styles.locationIcon}>📍</Text>
+            </View>
+            <View style={styles.locationTextContainer}>
+              {isRefreshingLocation ? (
+                <View style={styles.locationLoadingContainer}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                  <Text style={styles.locationLoadingText}>Updating location...</Text>
+                </View>
+              ) : (
+                <>
+                  <Text style={styles.locationName} numberOfLines={1}>
+                    {selectedLocation?.name || 'Location Unknown'}
+                  </Text>
+                  {(selectedLocation?.city || selectedLocation?.state) && (
+                    <Text style={styles.locationDetails} numberOfLines={1}>
+                      {[selectedLocation.city, selectedLocation.state].filter(Boolean).join(', ')}
+                    </Text>
+                  )}
+                </>
+              )}
+            </View>
+            <Text style={styles.editLocationText}>Change</Text>
+          </TouchableOpacity>
+          
+          {/* Refresh location button */}
+          {!isRefreshingLocation && (
+            <TouchableOpacity
+              style={styles.refreshLocationButton}
+              onPress={async () => {
+                setIsRefreshingLocation(true);
+                try {
+                  const newLocation = await refreshLocation();
+                  if (newLocation) {
+                    setSelectedLocation(newLocation);
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                  }
+                } catch (error) {
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                  Alert.alert('Error', 'Failed to refresh location. Please try again.');
+                } finally {
+                  setIsRefreshingLocation(false);
+                }
+              }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Text style={styles.refreshIcon}>🔄</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* Caption input */}
         <View style={styles.captionContainer}>
@@ -423,7 +506,13 @@ export function PostPreviewScreen() {
           disabled={isPosting || isOverLimit}
           fullWidth
           size="lg"
+          variant="primary"
         />
+        {isOverLimit && (
+          <Text style={styles.errorText}>
+            Caption is too long. Please shorten it to {config.MAX_CAPTION_LENGTH} characters.
+          </Text>
+        )}
       </View>
 
       {/* Success animation */}
@@ -500,18 +589,74 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.medium,
   },
   locationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     padding: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
+    backgroundColor: colors.surface,
+    position: 'relative',
+  },
+  locationContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  locationIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.primaryLight + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.sm,
+  },
+  locationIcon: {
+    fontSize: 18,
+  },
+  locationTextContainer: {
+    flex: 1,
+    marginRight: spacing.sm,
+  },
+  locationLoadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  locationLoadingText: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+  },
+  locationName: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+    color: colors.text,
+    marginBottom: 2,
+  },
+  locationDetails: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
   },
   editLocationText: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
     color: colors.primary,
-    marginLeft: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  refreshLocationButton: {
+    position: 'absolute',
+    top: spacing.md,
+    right: spacing.md,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  refreshIcon: {
+    fontSize: 16,
   },
   captionContainer: {
     padding: spacing.md,
@@ -576,5 +721,11 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
     backgroundColor: colors.background,
+  },
+  errorText: {
+    marginTop: spacing.sm,
+    fontSize: typography.sizes.sm,
+    color: colors.error,
+    textAlign: 'center',
   },
 });

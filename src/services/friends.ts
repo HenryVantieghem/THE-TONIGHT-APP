@@ -498,33 +498,47 @@ export function subscribeToFriendRequests(
   userId: string,
   onNewRequest: (friendship: Friendship) => void
 ) {
-  return supabase
-    .channel(CHANNELS.FRIENDSHIPS)
+  const channel = supabase
+    .channel(`${CHANNELS.FRIENDSHIPS}-${userId}-${Date.now()}`)
     .on(
       'postgres_changes',
       {
         event: 'INSERT',
         schema: 'public',
         table: TABLES.FRIENDSHIPS,
-        filter: `friend_id=eq.${userId}`,
+        filter: `friend_id=eq."${userId}"`,
       },
       async (payload) => {
-        // Fetch complete friendship with user data
-        const { data } = await supabase
-          .from(TABLES.FRIENDSHIPS)
-          .select(`
-            *,
-            user:profiles!friendships_user_id_fkey(*)
-          `)
-          .eq('id', payload.new.id)
-          .single();
+        try {
+          // Fetch complete friendship with user data
+          const { data, error } = await supabase
+            .from(TABLES.FRIENDSHIPS)
+            .select(`
+              *,
+              user:profiles!friendships_user_id_fkey(*)
+            `)
+            .eq('id', payload.new.id)
+            .single();
 
-        if (data && data.status === 'pending') {
-          onNewRequest(data as Friendship);
+          if (data && !error && data.status === 'pending') {
+            onNewRequest(data as Friendship);
+          } else if (error) {
+            console.error('Error fetching friendship:', error);
+          }
+        } catch (err) {
+          console.error('Error processing friend request:', err);
         }
       }
     )
-    .subscribe();
+    .subscribe((status, err) => {
+      if (status === 'SUBSCRIBED') {
+        console.log('Subscribed to friend requests');
+      } else if (status === 'CHANNEL_ERROR') {
+        console.error('Friend requests channel error:', err);
+      }
+    });
+
+  return channel;
 }
 
 // Subscribe to friendship status changes
@@ -533,19 +547,41 @@ export function subscribeToFriendshipChanges(
   onAccepted: (friendId: string) => void,
   onRemoved: (friendId: string) => void
 ) {
-  return supabase
-    .channel('friendship-changes')
+  const channel = supabase
+    .channel(`friendship-changes-${userId}-${Date.now()}`)
     .on(
       'postgres_changes',
       {
         event: 'UPDATE',
         schema: 'public',
         table: TABLES.FRIENDSHIPS,
-        filter: `user_id=eq.${userId}`,
+        filter: `user_id=eq."${userId}"`,
       },
       (payload) => {
-        if (payload.new.status === 'accepted') {
-          onAccepted(payload.new.friend_id);
+        try {
+          if (payload.new.status === 'accepted') {
+            onAccepted(payload.new.friend_id as string);
+          }
+        } catch (err) {
+          console.error('Error processing friendship update:', err);
+        }
+      }
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: TABLES.FRIENDSHIPS,
+        filter: `friend_id=eq."${userId}"`,
+      },
+      (payload) => {
+        try {
+          if (payload.new.status === 'accepted') {
+            onAccepted(payload.new.user_id as string);
+          }
+        } catch (err) {
+          console.error('Error processing friendship update:', err);
         }
       }
     )
@@ -557,20 +593,32 @@ export function subscribeToFriendshipChanges(
         table: TABLES.FRIENDSHIPS,
       },
       (payload) => {
-        // Check if this deletion affects the current user
-        if (
-          payload.old.user_id === userId ||
-          payload.old.friend_id === userId
-        ) {
-          const removedId =
-            payload.old.user_id === userId
-              ? payload.old.friend_id
-              : payload.old.user_id;
-          onRemoved(removedId);
+        try {
+          // Check if this deletion affects the current user
+          if (
+            payload.old &&
+            (payload.old.user_id === userId || payload.old.friend_id === userId)
+          ) {
+            const removedId =
+              payload.old.user_id === userId
+                ? payload.old.friend_id
+                : payload.old.user_id;
+            onRemoved(removedId as string);
+          }
+        } catch (err) {
+          console.error('Error processing friendship deletion:', err);
         }
       }
     )
-    .subscribe();
+    .subscribe((status, err) => {
+      if (status === 'SUBSCRIBED') {
+        console.log('Subscribed to friendship changes');
+      } else if (status === 'CHANNEL_ERROR') {
+        console.error('Friendship changes channel error:', err);
+      }
+    });
+
+  return channel;
 }
 
 // Get friend count

@@ -95,7 +95,8 @@ export function LocationSearchScreen() {
   }, []);
 
   const handleSelectLocation = useCallback((location: LocationData) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     onLocationSelect(location);
     navigation.goBack();
   }, [onLocationSelect, navigation]);

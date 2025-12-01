@@ -105,18 +105,34 @@ export function CameraScreen() {
       const { status } = await Camera.getCameraPermissionsAsync();
       setHasPermission(status === 'granted');
 
-      // Get location
+      // Get location - try to get current location automatically
       setIsLoadingLocation(true);
-      await getCurrentLocation();
-      setIsLoadingLocation(false);
+      try {
+        const location = await getCurrentLocation();
+        // If location fetch failed, try refreshing
+        if (!location) {
+          // Wait a bit and try again
+          setTimeout(async () => {
+            await getCurrentLocation();
+            setIsLoadingLocation(false);
+          }, 1000);
+        } else {
+          setIsLoadingLocation(false);
+        }
+      } catch (error) {
+        console.error('Location fetch error:', error);
+        setIsLoadingLocation(false);
+      }
     };
 
     init();
   }, [getCurrentLocation]);
 
   const handleCapture = useCallback((uri: string, type: 'image' | 'video') => {
+    // Use current location if available, otherwise use a default
+    // The user can change it in PostPreview if needed
     const location: LocationData = currentLocation || {
-      name: 'Unknown Location',
+      name: 'Location Unknown',
       lat: 0,
       lng: 0,
     };

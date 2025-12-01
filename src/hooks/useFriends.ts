@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import { useStore, selectUser, selectFriendIds } from '../stores/useStore';
 import * as friendsService from '../services/friends';
 import type { User, Friendship } from '../types';
@@ -13,6 +13,10 @@ export function useFriends() {
   const [sentRequests, setSentRequests] = useState<Friendship[]>([]);
   const [searchResults, setSearchResults] = useState<User[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+
+  // Subscription refs
+  const friendRequestsSubRef = useRef<{ unsubscribe: () => void } | null>(null);
+  const friendshipChangesSubRef = useRef<{ unsubscribe: () => void } | null>(null);
 
   // Load friends
   const loadFriends = useCallback(async () => {
@@ -257,6 +261,72 @@ export function useFriends() {
     },
     [friendIds]
   );
+
+  // Subscribe to friend requests
+  useEffect(() => {
+    if (!user) return;
+
+    // Unsubscribe from previous subscription
+    if (friendRequestsSubRef.current) {
+      friendRequestsSubRef.current.unsubscribe();
+    }
+
+    // Subscribe to new friend requests
+    friendRequestsSubRef.current = friendsService.subscribeToFriendRequests(
+      user.id,
+      (newRequest) => {
+        setPendingRequests((prev) => {
+          // Avoid duplicates
+          if (prev.find((r) => r.id === newRequest.id)) {
+            return prev;
+          }
+          return [newRequest, ...prev];
+        });
+      }
+    );
+
+    return () => {
+      if (friendRequestsSubRef.current) {
+        friendRequestsSubRef.current.unsubscribe();
+      }
+    };
+  }, [user]);
+
+  // Subscribe to friendship changes
+  useEffect(() => {
+    if (!user) return;
+
+    // Unsubscribe from previous subscription
+    if (friendshipChangesSubRef.current) {
+      friendshipChangesSubRef.current.unsubscribe();
+    }
+
+    // Subscribe to friendship status changes
+    friendshipChangesSubRef.current = friendsService.subscribeToFriendshipChanges(
+      user.id,
+      (friendId) => {
+        // Friend request accepted
+        addFriendId(friendId);
+        // Refresh friends list
+        loadFriends();
+        // Remove from pending
+        setPendingRequests((prev) =>
+          prev.filter((r) => r.user_id !== friendId && r.friend_id !== friendId)
+        );
+      },
+      (friendId) => {
+        // Friend removed
+        removeFriendId(friendId);
+        setFriends((prev) => prev.filter((f) => f.friend_id !== friendId));
+      }
+    );
+
+    return () => {
+      if (friendshipChangesSubRef.current) {
+        friendshipChangesSubRef.current.unsubscribe();
+      }
+    };
+  }, [user, addFriendId, removeFriendId, loadFriends]);
 
   return {
     friends,

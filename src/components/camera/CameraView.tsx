@@ -101,11 +101,27 @@ export function CameraViewComponent({
         maxDuration: 30,
       });
 
+      // Clean up timer
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+      }
+
+      setIsRecording(false);
+      setRecordingDuration(0);
+
       if (video?.uri) {
         onCapture(video.uri, 'video');
       }
     } catch (error) {
       console.error('Error recording video:', error);
+      // Clean up on error
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+      }
+      setIsRecording(false);
+      setRecordingDuration(0);
     }
   }, [isRecording, onCapture]);
 
