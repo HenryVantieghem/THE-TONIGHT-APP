@@ -1,5 +1,7 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -12,6 +14,11 @@ import { Button } from '../ui/Button';
 import { colors, shadows } from '../../constants/colors';
 import { typography } from '../../constants/typography';
 import { spacing, borderRadius } from '../../constants/config';
+import {
+  liquidGlass,
+  glassShadows,
+  glassColors,
+} from '../../constants/liquidGlass';
 
 type EmptyStateType = 'no-posts' | 'no-friends' | 'no-requests' | 'error';
 
@@ -62,6 +69,7 @@ export function EmptyState({
   const floatY = useSharedValue(0);
   const floatRotate = useSharedValue(0);
   const iconScale = useSharedValue(1);
+  const glowOpacity = useSharedValue(0.3);
 
   // Start floating animation on mount
   useEffect(() => {
@@ -112,7 +120,17 @@ export function EmptyState({
       -1,
       true
     );
-  }, [floatY, floatRotate, iconScale]);
+
+    // Glow pulse
+    glowOpacity.value = withRepeat(
+      withSequence(
+        withTiming(0.5, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.2, { duration: 2000, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      true
+    );
+  }, [floatY, floatRotate, iconScale, glowOpacity]);
 
   const animatedIconStyle = useAnimatedStyle(() => ({
     transform: [
@@ -122,27 +140,66 @@ export function EmptyState({
     ],
   }));
 
+  const animatedGlowStyle = useAnimatedStyle(() => ({
+    opacity: glowOpacity.value,
+  }));
+
   return (
     <View style={styles.container}>
-      {/* Floating icon with glow effect */}
-      <View style={styles.iconWrapper}>
-        <View style={styles.iconGlow} />
-        <Animated.Text style={[styles.icon, animatedIconStyle]}>
-          {content.icon}
-        </Animated.Text>
+      {/* Glass Card Container */}
+      <View style={styles.glassCard}>
+        {/* Glass Background */}
+        <View style={styles.glassBackground}>
+          {Platform.OS === 'ios' && (
+            <BlurView
+              intensity={liquidGlass.blur.regular}
+              tint="light"
+              style={StyleSheet.absoluteFill}
+            />
+          )}
+          <View style={styles.glassBg} />
+          {/* Top highlight */}
+          <LinearGradient
+            colors={['rgba(255, 255, 255, 0.4)', 'transparent']}
+            style={styles.glassHighlight}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 0.5 }}
+          />
+        </View>
+
+        {/* Border */}
+        <View style={styles.glassBorder} />
+
+        {/* Content */}
+        <View style={styles.content}>
+          {/* Floating icon with glow effect */}
+          <View style={styles.iconWrapper}>
+            <Animated.View style={[styles.iconGlow, animatedGlowStyle]}>
+              <LinearGradient
+                colors={colors.primaryGradient}
+                style={StyleSheet.absoluteFill}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              />
+            </Animated.View>
+            <Animated.Text style={[styles.icon, animatedIconStyle]}>
+              {content.icon}
+            </Animated.Text>
+          </View>
+
+          <Text style={styles.title}>{content.title}</Text>
+          <Text style={styles.subtitle}>{content.subtitle}</Text>
+
+          {showButton && (
+            <Button
+              title={actionLabel || content.defaultAction || ''}
+              onPress={onAction}
+              variant="primary"
+              style={styles.button}
+            />
+          )}
+        </View>
       </View>
-
-      <Text style={styles.title}>{content.title}</Text>
-      <Text style={styles.subtitle}>{content.subtitle}</Text>
-
-      {showButton && (
-        <Button
-          title={actionLabel || content.defaultAction || ''}
-          onPress={onAction}
-          variant="primary"
-          style={styles.button}
-        />
-      )}
     </View>
   );
 }
@@ -168,6 +225,18 @@ export function PostLoadingPlaceholder() {
 
   return (
     <View style={loadingStyles.container}>
+      {/* Glass Background */}
+      <View style={loadingStyles.glassBackground}>
+        {Platform.OS === 'ios' && (
+          <BlurView
+            intensity={liquidGlass.blur.light}
+            tint="light"
+            style={StyleSheet.absoluteFill}
+          />
+        )}
+        <View style={loadingStyles.glassBg} />
+      </View>
+
       <View style={loadingStyles.header}>
         <Animated.View style={[loadingStyles.avatar, animatedStyle]} />
         <View style={loadingStyles.textContainer}>
@@ -202,19 +271,51 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: spacing.xl,
   },
+  glassCard: {
+    borderRadius: 28,
+    overflow: 'hidden',
+    maxWidth: 340,
+    width: '100%',
+    ...glassShadows.key,
+  },
+  glassBackground: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 28,
+    overflow: 'hidden',
+  },
+  glassBg: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: liquidGlass.material.elevated.backgroundColor,
+  },
+  glassHighlight: {
+    ...StyleSheet.absoluteFillObject,
+    height: '40%',
+  },
+  glassBorder: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 28,
+    borderWidth: liquidGlass.border.width,
+    borderColor: liquidGlass.border.colorStrong,
+    pointerEvents: 'none',
+  },
+  content: {
+    padding: spacing.xl,
+    alignItems: 'center',
+  },
   iconWrapper: {
     marginBottom: spacing.lg,
     position: 'relative',
+    width: 100,
+    height: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   iconGlow: {
     position: 'absolute',
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: colors.primaryLight,
-    opacity: 0.2,
-    top: -18,
-    left: -18,
+    overflow: 'hidden',
   },
   icon: {
     fontSize: 64,
@@ -225,17 +326,16 @@ const styles = StyleSheet.create({
   title: {
     fontSize: typography.sizes.xxl,
     fontWeight: '700',
-    color: colors.text,
+    color: glassColors.text.primary,
     textAlign: 'center',
     marginBottom: spacing.sm,
   },
   subtitle: {
     fontSize: typography.sizes.md,
-    color: colors.textSecondary,
+    color: glassColors.text.secondary,
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: spacing.lg,
-    maxWidth: 280,
   },
   button: {
     minWidth: 160,
@@ -244,12 +344,23 @@ const styles = StyleSheet.create({
 
 const loadingStyles = StyleSheet.create({
   container: {
-    backgroundColor: colors.white,
     marginBottom: spacing.md,
-    borderRadius: borderRadius.lg,
+    borderRadius: 24,
     padding: spacing.md,
     overflow: 'hidden',
-    ...shadows.md,
+    ...glassShadows.ambient,
+  },
+  glassBackground: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 24,
+    overflow: 'hidden',
+  },
+  glassBg: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: liquidGlass.material.primary.backgroundColor,
+    borderWidth: liquidGlass.border.width,
+    borderColor: liquidGlass.border.color,
+    borderRadius: 24,
   },
   header: {
     flexDirection: 'row',
@@ -260,7 +371,7 @@ const loadingStyles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.surface,
+    backgroundColor: liquidGlass.material.subtle.backgroundColor,
   },
   textContainer: {
     marginLeft: spacing.sm,
@@ -269,21 +380,21 @@ const loadingStyles = StyleSheet.create({
   textShort: {
     width: 100,
     height: 14,
-    borderRadius: borderRadius.xs,
-    backgroundColor: colors.surface,
+    borderRadius: 7,
+    backgroundColor: liquidGlass.material.subtle.backgroundColor,
     marginBottom: 6,
   },
   textLong: {
     width: 150,
     height: 12,
-    borderRadius: borderRadius.xs,
-    backgroundColor: colors.surface,
+    borderRadius: 6,
+    backgroundColor: liquidGlass.material.subtle.backgroundColor,
   },
   media: {
     width: '100%',
     height: 200,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.surface,
+    borderRadius: 16,
+    backgroundColor: liquidGlass.material.subtle.backgroundColor,
     marginBottom: spacing.md,
   },
   footer: {
@@ -292,7 +403,7 @@ const loadingStyles = StyleSheet.create({
   bar: {
     width: '100%',
     height: 6,
-    borderRadius: borderRadius.round,
-    backgroundColor: colors.surface,
+    borderRadius: 3,
+    backgroundColor: liquidGlass.material.subtle.backgroundColor,
   },
 });

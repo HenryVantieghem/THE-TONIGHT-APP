@@ -13,16 +13,16 @@ import {
   Modal,
   ActivityIndicator,
   Linking,
+  ScrollView,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Image } from 'expo-image';
-import { Video, ResizeMode } from 'expo-av';
+import { VideoView, useVideoPlayer } from 'expo-video';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { Button } from '../../components/ui/Button';
-import { LocationStripCompact } from '../../components/camera/LocationStrip';
 import { usePosts } from '../../hooks/usePosts';
 import { useLocation } from '../../hooks/useLocation';
 import { validateCaption } from '../../utils/validation';
@@ -31,8 +31,8 @@ import { typography } from '../../constants/typography';
 import { spacing, borderRadius, config } from '../../constants/config';
 import type { MainStackParamList, LocationData } from '../../types';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const PREVIEW_HEIGHT = SCREEN_WIDTH * 1.2;
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const PREVIEW_HEIGHT = SCREEN_WIDTH * 1.1;
 
 type PostPreviewNavigationProp = NativeStackNavigationProp<MainStackParamList, 'PostPreview'>;
 type PostPreviewRouteProp = NativeStackScreenProps<MainStackParamList, 'PostPreview'>['route'];
@@ -88,7 +88,7 @@ function SuccessAnimation({
                 useNativeDriver: true,
               }),
             ]).start(onComplete);
-          }, 500);
+          }, 600);
         });
       });
     }
@@ -135,7 +135,7 @@ function SuccessAnimation({
 const successStyles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -166,64 +166,95 @@ const successStyles = StyleSheet.create({
 export function PostPreviewScreen() {
   const navigation = useNavigation<PostPreviewNavigationProp>();
   const route = useRoute<PostPreviewRouteProp>();
-  const { mediaUri, mediaType, location } = route.params;
+  const { mediaUri, mediaType, location: initialLocation } = route.params;
 
   const insets = useSafeAreaInsets();
   const { createPost } = usePosts();
-  const { getCurrentLocation: refreshLocation, requestPermission: requestLocationPermission, checkPermission: checkLocationPermission } = useLocation();
+  const { 
+    getCurrentLocation: refreshLocation, 
+    requestPermission: requestLocationPermission, 
+    checkPermission: checkLocationPermission 
+  } = useLocation();
 
   const [caption, setCaption] = useState('');
   const [isPosting, setIsPosting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<LocationData>(location);
+  const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(
+    initialLocation && initialLocation.name && initialLocation.name !== '' 
+      ? initialLocation 
+      : null
+  );
   const [isRefreshingLocation, setIsRefreshingLocation] = useState(false);
   const [hasLocationPermission, setHasLocationPermission] = useState<boolean | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+
+  // Track if we've already tried to auto-fetch location
+  const hasTriedAutoFetch = useRef(false);
+
+  // Video player for video preview
+  const videoPlayer = useVideoPlayer(mediaType === 'video' ? mediaUri : '');
+  
+  // Configure video player when it's created
+  useEffect(() => {
+    if (mediaType === 'video' && videoPlayer) {
+      videoPlayer.loop = true;
+      videoPlayer.muted = true;
+      videoPlayer.play();
+    }
+    
+    // Cleanup: pause video when component unmounts
+    return () => {
+      if (videoPlayer) {
+        videoPlayer.pause();
+      }
+    };
+  }, [mediaType, videoPlayer]);
 
   // Update location when route params change (from LocationSearchScreen)
   useEffect(() => {
     const params = route.params as any;
     if (params?.selectedLocation) {
       setSelectedLocation(params.selectedLocation);
+      setLocationError(null);
       // Clear the param to avoid re-applying
       navigation.setParams({ selectedLocation: undefined } as any);
     }
   }, [route.params, navigation]);
 
-  // Check location permission and auto-refresh location on mount if location is invalid
+  // Auto-fetch location on mount if needed
   useEffect(() => {
     const initLocation = async () => {
+      if (hasTriedAutoFetch.current) return;
+      hasTriedAutoFetch.current = true;
+
       // Check permission first
       const hasPermission = await checkLocationPermission();
       setHasLocationPermission(hasPermission);
 
-      // If location is default/unknown, try to get real location
-      const isInvalidLocation = !selectedLocation || 
-        selectedLocation.name === 'Location Unknown' || 
-        selectedLocation.name === '' ||
-        (selectedLocation.lat === 0 && selectedLocation.lng === 0) ||
-        selectedLocation.lat === undefined ||
-        selectedLocation.lng === undefined;
-
-      if (isInvalidLocation && hasPermission) {
+      // If we don't have a valid location, try to get one
+      if (!selectedLocation && hasPermission) {
         setIsRefreshingLocation(true);
+        setLocationError(null);
         try {
           const newLocation = await refreshLocation();
-          if (newLocation && newLocation.lat !== 0 && newLocation.lng !== 0) {
+          if (newLocation && newLocation.lat !== 0 && newLocation.lng !== 0 && newLocation.name) {
             setSelectedLocation(newLocation);
+          } else {
+            setLocationError('Could not determine your location. Please select manually.');
           }
         } catch (error) {
-          console.error('Failed to refresh location:', error);
-          // Don't show error - user can manually select location
+          console.error('Failed to get location:', error);
+          setLocationError('Could not get your location. Please select manually.');
         } finally {
           setIsRefreshingLocation(false);
         }
+      } else if (!selectedLocation && !hasPermission) {
+        setLocationError('Location permission required. Tap to enable.');
       }
     };
 
     initLocation();
-    // Only run once on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [checkLocationPermission, refreshLocation, selectedLocation]);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -249,7 +280,18 @@ export function PostPreviewScreen() {
   const characterCount = caption.length;
   const isOverLimit = characterCount > config.MAX_CAPTION_LENGTH;
 
-  // Define handleSelectLocation early so it can be used in handlePost
+  // Check if location is valid for posting
+  const isLocationValid = useCallback(() => {
+    if (!selectedLocation) return false;
+    if (!selectedLocation.name || selectedLocation.name.trim() === '') return false;
+    if (selectedLocation.lat === undefined || selectedLocation.lng === undefined) return false;
+    if (isNaN(selectedLocation.lat) || isNaN(selectedLocation.lng)) return false;
+    if (selectedLocation.lat === 0 && selectedLocation.lng === 0) return false;
+    if (selectedLocation.lat < -90 || selectedLocation.lat > 90) return false;
+    if (selectedLocation.lng < -180 || selectedLocation.lng > 180) return false;
+    return true;
+  }, [selectedLocation]);
+
   const handleSelectLocation = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     navigation.navigate('LocationSearch', {
@@ -257,137 +299,103 @@ export function PostPreviewScreen() {
     });
   }, [navigation, selectedLocation]);
 
+  const handleRefreshLocation = useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
+    // Check permission first
+    if (hasLocationPermission === false) {
+      const granted = await requestLocationPermission();
+      setHasLocationPermission(granted);
+      
+      if (!granted) {
+      Alert.alert(
+          'Location Permission Required',
+          'To tag your posts with your location, please enable location access in Settings.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+              text: 'Open Settings', 
+              onPress: () => {
+                if (Platform.OS === 'ios') {
+                  Linking.openURL('app-settings:');
+                } else {
+                  Linking.openSettings();
+                }
+              }
+          }
+        ]
+      );
+      return;
+    }
+    }
+
+    setIsRefreshingLocation(true);
+    setLocationError(null);
+    
+    try {
+      const newLocation = await refreshLocation();
+      if (newLocation && newLocation.lat !== 0 && newLocation.lng !== 0 && newLocation.name) {
+        setSelectedLocation(newLocation);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        setLocationError('Could not get your location. Try selecting manually.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+    } catch (error) {
+      console.error('Failed to refresh location:', error);
+      setLocationError('Failed to get location. Please try again.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setIsRefreshingLocation(false);
+    }
+  }, [hasLocationPermission, requestLocationPermission, refreshLocation]);
+
   const handlePost = useCallback(async () => {
+    // Validate caption
     if (isOverLimit) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Caption Too Long', 'Please shorten your caption.');
+      Alert.alert('Caption Too Long', `Please shorten your caption to ${config.MAX_CAPTION_LENGTH} characters.`);
       return;
     }
 
-    // Validate location - ensure we have a valid location before posting
-    if (!selectedLocation) {
+    // Validate location
+    if (!isLocationValid()) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
         'Location Required',
-        'Please select a location for your post.',
+        'Please select a location for your post before sharing.',
         [
           { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Select Location', 
-            onPress: handleSelectLocation
-          }
+          { text: 'Select Location', onPress: handleSelectLocation }
         ]
       );
       return;
     }
 
-    // Validate location name
-    if (!selectedLocation.name || selectedLocation.name.trim() === '' || selectedLocation.name === 'Location Unknown') {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(
-        'Invalid Location',
-        'Please select a valid location. Tap the location to search or use your current location.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Select Location', 
-            onPress: handleSelectLocation
-          }
-        ]
-      );
-      return;
-    }
-
-    // Validate coordinates are present and valid
-    if (selectedLocation.lat === undefined || selectedLocation.lng === undefined) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(
-        'Invalid Location',
-        'Location coordinates are missing. Please select a location.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Select Location', 
-            onPress: handleSelectLocation
-          }
-        ]
-      );
-      return;
-    }
-
-    // Convert to numbers and validate range
-    const lat = typeof selectedLocation.lat === 'number' ? selectedLocation.lat : parseFloat(String(selectedLocation.lat));
-    const lng = typeof selectedLocation.lng === 'number' ? selectedLocation.lng : parseFloat(String(selectedLocation.lng));
-
-    if (isNaN(lat) || isNaN(lng)) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(
-        'Invalid Location',
-        'Location coordinates are invalid. Please select a location.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Select Location', 
-            onPress: handleSelectLocation
-          }
-        ]
-      );
-      return;
-    }
-
-    // Validate coordinate ranges
-    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(
-        'Invalid Location',
-        'Location coordinates are out of range. Please select a valid location.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Select Location', 
-            onPress: handleSelectLocation
-          }
-        ]
-      );
-      return;
-    }
-
-    // Check for default/unknown coordinates
-    if (lat === 0 && lng === 0) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(
-        'Location Required',
-        'Please select a valid location. Tap the location to search or use your current location.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Select Location', 
-            onPress: handleSelectLocation
-          }
-        ]
-      );
-      return;
-    }
-
-
-    // Validate media URI
+    // Validate media
     if (!mediaUri) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Media Required', 'Please capture a photo or video first.');
+      Alert.alert('Error', 'No media to post. Please go back and capture a photo or video.');
       return;
     }
 
     setIsPosting(true);
 
     try {
-      // Create validated location object (coordinates already validated above)
       const validLocation: LocationData = {
-        name: selectedLocation.name.trim(),
-        lat: lat,
-        lng: lng,
-        city: selectedLocation.city?.trim() || undefined,
-        state: selectedLocation.state?.trim() || undefined,
+        name: selectedLocation!.name.trim(),
+        lat: selectedLocation!.lat,
+        lng: selectedLocation!.lng,
+        city: selectedLocation!.city?.trim() || undefined,
+        state: selectedLocation!.state?.trim() || undefined,
       };
+
+      console.log('Creating post with:', {
+        mediaUri: mediaUri.substring(0, 50) + '...',
+        mediaType,
+        caption: caption.trim() || '(no caption)',
+        location: validLocation,
+      });
 
       const { data, error } = await createPost({
         mediaUri,
@@ -405,30 +413,26 @@ export function PostPreviewScreen() {
       }
 
       if (data) {
-        // Show success animation
+        console.log('Post created successfully:', data.id);
         setShowSuccess(true);
-        // Don't set isPosting to false here - let success animation handle it
       } else {
-        // No data returned but no error - this shouldn't happen
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        Alert.alert('Error', 'Failed to create post. Please try again.');
+        Alert.alert('Error', 'Something went wrong. Please try again.');
         setIsPosting(false);
       }
     } catch (err) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       console.error('Post creation exception:', err);
-      Alert.alert('Error', 'Failed to create post. Please try again.');
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
       setIsPosting(false);
     }
-  }, [isOverLimit, createPost, mediaUri, mediaType, caption, selectedLocation, handleSelectLocation]);
+  }, [isOverLimit, isLocationValid, mediaUri, mediaType, caption, selectedLocation, createPost, handleSelectLocation]);
 
   const handleSuccessComplete = useCallback(() => {
-    // Reset posting state
     setIsPosting(false);
     setShowSuccess(false);
+    
     // Navigate back to feed
-    // Post is already added to store via usePosts hook, so it will appear immediately
-    // popToTop() will return to Feed screen, and focus listener will refresh if needed
     if (navigation.canGoBack()) {
       navigation.popToTop();
     } else {
@@ -443,10 +447,7 @@ export function PostPreviewScreen() {
       'Discard Post?',
       'Your photo will be lost if you go back.',
       [
-        {
-          text: 'Keep Editing',
-          style: 'cancel',
-        },
+        { text: 'Keep Editing', style: 'cancel' },
         {
           text: 'Discard',
           style: 'destructive',
@@ -461,46 +462,6 @@ export function PostPreviewScreen() {
     );
   }, [navigation]);
 
-  const handleRequestLocationPermission = useCallback(async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const granted = await requestLocationPermission();
-    
-    if (granted) {
-      setHasLocationPermission(true);
-      setIsRefreshingLocation(true);
-      try {
-        const newLocation = await refreshLocation();
-        if (newLocation) {
-          setSelectedLocation(newLocation);
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        }
-      } catch (error) {
-        console.error('Failed to get location after permission grant:', error);
-        Alert.alert('Error', 'Failed to get your location. Please try selecting a location manually.');
-      } finally {
-        setIsRefreshingLocation(false);
-      }
-    } else {
-      Alert.alert(
-        'Location Permission Required',
-        'To tag your posts with your location, please enable location access in Settings.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Open Settings', 
-            onPress: () => {
-              if (Platform.OS === 'ios') {
-                Linking.openURL('app-settings:');
-              } else {
-                Linking.openSettings();
-              }
-            }
-          }
-        ]
-      );
-    }
-  }, [requestLocationPermission, refreshLocation]);
-
   // Character count color
   const getCharacterCountColor = () => {
     const ratio = characterCount / config.MAX_CAPTION_LENGTH;
@@ -510,17 +471,22 @@ export function PostPreviewScreen() {
     return colors.textTertiary;
   };
 
+  // Determine if we can post
+  const canPost = !isPosting && !isOverLimit && isLocationValid() && !isRefreshingLocation;
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
         <TouchableOpacity
           onPress={handleCancel}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          disabled={isPosting}
         >
-          <Text style={styles.cancelText}>Cancel</Text>
+          <Text style={[styles.cancelText, isPosting && styles.disabledText]}>Cancel</Text>
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>New Post</Text>
@@ -528,6 +494,12 @@ export function PostPreviewScreen() {
         <View style={{ width: 60 }} />
       </View>
 
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
       <Animated.View
         style={[
           styles.content,
@@ -539,14 +511,12 @@ export function PostPreviewScreen() {
       >
         {/* Media preview */}
         <View style={styles.mediaContainer}>
-          {mediaType === 'video' ? (
-            <Video
-              source={{ uri: mediaUri }}
+          {mediaType === 'video' && videoPlayer ? (
+            <VideoView
+              player={videoPlayer}
               style={styles.media}
-              resizeMode={ResizeMode.COVER}
-              isLooping
-              isMuted
-              shouldPlay
+              contentFit="cover"
+              nativeControls={false}
             />
           ) : (
             <Image
@@ -566,111 +536,81 @@ export function PostPreviewScreen() {
 
           {/* Gradient overlay at bottom */}
           <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.3)']}
+              colors={['transparent', 'rgba(0,0,0,0.4)']}
             style={styles.mediaGradient}
           />
         </View>
 
-        {/* Location */}
-        <View style={styles.locationContainer}>
+          {/* Location Section */}
+          <View style={styles.locationSection}>
+            <View style={styles.locationHeader}>
+              <Text style={styles.sectionLabel}>LOCATION</Text>
+              {!isRefreshingLocation && (
           <TouchableOpacity
-            style={styles.locationContent}
+                  onPress={handleRefreshLocation}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  style={styles.refreshButton}
+                >
+                  <Text style={styles.refreshIcon}>
+                    {hasLocationPermission === false ? '🔓' : '📍'}
+                  </Text>
+                  <Text style={styles.refreshText}>
+                    {hasLocationPermission === false ? 'Enable' : 'Use Current'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.locationCard,
+                !isLocationValid() && styles.locationCardError,
+              ]}
             onPress={handleSelectLocation}
             activeOpacity={0.7}
+              disabled={isRefreshingLocation}
           >
-            <View style={styles.locationIconContainer}>
-              <Text style={styles.locationIcon}>📍</Text>
-            </View>
-            <View style={styles.locationTextContainer}>
               {isRefreshingLocation ? (
-                <View style={styles.locationLoadingContainer}>
+                <View style={styles.locationLoading}>
                   <ActivityIndicator size="small" color={colors.primary} />
-                  <Text style={styles.locationLoadingText}>Updating location...</Text>
+                  <Text style={styles.locationLoadingText}>Getting your location...</Text>
                 </View>
-              ) : (
+              ) : selectedLocation && isLocationValid() ? (
                 <>
+                  <View style={styles.locationIconContainer}>
+                    <Text style={styles.locationIcon}>📍</Text>
+                  </View>
+                  <View style={styles.locationTextContainer}>
                   <Text style={styles.locationName} numberOfLines={1}>
-                    {selectedLocation?.name || 'Location Unknown'}
+                      {selectedLocation.name}
                   </Text>
-                  {(selectedLocation?.city || selectedLocation?.state) && (
+                    {(selectedLocation.city || selectedLocation.state) && (
                     <Text style={styles.locationDetails} numberOfLines={1}>
                       {[selectedLocation.city, selectedLocation.state].filter(Boolean).join(', ')}
                     </Text>
                   )}
+                  </View>
+                  <Text style={styles.changeText}>Change</Text>
                 </>
-              )}
+              ) : (
+                <>
+                  <View style={[styles.locationIconContainer, styles.locationIconError]}>
+                    <Text style={styles.locationIcon}>📍</Text>
             </View>
-            <Text style={styles.editLocationText}>Change</Text>
-          </TouchableOpacity>
-          
-          {/* Refresh location button or request permission button */}
-          {!isRefreshingLocation && (
-            <TouchableOpacity
-              style={styles.refreshLocationButton}
-              onPress={async () => {
-                // Check permission first
-                if (hasLocationPermission === false) {
-                  await handleRequestLocationPermission();
-                  return;
-                }
-                
-                // If permission status unknown, check it
-                if (hasLocationPermission === null) {
-                  const hasPermission = await checkLocationPermission();
-                  setHasLocationPermission(hasPermission);
-                  if (!hasPermission) {
-                    await handleRequestLocationPermission();
-                    return;
-                  }
-                }
-                
-                setIsRefreshingLocation(true);
-                try {
-                  const newLocation = await refreshLocation();
-                  if (newLocation) {
-                    setSelectedLocation(newLocation);
-                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                  } else {
-                    // If location fetch failed, offer to search manually
-                    Alert.alert(
-                      'Location Not Available',
-                      'Unable to get your current location. Would you like to search for a location?',
-                      [
-                        { text: 'Cancel', style: 'cancel' },
-                        { 
-                          text: 'Search', 
-                          onPress: handleSelectLocation
-                        }
-                      ]
-                    );
-                  }
-                } catch (error) {
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-                  Alert.alert(
-                    'Error',
-                    'Failed to refresh location. Would you like to search for a location?',
-                    [
-                      { text: 'Cancel', style: 'cancel' },
-                      { 
-                        text: 'Search', 
-                        onPress: handleSelectLocation
-                      }
-                    ]
-                  );
-                } finally {
-                  setIsRefreshingLocation(false);
-                }
-              }}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Text style={styles.refreshIcon}>
-                {hasLocationPermission === false ? '🔒' : '🔄'}
+                  <View style={styles.locationTextContainer}>
+                    <Text style={styles.locationPlaceholder}>
+                      {locationError || 'Tap to select a location'}
               </Text>
-            </TouchableOpacity>
+                  </View>
+                  <Text style={styles.selectText}>Select</Text>
+                </>
           )}
+            </TouchableOpacity>
         </View>
 
         {/* Caption input */}
+          <View style={styles.captionSection}>
+            <Text style={styles.sectionLabel}>CAPTION (OPTIONAL)</Text>
         <View style={styles.captionContainer}>
           <TextInput
             style={styles.captionInput}
@@ -679,15 +619,12 @@ export function PostPreviewScreen() {
             value={caption}
             onChangeText={setCaption}
             multiline
-            maxLength={config.MAX_CAPTION_LENGTH + 20} // Allow typing past limit to see
+                maxLength={config.MAX_CAPTION_LENGTH + 20}
             returnKeyType="done"
             blurOnSubmit
+                editable={!isPosting}
           />
-
           <View style={styles.captionFooter}>
-            <Text style={styles.captionHint}>
-              Add a caption (optional)
-            </Text>
             <Text
               style={[
                 styles.characterCount,
@@ -696,6 +633,7 @@ export function PostPreviewScreen() {
             >
               {characterCount}/{config.MAX_CAPTION_LENGTH}
             </Text>
+              </View>
           </View>
         </View>
 
@@ -712,20 +650,27 @@ export function PostPreviewScreen() {
           </View>
         </View>
       </Animated.View>
+      </ScrollView>
 
+      {/* Footer with Post button */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
         <Button
           title={isPosting ? 'Sharing...' : 'Share with Friends'}
           onPress={handlePost}
           loading={isPosting}
-          disabled={isPosting || isOverLimit}
+          disabled={!canPost}
           fullWidth
           size="lg"
           variant="primary"
         />
+        {!isLocationValid() && !isRefreshingLocation && (
+          <Text style={styles.errorText}>
+            Please select a location to continue
+          </Text>
+        )}
         {isOverLimit && (
           <Text style={styles.errorText}>
-            Caption is too long. Please shorten it to {config.MAX_CAPTION_LENGTH} characters.
+            Caption is too long ({characterCount - config.MAX_CAPTION_LENGTH} characters over)
           </Text>
         )}
       </View>
@@ -752,16 +697,27 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
+    backgroundColor: colors.background,
+    zIndex: 10,
   },
   cancelText: {
     fontSize: typography.sizes.md,
     color: colors.textSecondary,
     fontWeight: typography.weights.medium,
   },
+  disabledText: {
+    opacity: 0.5,
+  },
   headerTitle: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.semibold,
     color: colors.text,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   content: {
     flex: 1,
@@ -781,7 +737,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 80,
+    height: 100,
   },
   videoIndicator: {
     position: 'absolute',
@@ -803,26 +759,76 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontWeight: typography.weights.medium,
   },
-  locationContainer: {
+  locationSection: {
     padding: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
-    backgroundColor: colors.surface,
-    position: 'relative',
   },
-  locationContent: {
+  locationHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  sectionLabel: {
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.semibold,
+    color: colors.textSecondary,
+    letterSpacing: 0.5,
+  },
+  refreshButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    backgroundColor: colors.primaryLight + '15',
+    borderRadius: borderRadius.sm,
+  },
+  refreshIcon: {
+    fontSize: 12,
+  },
+  refreshText: {
+    fontSize: typography.sizes.xs,
+    color: colors.primary,
+    fontWeight: typography.weights.medium,
+  },
+  locationCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  locationCardError: {
+    borderColor: colors.error + '50',
+    backgroundColor: colors.error + '08',
+  },
+  locationLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  locationLoadingText: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
   },
   locationIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: colors.primaryLight + '20',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: spacing.sm,
+    marginRight: spacing.md,
+  },
+  locationIconError: {
+    backgroundColor: colors.error + '15',
   },
   locationIcon: {
     fontSize: 18,
@@ -830,15 +836,6 @@ const styles = StyleSheet.create({
   locationTextContainer: {
     flex: 1,
     marginRight: spacing.sm,
-  },
-  locationLoadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  locationLoadingText: {
-    fontSize: typography.sizes.sm,
-    color: colors.textSecondary,
   },
   locationName: {
     fontSize: typography.sizes.md,
@@ -850,31 +847,30 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     color: colors.textSecondary,
   },
-  editLocationText: {
+  locationPlaceholder: {
+    fontSize: typography.sizes.md,
+    color: colors.textTertiary,
+  },
+  changeText: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
     color: colors.primary,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
   },
-  refreshLocationButton: {
-    position: 'absolute',
-    top: spacing.md,
-    right: spacing.md,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
+  selectText: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+    color: colors.error,
   },
-  refreshIcon: {
-    fontSize: 16,
+  captionSection: {
+    padding: spacing.md,
   },
   captionContainer: {
+    marginTop: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
     padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   captionInput: {
     fontSize: typography.sizes.md,
@@ -882,16 +878,15 @@ const styles = StyleSheet.create({
     minHeight: 80,
     textAlignVertical: 'top',
     lineHeight: typography.lineHeights.lg,
+    padding: 0,
   },
   captionFooter: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    justifyContent: 'flex-end',
     marginTop: spacing.sm,
-  },
-  captionHint: {
-    fontSize: typography.sizes.xs,
-    color: colors.textTertiary,
+    paddingTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
   },
   characterCount: {
     fontSize: typography.sizes.sm,
@@ -903,19 +898,22 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     backgroundColor: colors.surface,
     marginHorizontal: spacing.md,
+    marginTop: spacing.sm,
     borderRadius: borderRadius.md,
     gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   timerIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.primaryLight + '20',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.timerGreen + '20',
     justifyContent: 'center',
     alignItems: 'center',
   },
   timerIcon: {
-    fontSize: 20,
+    fontSize: 22,
   },
   timerTextContainer: {
     flex: 1,

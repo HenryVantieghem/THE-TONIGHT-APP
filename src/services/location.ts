@@ -29,8 +29,10 @@ export async function hasLocationPermission(): Promise<boolean> {
   }
 }
 
-// Get current location
-export async function getCurrentLocation(): Promise<ApiResponse<{ lat: number; lng: number }>> {
+// Get current location with timeout
+export async function getCurrentLocation(
+  accuracy: Location.Accuracy = Location.Accuracy.Balanced
+): Promise<ApiResponse<{ lat: number; lng: number }>> {
   try {
     const hasPermission = await hasLocationPermission();
 
@@ -41,22 +43,60 @@ export async function getCurrentLocation(): Promise<ApiResponse<{ lat: number; l
       };
     }
 
-    const location = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.Balanced,
+    // Create a timeout promise (longer timeout for highest accuracy)
+    const timeout = accuracy === Location.Accuracy.Highest ? 15000 : 10000;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Location request timed out')), timeout);
     });
+
+    // Race between location request and timeout
+    const location = await Promise.race([
+      Location.getCurrentPositionAsync({
+        accuracy,
+      }),
+      timeoutPromise,
+    ]);
+
+    // Validate coordinates
+    if (!location || !location.coords) {
+      return {
+        data: null,
+        error: { message: 'Invalid location data received.' },
+      };
+    }
+
+    const { latitude, longitude } = location.coords;
+    
+    // Validate coordinate ranges
+    if (
+      isNaN(latitude) || 
+      isNaN(longitude) ||
+      latitude < -90 || 
+      latitude > 90 ||
+      longitude < -180 || 
+      longitude > 180
+    ) {
+      return {
+        data: null,
+        error: { message: 'Invalid coordinates received.' },
+      };
+    }
 
     return {
       data: {
-        lat: location.coords.latitude,
-        lng: location.coords.longitude,
+        lat: latitude,
+        lng: longitude,
       },
       error: null,
     };
-  } catch (err) {
+  } catch (err: any) {
     console.error('Get location error:', err);
+    const message = err?.message?.includes('timed out')
+      ? 'Location request timed out. Please try again.'
+      : 'Failed to get current location.';
     return {
       data: null,
-      error: { message: 'Failed to get current location.' },
+      error: { message },
     };
   }
 }
@@ -194,8 +234,10 @@ export async function reverseGeocode(
 }
 
 // Get current location with reverse geocoding
-export async function getCurrentLocationWithAddress(): Promise<ApiResponse<LocationData>> {
-  const locationResult = await getCurrentLocation();
+export async function getCurrentLocationWithAddress(
+  accuracy: Location.Accuracy = Location.Accuracy.Balanced
+): Promise<ApiResponse<LocationData>> {
+  const locationResult = await getCurrentLocation(accuracy);
 
   if (locationResult.error || !locationResult.data) {
     return {

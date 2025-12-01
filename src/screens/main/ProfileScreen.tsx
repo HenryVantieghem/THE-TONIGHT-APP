@@ -5,11 +5,10 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  FlatList,
   Dimensions,
   Alert,
-  Animated,
   RefreshControl,
+  Platform,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -18,17 +17,32 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  useAnimatedScrollHandler,
+  withSpring,
+  withTiming,
+  interpolate,
+  Extrapolation,
+} from 'react-native-reanimated';
 import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
 import { ShimmerPlaceholder } from '../../components/feed/PostCardSkeleton';
 import { useAuth } from '../../hooks/useAuth';
 import { useFriends } from '../../hooks/useFriends';
 import * as postsService from '../../services/posts';
-import * as authService from '../../services/auth';
 import { supabase, BUCKETS } from '../../services/supabase';
-import { colors, shadows } from '../../constants/colors';
+import { colors } from '../../constants/colors';
 import { typography } from '../../constants/typography';
 import { spacing, borderRadius } from '../../constants/config';
+import {
+  liquidGlass,
+  glassShadows,
+  glassMotion,
+  glassColors,
+} from '../../constants/liquidGlass';
 import type { Post, User, UserStats, MainStackParamList } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -38,7 +52,9 @@ const GRID_ITEM_SIZE = (SCREEN_WIDTH - GRID_GAP * 2) / 3;
 type ProfileNavigationProp = NativeStackNavigationProp<MainStackParamList, 'Profile'>;
 type ProfileRouteProp = NativeStackScreenProps<MainStackParamList, 'Profile'>['route'];
 
-// Animated stat counter component
+const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
+
+// Animated stat counter component with glass styling
 function AnimatedStat({
   value,
   label,
@@ -50,55 +66,55 @@ function AnimatedStat({
   onPress?: () => void;
   delay?: number;
 }) {
-  const animatedValue = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.5)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
+  const scale = useSharedValue(0.8);
+  const opacity = useSharedValue(0);
   const [displayValue, setDisplayValue] = useState(0);
+  const countValue = useSharedValue(0);
 
   useEffect(() => {
     // Entry animation
-    Animated.parallel([
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 400,
-        delay,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacityAnim, {
-        toValue: 1,
-        duration: 400,
-        delay,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    opacity.value = withTiming(1, { duration: glassMotion.duration.smooth });
+    scale.value = withSpring(1, { ...glassMotion.spring.smooth, delay });
 
-    // Value counter animation
-    animatedValue.addListener(({ value: v }) => {
-      setDisplayValue(Math.floor(v));
-    });
+    // Count animation
+    countValue.value = withTiming(value, { duration: 800 }, () => {});
+    
+    const interval = setInterval(() => {
+      setDisplayValue(Math.floor(countValue.value));
+    }, 50);
 
-    Animated.timing(animatedValue, {
-      toValue: value,
-      duration: 800,
-      delay: delay + 200,
-      useNativeDriver: false,
-    }).start();
+    setTimeout(() => {
+      setDisplayValue(value);
+      clearInterval(interval);
+    }, 900);
 
-    return () => {
-      animatedValue.removeAllListeners();
-    };
-  }, [value, delay, animatedValue, scaleAnim, opacityAnim]);
+    return () => clearInterval(interval);
+  }, [value, delay, opacity, scale, countValue]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ scale: scale.value }],
+  }));
 
   const content = (
-    <Animated.View
-      style={[
-        styles.statItem,
-        {
-          opacity: opacityAnim,
-          transform: [{ scale: scaleAnim }],
-        },
-      ]}
-    >
+    <Animated.View style={[styles.statItem, animatedStyle]}>
+      {/* Glass background */}
+      <View style={styles.statGlassBackground}>
+        {Platform.OS === 'ios' && (
+          <BlurView
+            intensity={liquidGlass.blur.light}
+            tint="light"
+            style={StyleSheet.absoluteFill}
+          />
+        )}
+        <View style={styles.statGlassBg} />
+        <LinearGradient
+          colors={['rgba(255, 255, 255, 0.3)', 'transparent']}
+          style={styles.statGlassHighlight}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 0.5 }}
+        />
+      </View>
       <Text style={styles.statValue}>{displayValue.toLocaleString()}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </Animated.View>
@@ -115,7 +131,7 @@ function AnimatedStat({
   return content;
 }
 
-// Loading skeleton for profile
+// Loading skeleton for profile with glass styling
 function ProfileSkeleton() {
   return (
     <View style={styles.profileSection}>
@@ -123,13 +139,13 @@ function ProfileSkeleton() {
       <ShimmerPlaceholder
         width={150}
         height={24}
-        borderRadius={8}
+        borderRadius={12}
         style={{ marginTop: spacing.md }}
       />
       <View style={[styles.statsRow, { marginTop: spacing.lg }]}>
-        <ShimmerPlaceholder width={60} height={50} borderRadius={8} />
-        <ShimmerPlaceholder width={60} height={50} borderRadius={8} />
-        <ShimmerPlaceholder width={60} height={50} borderRadius={8} />
+        <ShimmerPlaceholder width={70} height={70} borderRadius={16} />
+        <ShimmerPlaceholder width={70} height={70} borderRadius={16} />
+        <ShimmerPlaceholder width={70} height={70} borderRadius={16} />
       </View>
     </View>
   );
@@ -153,9 +169,19 @@ export function ProfileScreen() {
   const [friendshipStatus, setFriendshipStatus] = useState<string>('none');
   const [friendshipId, setFriendshipId] = useState<string | null>(null);
 
+  // Scroll tracking for header animation
+  const scrollY = useSharedValue(0);
+  const headerHeight = 56 + insets.top;
+
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+    },
+  });
+
   // Animation values
-  const headerOpacity = useRef(new Animated.Value(0)).current;
-  const contentTranslate = useRef(new Animated.Value(30)).current;
+  const contentOpacity = useSharedValue(0);
+  const contentTranslate = useSharedValue(30);
 
   // Load profile data
   const loadProfile = useCallback(async () => {
@@ -202,24 +228,14 @@ export function ProfileScreen() {
       }
 
       // Animate in content
-      Animated.parallel([
-        Animated.timing(headerOpacity, {
-          toValue: 1,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-        Animated.timing(contentTranslate, {
-          toValue: 0,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-      ]).start();
+      contentOpacity.value = withTiming(1, { duration: glassMotion.duration.smooth });
+      contentTranslate.value = withSpring(0, glassMotion.spring.smooth);
     } catch (error) {
       console.error('Load profile error:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [userId, user?.id, isOwnProfile, getFriendshipStatus, headerOpacity, contentTranslate]);
+  }, [userId, user?.id, isOwnProfile, getFriendshipStatus, contentOpacity, contentTranslate]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -282,7 +298,7 @@ export function ProfileScreen() {
       console.error('Change avatar error:', error);
       Alert.alert('Error', 'Failed to change avatar');
     }
-  }, [user, updateAvatar]);
+  }, [user, updateAvatar, loadProfile]);
 
   const handleFriendAction = useCallback(async () => {
     if (!userId) return;
@@ -360,13 +376,13 @@ export function ProfileScreen() {
       case 'accepted':
         return {
           title: 'Friends ✓',
-          variant: 'secondary' as const,
+          variant: 'glass' as const,
           icon: '👥',
         };
       case 'pending_sent':
         return {
           title: 'Request Sent',
-          variant: 'secondary' as const,
+          variant: 'glass' as const,
           icon: '⏳',
         };
       case 'pending_received':
@@ -384,6 +400,23 @@ export function ProfileScreen() {
     }
   };
 
+  // Animated header background
+  const headerBackgroundStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(
+      scrollY.value,
+      [0, 60],
+      [0, 1],
+      Extrapolation.CLAMP
+    );
+    return { opacity };
+  });
+
+  // Animated content style
+  const contentStyle = useAnimatedStyle(() => ({
+    opacity: contentOpacity.value,
+    transform: [{ translateY: contentTranslate.value }],
+  }));
+
   const renderPostItem = useCallback(({ item, index }: { item: Post; index: number }) => (
     <TouchableOpacity
       style={styles.gridItem}
@@ -398,6 +431,14 @@ export function ProfileScreen() {
       />
       {item.media_type === 'video' && (
         <View style={styles.videoOverlay}>
+          {Platform.OS === 'ios' && (
+            <BlurView
+              intensity={liquidGlass.blur.subtle}
+              tint="dark"
+              style={StyleSheet.absoluteFill}
+            />
+          )}
+          <View style={styles.videoOverlayBg} />
           <Text style={styles.videoIcon}>▶</Text>
         </View>
       )}
@@ -409,14 +450,42 @@ export function ProfileScreen() {
 
   return (
     <View style={styles.container}>
-      <Animated.View
-        style={[
-          styles.header,
-          { paddingTop: insets.top + spacing.sm, opacity: headerOpacity },
-        ]}
-      >
-        <TouchableOpacity onPress={handleClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <Text style={styles.backText}>← Back</Text>
+      {/* Liquid Glass Header */}
+      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+        {/* Glass Background */}
+        <Animated.View style={[StyleSheet.absoluteFill, headerBackgroundStyle]}>
+          {Platform.OS === 'ios' ? (
+            <BlurView
+              intensity={liquidGlass.blur.regular}
+              tint="light"
+              style={StyleSheet.absoluteFill}
+            />
+          ) : null}
+          <View style={styles.headerGlassBg} />
+          <LinearGradient
+            colors={['rgba(255, 255, 255, 0.4)', 'transparent']}
+            style={styles.headerHighlight}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+          />
+        </Animated.View>
+
+        <TouchableOpacity 
+          onPress={handleClose} 
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={styles.headerBackButton}
+        >
+          <View style={styles.glassIconButton}>
+            {Platform.OS === 'ios' && (
+              <BlurView
+                intensity={liquidGlass.blur.light}
+                tint="light"
+                style={StyleSheet.absoluteFill}
+              />
+            )}
+            <View style={styles.glassIconBg} />
+            <Text style={styles.backIcon}>←</Text>
+          </View>
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>
@@ -427,41 +496,67 @@ export function ProfileScreen() {
           <TouchableOpacity
             onPress={handleSettingsPress}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            style={styles.headerSettingsButton}
           >
-            <Text style={styles.settingsIcon}>⚙️</Text>
+            <View style={styles.glassIconButton}>
+              {Platform.OS === 'ios' && (
+                <BlurView
+                  intensity={liquidGlass.blur.light}
+                  tint="light"
+                  style={StyleSheet.absoluteFill}
+                />
+              )}
+              <View style={styles.glassIconBg} />
+              <Text style={styles.settingsIcon}>⚙️</Text>
+            </View>
           </TouchableOpacity>
         ) : (
-          <View style={{ width: 40 }} />
+          <View style={{ width: 44 }} />
         )}
-      </Animated.View>
+      </View>
 
-      <ScrollView
+      <AnimatedScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: headerHeight }]}
         showsVerticalScrollIndicator={false}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={handleRefresh}
             tintColor={colors.primary}
+            progressViewOffset={headerHeight}
           />
         }
       >
         {isLoading ? (
           <ProfileSkeleton />
         ) : (
-          <Animated.View
-            style={[
-              styles.profileSection,
-              { transform: [{ translateY: contentTranslate }] },
-            ]}
-          >
+          <Animated.View style={[styles.profileSection, contentStyle]}>
+            {/* Avatar with glass ring */}
             <TouchableOpacity
               onPress={isOwnProfile ? handleChangeAvatar : undefined}
               disabled={!isOwnProfile}
               activeOpacity={0.8}
             >
               <View style={styles.avatarContainer}>
+                {/* Glass ring */}
+                <View style={styles.avatarGlassRing}>
+                  {Platform.OS === 'ios' && (
+                    <BlurView
+                      intensity={liquidGlass.blur.light}
+                      tint="light"
+                      style={StyleSheet.absoluteFill}
+                    />
+                  )}
+                  <LinearGradient
+                    colors={colors.primaryGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.avatarGradientRing}
+                  />
+                </View>
                 <Avatar
                   uri={displayUser?.avatar_url}
                   name={displayUser?.username}
@@ -482,7 +577,7 @@ export function ProfileScreen() {
 
             <Text style={styles.username}>@{displayUser?.username}</Text>
 
-            {/* Animated Stats */}
+            {/* Animated Stats with Glass Cards */}
             <View style={styles.statsRow}>
               <AnimatedStat
                 value={userStats?.total_posts || 0}
@@ -502,12 +597,12 @@ export function ProfileScreen() {
               />
             </View>
 
-            {/* Action buttons */}
+            {/* Action buttons with glass styling */}
             {isOwnProfile ? (
               <View style={styles.actionButtons}>
                 <Button
                   title="Friends"
-                  variant="secondary"
+                  variant="glass"
                   onPress={handleFriendsPress}
                   style={styles.actionButton}
                   icon={<Text>👥</Text>}
@@ -533,9 +628,22 @@ export function ProfileScreen() {
 
         {/* Posts grid */}
         <View style={styles.postsSection}>
+          {/* Section header with glass background */}
           <View style={styles.sectionHeader}>
+            <View style={styles.sectionHeaderGlass}>
+              {Platform.OS === 'ios' && (
+                <BlurView
+                  intensity={liquidGlass.blur.subtle}
+                  tint="light"
+                  style={StyleSheet.absoluteFill}
+                />
+              )}
+              <View style={styles.sectionHeaderBg} />
+            </View>
             <Text style={styles.sectionTitle}>Posts</Text>
-            <Text style={styles.postCount}>{posts.length}</Text>
+            <View style={styles.postCountBadge}>
+              <Text style={styles.postCount}>{posts.length}</Text>
+            </View>
           </View>
 
           {posts.length > 0 ? (
@@ -548,6 +656,22 @@ export function ProfileScreen() {
             </View>
           ) : (
             <View style={styles.emptyPosts}>
+              <View style={styles.emptyGlassContainer}>
+                {Platform.OS === 'ios' && (
+                  <BlurView
+                    intensity={liquidGlass.blur.light}
+                    tint="light"
+                    style={StyleSheet.absoluteFill}
+                  />
+                )}
+                <View style={styles.emptyGlassBg} />
+                <LinearGradient
+                  colors={['rgba(255, 255, 255, 0.3)', 'transparent']}
+                  style={styles.emptyGlassHighlight}
+                  start={{ x: 0.5, y: 0 }}
+                  end={{ x: 0.5, y: 0.5 }}
+                />
+              </View>
               <Text style={styles.emptyIcon}>📷</Text>
               <Text style={styles.emptyText}>No posts yet</Text>
               {isOwnProfile && (
@@ -558,7 +682,7 @@ export function ProfileScreen() {
             </View>
           )}
         </View>
-      </ScrollView>
+      </AnimatedScrollView>
     </View>
   );
 }
@@ -566,31 +690,71 @@ export function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.surface,
   },
   header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.background,
-    zIndex: 10,
   },
-  backText: {
-    fontSize: typography.sizes.md,
-    color: colors.primary,
-    fontWeight: typography.weights.medium,
+  headerGlassBg: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: liquidGlass.material.primary.backgroundColor,
+  },
+  headerHighlight: {
+    ...StyleSheet.absoluteFillObject,
+    height: '60%',
+  },
+  headerBackButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  headerSettingsButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  glassIconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  glassIconBg: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: liquidGlass.material.subtle.backgroundColor,
+    borderRadius: 18,
+    borderWidth: liquidGlass.border.width,
+    borderColor: liquidGlass.border.color,
+  },
+  backIcon: {
+    fontSize: 20,
+    color: glassColors.text.primary,
+    fontWeight: '600',
+    zIndex: 1,
   },
   headerTitle: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.semibold,
-    color: colors.text,
+    color: glassColors.text.primary,
+    flex: 1,
+    textAlign: 'center',
   },
   settingsIcon: {
-    fontSize: 24,
+    fontSize: 20,
+    zIndex: 1,
   },
   scrollView: {
     flex: 1,
@@ -602,54 +766,84 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: spacing.lg,
     paddingTop: spacing.xl,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
   },
   avatarContainer: {
     position: 'relative',
+  },
+  avatarGlassRing: {
+    ...StyleSheet.absoluteFillObject,
+    margin: -6,
+    borderRadius: 60,
+    overflow: 'hidden',
+  },
+  avatarGradientRing: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.3,
   },
   changeAvatarBadge: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    borderRadius: 14,
+    borderRadius: 16,
     overflow: 'hidden',
-    ...shadows.md,
+    ...glassShadows.key,
   },
   badgeGradient: {
-    width: 28,
-    height: 28,
+    width: 32,
+    height: 32,
     justifyContent: 'center',
     alignItems: 'center',
   },
   changeAvatarIcon: {
-    fontSize: 14,
+    fontSize: 16,
   },
   username: {
     fontSize: typography.sizes.xxl,
     fontWeight: typography.weights.bold,
-    color: colors.text,
+    color: glassColors.text.primary,
     marginTop: spacing.md,
     letterSpacing: -0.5,
   },
   statsRow: {
     flexDirection: 'row',
     marginTop: spacing.lg,
-    gap: spacing.xl,
+    gap: spacing.md,
   },
   statItem: {
     alignItems: 'center',
-    minWidth: 70,
+    minWidth: 80,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  statGlassBackground: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  statGlassBg: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: liquidGlass.material.subtle.backgroundColor,
+    borderWidth: liquidGlass.border.width,
+    borderColor: liquidGlass.border.color,
+    borderRadius: 16,
+  },
+  statGlassHighlight: {
+    ...StyleSheet.absoluteFillObject,
+    height: '50%',
   },
   statValue: {
     fontSize: typography.sizes.xxl,
     fontWeight: typography.weights.bold,
-    color: colors.text,
+    color: glassColors.text.primary,
+    zIndex: 1,
   },
   statLabel: {
     fontSize: typography.sizes.sm,
-    color: colors.textSecondary,
+    color: glassColors.text.secondary,
     marginTop: 2,
+    zIndex: 1,
   },
   actionButtons: {
     flexDirection: 'row',
@@ -657,7 +851,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   actionButton: {
-    minWidth: 110,
+    minWidth: 120,
   },
   friendButton: {
     marginTop: spacing.lg,
@@ -671,20 +865,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
-    marginBottom: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.sm,
+    marginHorizontal: spacing.md,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  sectionHeaderGlass: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  sectionHeaderBg: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: liquidGlass.material.subtle.backgroundColor,
+    borderWidth: liquidGlass.border.width,
+    borderColor: liquidGlass.border.color,
+    borderRadius: 12,
   },
   sectionTitle: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.semibold,
-    color: colors.text,
+    color: glassColors.text.primary,
+    zIndex: 1,
+  },
+  postCountBadge: {
+    backgroundColor: `${colors.primary}20`,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: 12,
+    zIndex: 1,
   },
   postCount: {
     fontSize: typography.sizes.sm,
-    color: colors.textSecondary,
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.sm,
+    color: colors.primary,
+    fontWeight: '600',
   },
   postsGrid: {
     flexDirection: 'row',
@@ -704,31 +919,59 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 6,
     right: 6,
-    backgroundColor: colors.overlay,
-    borderRadius: 4,
-    paddingHorizontal: 4,
-    paddingVertical: 2,
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    overflow: 'hidden',
+  },
+  videoOverlayBg: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: liquidGlass.material.dark.backgroundColor,
+    borderRadius: 10,
   },
   videoIcon: {
     fontSize: 10,
     color: colors.white,
+    zIndex: 1,
   },
   emptyPosts: {
     padding: spacing.xxl,
     alignItems: 'center',
+    marginHorizontal: spacing.md,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  emptyGlassContainer: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  emptyGlassBg: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: liquidGlass.material.subtle.backgroundColor,
+    borderWidth: liquidGlass.border.width,
+    borderColor: liquidGlass.border.color,
+    borderRadius: 20,
+  },
+  emptyGlassHighlight: {
+    ...StyleSheet.absoluteFillObject,
+    height: '50%',
   },
   emptyIcon: {
     fontSize: 48,
     marginBottom: spacing.md,
+    zIndex: 1,
   },
   emptyText: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.semibold,
-    color: colors.text,
+    color: glassColors.text.primary,
+    zIndex: 1,
   },
   emptySubtext: {
     fontSize: typography.sizes.sm,
-    color: colors.textSecondary,
+    color: glassColors.text.secondary,
     marginTop: spacing.xs,
+    zIndex: 1,
   },
 });

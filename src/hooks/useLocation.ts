@@ -26,7 +26,7 @@ export function useLocation() {
   }, [setPermissions]);
 
   // Get current location with address
-  const getCurrentLocation = useCallback(async () => {
+  const getCurrentLocation = useCallback(async (useExactLocation: boolean = false) => {
     const hasPermission = await locationService.hasLocationPermission();
 
     if (!hasPermission) {
@@ -34,7 +34,12 @@ export function useLocation() {
       return null;
     }
 
-    const { data, error } = await locationService.getCurrentLocationWithAddress();
+    // Use highest accuracy if exact location is requested
+    const accuracy = useExactLocation 
+      ? Location.Accuracy.Highest 
+      : Location.Accuracy.Balanced;
+
+    const { data, error } = await locationService.getCurrentLocationWithAddress(accuracy);
 
     if (error) {
       setError(error.message);
@@ -131,4 +136,15 @@ export function useLocation() {
     getFullLocationDisplay,
     updateLocationPrecision,
   };
+}
+
+// Helper to get exact location (highest accuracy)
+export function useExactLocation() {
+  const { getCurrentLocation } = useLocation();
+  
+  const getExactLocation = useCallback(async () => {
+    return getCurrentLocation(true); // Use exact location
+  }, [getCurrentLocation]);
+  
+  return { getExactLocation };
 }

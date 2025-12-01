@@ -23,9 +23,10 @@ export async function createPost(
       };
     }
 
-    // Read file using fetch (works reliably in React Native, same approach as avatar uploads)
-    // This avoids deprecated expo-file-system methods and works with all file types including HEIC
+    // Read file using fetch (recommended for SDK 54, no deprecation warnings)
     let fileBlob: Blob;
+    let fileSize: number;
+    
     try {
       // Use fetch to read the file - React Native fetch handles file:// URIs correctly
       const response = await fetch(mediaUri);
@@ -43,30 +44,27 @@ export async function createPost(
         };
       }
 
+      fileSize = fileBlob.size;
+
       // Check file size (max 10MB)
       const maxSize = config.MAX_MEDIA_SIZE_MB * 1024 * 1024;
-      if (fileBlob.size > maxSize) {
+      if (fileSize > maxSize) {
         return {
           data: null,
           error: { 
-            message: `File is too large. Maximum size is ${config.MAX_MEDIA_SIZE_MB}MB.` 
+            message: `File is too large (${(fileSize / 1024 / 1024).toFixed(1)}MB). Maximum size is ${config.MAX_MEDIA_SIZE_MB}MB.` 
           },
         };
       }
 
-      console.log(`File read successfully: ${fileBlob.size} bytes`);
+      console.log(`File read successfully: ${fileSize} bytes`);
     } catch (fileError: any) {
       console.error('File read error:', fileError);
       console.error('Media URI:', mediaUri);
-      console.error('Error details:', JSON.stringify(fileError, null, 2));
       
       // More specific error messages
       let errorMessage = 'Failed to read media file. Please try capturing again.';
-      if (fileError.message?.includes('Network')) {
-        errorMessage = 'Network error. Please check your connection and try again.';
-      } else if (fileError.message?.includes('fetch')) {
-        errorMessage = 'Failed to access media file. Please try capturing again.';
-      } else if (fileError.message?.includes('ENOENT') || fileError.message?.includes('not found')) {
+      if (fileError.message?.includes('ENOENT') || fileError.message?.includes('not found')) {
         errorMessage = 'Media file not found. Please try capturing again.';
       } else if (fileError.message?.includes('permission') || fileError.message?.includes('Permission')) {
         errorMessage = 'Permission denied. Please grant media access and try again.';
@@ -82,8 +80,7 @@ export async function createPost(
       };
     }
 
-    // Upload to Supabase storage using Blob
-    // Supabase storage accepts Blob objects in React Native
+    // Upload to Supabase storage using Blob (recommended for React Native)
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(BUCKETS.POST_MEDIA)
       .upload(fileName, fileBlob, {

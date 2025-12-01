@@ -140,15 +140,18 @@ export function CameraScreen() {
   }, [getCurrentLocation]);
 
   const handleCapture = useCallback((uri: string, type: 'image' | 'video') => {
-    // Use current location if available and valid, otherwise use a default
-    // PostPreviewScreen will handle refreshing invalid locations
-    const location: LocationData = currentLocation && 
+    // Pass current location if valid, otherwise pass null
+    // PostPreviewScreen will handle getting location if needed
+    const isValidLocation = currentLocation && 
       currentLocation.lat !== 0 && 
       currentLocation.lng !== 0 &&
-      currentLocation.name !== 'Location Unknown'
+      currentLocation.name !== 'Location Unknown' &&
+      currentLocation.name !== '';
+
+    const location: LocationData = isValidLocation
       ? currentLocation
       : {
-          name: 'Location Unknown',
+          name: '', // Empty name signals to PostPreview that location needs to be fetched
           lat: 0,
           lng: 0,
         };

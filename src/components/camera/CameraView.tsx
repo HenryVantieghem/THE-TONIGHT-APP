@@ -72,15 +72,22 @@ export function CameraViewComponent({
     if (!cameraRef.current) return;
 
     try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.8,
         skipProcessing: Platform.OS === 'android',
       });
 
       if (photo?.uri) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         onCapture(photo.uri, 'image');
+      } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        console.error('No photo URI returned');
       }
     } catch (error) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       console.error('Error taking photo:', error);
     }
   }, [onCapture]);
@@ -187,73 +194,72 @@ export function CameraViewComponent({
         style={styles.camera}
         facing={facing}
         flash={flash}
-      >
-        {/* Top controls */}
-        <View style={[styles.topControls, { paddingTop: insets.top + spacing.sm }]}>
+      />
+      {/* Top controls - positioned absolutely outside CameraView */}
+      <View style={[styles.topControls, { paddingTop: insets.top + spacing.sm }]}>
+        <TouchableOpacity
+          style={styles.controlButton}
+          onPress={onClose}
+        >
+          <Text style={styles.controlIcon}>✕</Text>
+        </TouchableOpacity>
+
+        <View style={styles.topRight}>
           <TouchableOpacity
-            style={styles.controlButton}
-            onPress={onClose}
+            style={[
+              styles.controlButton,
+              flash === 'off' && styles.controlButtonDim,
+            ]}
+            onPress={toggleFlash}
           >
-            <Text style={styles.controlIcon}>✕</Text>
-          </TouchableOpacity>
-
-          <View style={styles.topRight}>
-            <TouchableOpacity
-              style={[
-                styles.controlButton,
-                flash === 'off' && styles.controlButtonDim,
-              ]}
-              onPress={toggleFlash}
-            >
-              <Text style={styles.controlIcon}>{getFlashIcon()}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Recording indicator */}
-        {isRecording && (
-          <View style={styles.recordingIndicator}>
-            <View style={styles.recordingDot} />
-            <Text style={styles.recordingTime}>
-              {formatDuration(recordingDuration)}
-            </Text>
-          </View>
-        )}
-
-        {/* Location strip */}
-        <View style={[styles.locationContainer, { bottom: 200 + insets.bottom }]}>
-          <LocationStrip
-            location={location}
-            isLoading={isLoadingLocation}
-            onPress={onLocationPress}
-          />
-        </View>
-
-        {/* Bottom controls */}
-        <View style={[styles.bottomControls, { paddingBottom: insets.bottom + spacing.lg }]}>
-          <TouchableOpacity
-            style={styles.sideButton}
-            onPress={toggleFacing}
-          >
-            <Text style={styles.sideButtonIcon}>🔄</Text>
-          </TouchableOpacity>
-
-          <CaptureButton
-            onCapture={handleCapture}
-            onVideoStart={handleVideoStart}
-            onVideoEnd={handleVideoEnd}
-            isRecording={isRecording}
-            videoEnabled
-          />
-
-          <TouchableOpacity
-            style={styles.sideButton}
-            onPress={handlePickImage}
-          >
-            <Text style={styles.sideButtonIcon}>🖼️</Text>
+            <Text style={styles.controlIcon}>{getFlashIcon()}</Text>
           </TouchableOpacity>
         </View>
-      </ExpoCameraView>
+      </View>
+
+      {/* Recording indicator - positioned absolutely */}
+      {isRecording && (
+        <View style={styles.recordingIndicator}>
+          <View style={styles.recordingDot} />
+          <Text style={styles.recordingTime}>
+            {formatDuration(recordingDuration)}
+          </Text>
+        </View>
+      )}
+
+      {/* Location strip - positioned absolutely */}
+      <View style={[styles.locationContainer, { bottom: 200 + insets.bottom }]}>
+        <LocationStrip
+          location={location}
+          isLoading={isLoadingLocation}
+          onPress={onLocationPress}
+        />
+      </View>
+
+      {/* Bottom controls - positioned absolutely */}
+      <View style={[styles.bottomControls, { paddingBottom: insets.bottom + spacing.lg }]}>
+        <TouchableOpacity
+          style={styles.sideButton}
+          onPress={toggleFacing}
+        >
+          <Text style={styles.sideButtonIcon}>🔄</Text>
+        </TouchableOpacity>
+
+        <CaptureButton
+          onCapture={handleCapture}
+          onVideoStart={handleVideoStart}
+          onVideoEnd={handleVideoEnd}
+          isRecording={isRecording}
+          videoEnabled
+        />
+
+        <TouchableOpacity
+          style={styles.sideButton}
+          onPress={handlePickImage}
+        >
+          <Text style={styles.sideButtonIcon}>🖼️</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -265,6 +271,8 @@ const styles = StyleSheet.create({
   },
   camera: {
     flex: 1,
+    width: '100%',
+    height: '100%',
   },
   topControls: {
     position: 'absolute',
@@ -275,6 +283,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
     zIndex: 10,
+    pointerEvents: 'box-none',
   },
   topRight: {
     flexDirection: 'row',
@@ -333,6 +342,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: spacing.xl,
+    zIndex: 10,
+    pointerEvents: 'box-none',
   },
   sideButton: {
     width: 48,

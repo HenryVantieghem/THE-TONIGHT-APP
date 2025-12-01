@@ -1,5 +1,6 @@
 // Color system for THE TONIGHT APP
 // Premium design with vibrant sunset gradients for energy and FOMO
+// Enhanced with Apple's Liquid Glass design language (iOS 26+)
 
 export const colors = {
   // Primary - Vibrant sunset gradient for energy (THE SIGNATURE LOOK)
@@ -78,9 +79,14 @@ export const colors = {
   overlayDark: 'rgba(0, 0, 0, 0.7)',
   overlayWhite: 'rgba(255, 255, 255, 0.9)',
 
-  // Glassmorphism
+  // Glassmorphism & Liquid Glass (iOS 26+)
   glass: 'rgba(255, 255, 255, 0.8)',
   glassDark: 'rgba(0, 0, 0, 0.4)',
+  glassSubtle: 'rgba(255, 255, 255, 0.45)',
+  glassElevated: 'rgba(255, 255, 255, 0.85)',
+  glassBorder: 'rgba(255, 255, 255, 0.25)',
+  glassBorderStrong: 'rgba(255, 255, 255, 0.45)',
+  glassHighlight: 'rgba(255, 255, 255, 0.4)',
 
   // Heart animation color
   heartRed: '#FF3B6F',

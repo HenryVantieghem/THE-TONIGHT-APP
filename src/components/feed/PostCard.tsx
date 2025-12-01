@@ -7,9 +7,12 @@ import {
   Dimensions,
   Alert,
   Pressable,
+  Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { Video, ResizeMode } from 'expo-av';
+import { VideoView, useVideoPlayer } from 'expo-video';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -18,19 +21,28 @@ import Animated, {
   withSequence,
   runOnJS,
   Easing,
+  interpolate,
+  Extrapolation,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Avatar } from '../ui/Avatar';
 import { TimerBar } from '../ui/TimerBar';
 import { EmojiReactions } from './EmojiReactions';
-import { colors, shadows } from '../../constants/colors';
+import { colors } from '../../constants/colors';
 import { typography } from '../../constants/typography';
 import { spacing, borderRadius } from '../../constants/config';
+import {
+  liquidGlass,
+  glassShadows,
+  glassMotion,
+  glassColors,
+} from '../../constants/liquidGlass';
 import type { Post, ReactionEmoji } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MEDIA_HEIGHT = SCREEN_WIDTH * 0.75;
 const DOUBLE_TAP_DELAY = 300;
+const CARD_BORDER_RADIUS = 24;
 
 interface PostCardProps {
   post: Post;
@@ -56,6 +68,26 @@ export function PostCard({
   // Heart animation values
   const heartScale = useSharedValue(0);
   const heartOpacity = useSharedValue(0);
+  const pressProgress = useSharedValue(0);
+
+  // Video player for video posts
+  const videoPlayer = useVideoPlayer(post.media_type === 'video' ? post.media_url : '');
+  
+  // Configure video player when it's created
+  useEffect(() => {
+    if (post.media_type === 'video' && videoPlayer) {
+      videoPlayer.loop = true;
+      videoPlayer.muted = true;
+      videoPlayer.play();
+    }
+    
+    // Cleanup: pause video when component unmounts or post changes
+    return () => {
+      if (videoPlayer) {
+        videoPlayer.pause();
+      }
+    };
+  }, [post.media_type, post.media_url, videoPlayer]);
 
   const handleReact = useCallback(
     (emoji: ReactionEmoji) => {
@@ -156,11 +188,31 @@ export function PostCard({
     }
   }, [post.user, onUserPress]);
 
+  // Press animation handlers
+  const handlePressIn = () => {
+    pressProgress.value = withSpring(1, glassMotion.spring.snappy);
+  };
+
+  const handlePressOut = () => {
+    pressProgress.value = withSpring(0, glassMotion.spring.smooth);
+  };
+
   // Heart animation styles
   const heartAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: heartScale.value }],
     opacity: heartOpacity.value,
   }));
+
+  // Card press animation
+  const cardAnimatedStyle = useAnimatedStyle(() => {
+    const scale = interpolate(
+      pressProgress.value,
+      [0, 1],
+      [1, 0.98],
+      Extrapolation.CLAMP
+    );
+    return { transform: [{ scale }] };
+  });
 
   const locationDisplay = post.location_city
     ? `${post.location_name}\n${post.location_city}${post.location_state ? `, ${post.location_state}` : ''}`
@@ -173,14 +225,38 @@ export function PostCard({
     : post.caption;
 
   return (
-    <View style={styles.container}>
+    <Animated.View style={[styles.container, cardAnimatedStyle]}>
+      {/* Glass Background */}
+      <View style={styles.glassBackground}>
+        {Platform.OS === 'ios' ? (
+          <BlurView
+            intensity={liquidGlass.blur.regular}
+            tint="light"
+            style={StyleSheet.absoluteFill}
+          />
+        ) : null}
+        <View style={styles.glassColorLayer} />
+        {/* Top highlight */}
+        <LinearGradient
+          colors={['rgba(255, 255, 255, 0.4)', 'transparent']}
+          style={styles.glassHighlight}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 0.3 }}
+        />
+      </View>
+
+      {/* Glass Border */}
+      <View style={styles.glassBorder} />
+
       {/* Header */}
       <TouchableOpacity style={styles.header} onPress={handleUserPress}>
-        <Avatar
-          uri={post.user?.avatar_url}
-          name={post.user?.username}
-          size="medium"
-        />
+        <View style={styles.avatarRing}>
+          <Avatar
+            uri={post.user?.avatar_url}
+            name={post.user?.username}
+            size="medium"
+          />
+        </View>
         <View style={styles.headerText}>
           <Text style={styles.username}>
             @{post.user?.username || 'unknown'}
@@ -198,17 +274,17 @@ export function PostCard({
       <Pressable
         style={styles.mediaContainer}
         onPress={handleMediaPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
         onLongPress={handleLongPress}
         delayLongPress={500}
       >
-        {post.media_type === 'video' ? (
-          <Video
-            source={{ uri: post.media_url }}
+        {post.media_type === 'video' && videoPlayer ? (
+          <VideoView
+            player={videoPlayer}
             style={styles.media}
-            resizeMode={ResizeMode.COVER}
-            isLooping
-            isMuted
-            shouldPlay
+            contentFit="cover"
+            nativeControls={false}
           />
         ) : (
           <Image
@@ -219,9 +295,17 @@ export function PostCard({
           />
         )}
 
-        {/* Video indicator */}
+        {/* Video indicator - Glass Pill Style */}
         {post.media_type === 'video' && (
           <View style={styles.videoIndicator}>
+            {Platform.OS === 'ios' && (
+              <BlurView
+                intensity={liquidGlass.blur.light}
+                tint="dark"
+                style={StyleSheet.absoluteFill}
+              />
+            )}
+            <View style={styles.videoIndicatorBg} />
             <Text style={styles.videoIcon}>▶️</Text>
           </View>
         )}
@@ -248,16 +332,26 @@ export function PostCard({
         </TouchableOpacity>
       )}
 
-      {/* Timer Bar */}
+      {/* Timer Bar - Glass Style */}
       <View style={styles.timerContainer}>
-        <TimerBar
-          createdAt={post.created_at}
-          expiresAt={post.expires_at}
-          showTimeLeft
-        />
+        <View style={styles.timerGlass}>
+          {Platform.OS === 'ios' && (
+            <BlurView
+              intensity={liquidGlass.blur.subtle}
+              tint="light"
+              style={StyleSheet.absoluteFill}
+            />
+          )}
+          <View style={styles.timerGlassBg} />
+          <TimerBar
+            createdAt={post.created_at}
+            expiresAt={post.expires_at}
+            showTimeLeft
+          />
+        </View>
       </View>
 
-      {/* Reactions */}
+      {/* Reactions - Glass Pill Style */}
       <View style={styles.reactionsContainer}>
         <EmojiReactions
           reactions={post.reactions || []}
@@ -265,23 +359,48 @@ export function PostCard({
           onReact={handleReact}
         />
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.white,
     marginBottom: spacing.md,
-    borderRadius: borderRadius.lg,
-    ...shadows.md,
+    borderRadius: CARD_BORDER_RADIUS,
     overflow: 'hidden',
+    ...glassShadows.key,
+  },
+  glassBackground: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: CARD_BORDER_RADIUS,
+    overflow: 'hidden',
+  },
+  glassColorLayer: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: liquidGlass.material.elevated.backgroundColor,
+  },
+  glassHighlight: {
+    ...StyleSheet.absoluteFillObject,
+    height: '30%',
+  },
+  glassBorder: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: CARD_BORDER_RADIUS,
+    borderWidth: liquidGlass.border.width,
+    borderColor: liquidGlass.border.colorStrong,
+    pointerEvents: 'none',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: spacing.md,
     paddingBottom: spacing.sm,
+  },
+  avatarRing: {
+    borderRadius: 24,
+    padding: 2,
+    borderWidth: 2,
+    borderColor: liquidGlass.border.color,
   },
   headerText: {
     marginLeft: spacing.sm,
@@ -290,7 +409,7 @@ const styles = StyleSheet.create({
   username: {
     fontSize: typography.sizes.md,
     fontWeight: '600',
-    color: colors.text,
+    color: glassColors.text.primary,
   },
   locationRow: {
     flexDirection: 'row',
@@ -303,7 +422,7 @@ const styles = StyleSheet.create({
   },
   locationText: {
     fontSize: typography.sizes.sm,
-    color: colors.textSecondary,
+    color: glassColors.text.secondary,
     flex: 1,
   },
   mediaContainer: {
@@ -320,13 +439,22 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: spacing.sm,
     right: spacing.sm,
-    backgroundColor: colors.overlay,
-    borderRadius: borderRadius.xs,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 2,
+    borderRadius: 12,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    overflow: 'hidden',
+    minWidth: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoIndicatorBg: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: liquidGlass.material.dark.backgroundColor,
+    borderRadius: 12,
   },
   videoIcon: {
     fontSize: 12,
+    zIndex: 1,
   },
   heartContainer: {
     position: 'absolute',
@@ -350,16 +478,28 @@ const styles = StyleSheet.create({
   },
   caption: {
     fontSize: typography.sizes.md,
-    color: colors.text,
+    color: glassColors.text.primary,
     lineHeight: 22,
   },
   seeMore: {
-    color: colors.textSecondary,
+    color: glassColors.text.secondary,
     fontWeight: '500',
   },
   timerContainer: {
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
+  },
+  timerGlass: {
+    borderRadius: 12,
+    padding: spacing.sm,
+    overflow: 'hidden',
+  },
+  timerGlassBg: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: liquidGlass.material.subtle.backgroundColor,
+    borderRadius: 12,
+    borderWidth: liquidGlass.border.width,
+    borderColor: liquidGlass.border.color,
   },
   reactionsContainer: {
     paddingHorizontal: spacing.md,

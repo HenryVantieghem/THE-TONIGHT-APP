@@ -109,21 +109,27 @@ export function LocationSearchScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     
-    // Navigate back to PostPreviewScreen with updated location via navigation params
-    // Get the navigation state to find PostPreview route
+    // Navigate back to PostPreviewScreen with the selected location
+    // Use navigate with merge to update the PostPreview params
+    try {
     const state = navigation.getState();
     const postPreviewRoute = state.routes.find(r => r.name === 'PostPreview');
     
     if (postPreviewRoute && postPreviewRoute.params) {
-      // Navigate to PostPreview with updated params
-      // React Navigation will automatically pop LocationSearchScreen and show PostPreview
       const existingParams = postPreviewRoute.params as any;
       navigation.navigate('PostPreview', {
         ...existingParams,
         selectedLocation: location,
       } as any);
     } else {
-      // Fallback: just go back if PostPreview route not found
+        // Fallback: go back and hope the parent handles it
+        // This shouldn't happen in normal flow
+        console.warn('PostPreview route not found in navigation state');
+        navigation.goBack();
+      }
+    } catch (error) {
+      console.error('Navigation error:', error);
+      // Fallback: just go back
       if (navigation.canGoBack()) {
         navigation.goBack();
       }
