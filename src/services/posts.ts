@@ -28,9 +28,10 @@ export async function createPost(
     // Convert to Uint8Array for Supabase storage upload
     let fileData: Uint8Array;
     try {
-      // Read file as base64 - expo-file-system v19+ uses string literal
+      // Read file as base64
+      // expo-file-system readAsStringAsync accepts encoding as string or EncodingType enum
       const base64 = await FileSystem.readAsStringAsync(mediaUri, {
-        encoding: 'base64',
+        encoding: FileSystem.EncodingType?.Base64 || 'base64',
       } as any);
 
       if (!base64 || base64.length === 0) {
@@ -577,7 +578,11 @@ export function subscribeToPostDeletions(
       if (status === 'SUBSCRIBED') {
         console.log('Subscribed to post deletions');
       } else if (status === 'CHANNEL_ERROR') {
-        console.error('Deletion channel error:', err);
+        console.error('Deletion channel error:', err || 'Unknown error');
+      } else if (status === 'TIMED_OUT') {
+        console.warn('Deletion subscription timed out');
+      } else if (status === 'CLOSED') {
+        console.warn('Deletion subscription closed');
       }
     });
 
