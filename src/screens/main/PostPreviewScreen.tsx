@@ -179,6 +179,16 @@ export function PostPreviewScreen() {
   const [isRefreshingLocation, setIsRefreshingLocation] = useState(false);
   const [hasLocationPermission, setHasLocationPermission] = useState<boolean | null>(null);
 
+  // Update location when route params change (from LocationSearchScreen)
+  useEffect(() => {
+    const params = route.params as any;
+    if (params?.selectedLocation) {
+      setSelectedLocation(params.selectedLocation);
+      // Clear the param to avoid re-applying
+      navigation.setParams({ selectedLocation: undefined } as any);
+    }
+  }, [route.params, navigation]);
+
   // Check location permission and auto-refresh location on mount if location is invalid
   useEffect(() => {
     const initLocation = async () => {
@@ -187,26 +197,33 @@ export function PostPreviewScreen() {
       setHasLocationPermission(hasPermission);
 
       // If location is default/unknown, try to get real location
-      if (!selectedLocation || selectedLocation.name === 'Location Unknown' || 
-          (selectedLocation.lat === 0 && selectedLocation.lng === 0)) {
-        if (hasPermission) {
-          setIsRefreshingLocation(true);
-          try {
-            const newLocation = await refreshLocation();
-            if (newLocation) {
-              setSelectedLocation(newLocation);
-            }
-          } catch (error) {
-            console.error('Failed to refresh location:', error);
-          } finally {
-            setIsRefreshingLocation(false);
+      const isInvalidLocation = !selectedLocation || 
+        selectedLocation.name === 'Location Unknown' || 
+        selectedLocation.name === '' ||
+        (selectedLocation.lat === 0 && selectedLocation.lng === 0) ||
+        selectedLocation.lat === undefined ||
+        selectedLocation.lng === undefined;
+
+      if (isInvalidLocation && hasPermission) {
+        setIsRefreshingLocation(true);
+        try {
+          const newLocation = await refreshLocation();
+          if (newLocation && newLocation.lat !== 0 && newLocation.lng !== 0) {
+            setSelectedLocation(newLocation);
           }
+        } catch (error) {
+          console.error('Failed to refresh location:', error);
+          // Don't show error - user can manually select location
+        } finally {
+          setIsRefreshingLocation(false);
         }
       }
     };
 
     initLocation();
-  }, [checkLocationPermission, refreshLocation, selectedLocation]);
+    // Only run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
