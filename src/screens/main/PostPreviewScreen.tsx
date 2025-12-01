@@ -239,15 +239,12 @@ export function PostPreviewScreen() {
       return;
     }
 
-    // Validate location
-    if (!selectedLocation || !selectedLocation.name || selectedLocation.name.trim() === '' || 
-        selectedLocation.lat === undefined || selectedLocation.lng === undefined ||
-        isNaN(selectedLocation.lat) || isNaN(selectedLocation.lng) ||
-        (selectedLocation.lat === 0 && selectedLocation.lng === 0)) {
+    // Validate location - ensure we have a valid location before posting
+    if (!selectedLocation) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
         'Location Required',
-        'Please select a valid location for your post. You can search for a location or use your current location.',
+        'Please select a location for your post.',
         [
           { text: 'Cancel', style: 'cancel' },
           { 
@@ -259,15 +256,94 @@ export function PostPreviewScreen() {
       return;
     }
 
-    // Validate coordinates (already checked above, but ensure they're valid numbers)
+    // Validate location name
+    if (!selectedLocation.name || selectedLocation.name.trim() === '' || selectedLocation.name === 'Location Unknown') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        'Invalid Location',
+        'Please select a valid location. Tap the location to search or use your current location.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Select Location', 
+            onPress: handleSelectLocation
+          }
+        ]
+      );
+      return;
+    }
+
+    // Validate coordinates are present and valid
+    if (selectedLocation.lat === undefined || selectedLocation.lng === undefined) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        'Invalid Location',
+        'Location coordinates are missing. Please select a location.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Select Location', 
+            onPress: handleSelectLocation
+          }
+        ]
+      );
+      return;
+    }
+
+    // Convert to numbers and validate range
     const lat = typeof selectedLocation.lat === 'number' ? selectedLocation.lat : parseFloat(String(selectedLocation.lat));
     const lng = typeof selectedLocation.lng === 'number' ? selectedLocation.lng : parseFloat(String(selectedLocation.lng));
 
-    if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0 || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    if (isNaN(lat) || isNaN(lng)) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Invalid Location', 'Please select a valid location. Tap the location to search or refresh your current location.');
+      Alert.alert(
+        'Invalid Location',
+        'Location coordinates are invalid. Please select a location.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Select Location', 
+            onPress: handleSelectLocation
+          }
+        ]
+      );
       return;
     }
+
+    // Validate coordinate ranges
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        'Invalid Location',
+        'Location coordinates are out of range. Please select a valid location.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Select Location', 
+            onPress: handleSelectLocation
+          }
+        ]
+      );
+      return;
+    }
+
+    // Check for default/unknown coordinates
+    if (lat === 0 && lng === 0) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        'Location Required',
+        'Please select a valid location. Tap the location to search or use your current location.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Select Location', 
+            onPress: handleSelectLocation
+          }
+        ]
+      );
+      return;
+    }
+
 
     // Validate media URI
     if (!mediaUri) {
@@ -279,11 +355,11 @@ export function PostPreviewScreen() {
     setIsPosting(true);
 
     try {
-      // Ensure location has valid coordinates
+      // Create validated location object (coordinates already validated above)
       const validLocation: LocationData = {
         name: selectedLocation.name.trim(),
-        lat: typeof selectedLocation.lat === 'number' ? selectedLocation.lat : parseFloat(String(selectedLocation.lat)),
-        lng: typeof selectedLocation.lng === 'number' ? selectedLocation.lng : parseFloat(String(selectedLocation.lng)),
+        lat: lat,
+        lng: lng,
         city: selectedLocation.city?.trim() || undefined,
         state: selectedLocation.state?.trim() || undefined,
       };
@@ -319,7 +395,7 @@ export function PostPreviewScreen() {
       Alert.alert('Error', 'Failed to create post. Please try again.');
       setIsPosting(false);
     }
-  }, [isOverLimit, createPost, mediaUri, mediaType, caption, selectedLocation]);
+  }, [isOverLimit, createPost, mediaUri, mediaType, caption, selectedLocation, handleSelectLocation]);
 
   const handleSuccessComplete = useCallback(() => {
     // Reset posting state
@@ -399,16 +475,6 @@ export function PostPreviewScreen() {
       );
     }
   }, [requestLocationPermission, refreshLocation]);
-
-  const handleSelectLocation = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    navigation.navigate('LocationSearch', {
-      currentLocation: selectedLocation,
-      onLocationSelect: (loc: LocationData) => {
-        setSelectedLocation(loc);
-      },
-    });
-  }, [navigation, selectedLocation]);
 
   // Character count color
   const getCharacterCountColor = () => {

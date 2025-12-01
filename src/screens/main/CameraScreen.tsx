@@ -140,13 +140,18 @@ export function CameraScreen() {
   }, [getCurrentLocation]);
 
   const handleCapture = useCallback((uri: string, type: 'image' | 'video') => {
-    // Use current location if available, otherwise use a default
-    // The user can change it in PostPreview if needed
-    const location: LocationData = currentLocation || {
-      name: 'Location Unknown',
-      lat: 0,
-      lng: 0,
-    };
+    // Use current location if available and valid, otherwise use a default
+    // PostPreviewScreen will handle refreshing invalid locations
+    const location: LocationData = currentLocation && 
+      currentLocation.lat !== 0 && 
+      currentLocation.lng !== 0 &&
+      currentLocation.name !== 'Location Unknown'
+      ? currentLocation
+      : {
+          name: 'Location Unknown',
+          lat: 0,
+          lng: 0,
+        };
 
     navigation.replace('PostPreview', {
       mediaUri: uri,
