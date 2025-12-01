@@ -13,6 +13,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components/ui/Button';
+import { typography } from '../../constants/typography';
 import type { AuthStackParamList } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -152,18 +153,6 @@ export function OnboardingScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      {/* Logo/Brand Header */}
-      <View style={styles.brandHeader}>
-        <LinearGradient
-          colors={authColors.primaryGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.brandGradient}
-        >
-          <Text style={styles.brandText}>Tonight</Text>
-        </LinearGradient>
-      </View>
-
       {/* Slides */}
       <View style={styles.slideContainer}>
         <FlatList

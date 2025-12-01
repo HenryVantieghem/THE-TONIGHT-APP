@@ -28,8 +28,6 @@ import { PostCard } from '../../components/feed/PostCard';
 import { EmptyState } from '../../components/feed/EmptyState';
 import { PostCardSkeleton } from '../../components/feed/PostCardSkeleton';
 import { FloatingCameraButton } from '../../components/ui/FloatingCameraButton';
-import { Avatar } from '../../components/ui/Avatar';
-import { DiscoBallLogo } from '../../components/ui/DiscoBallLogo';
 import { usePosts } from '../../hooks/usePosts';
 import { useAuth } from '../../hooks/useAuth';
 import { useFriends } from '../../hooks/useFriends';
@@ -253,51 +251,34 @@ export function FeedScreen() {
 
         {/* Header Content */}
         <View style={styles.headerContent}>
-          {/* Friends Button - Glass Pill Style */}
+          {/* Hamburger Menu Button */}
           <TouchableOpacity
             onPress={handleFriendsPress}
             style={styles.headerButton}
             activeOpacity={0.7}
           >
-            <View style={styles.glassIconButton}>
-              {Platform.OS === 'ios' && (
-                <BlurView
-                  intensity={liquidGlass.blur.light}
-                  tint="light"
-                  style={StyleSheet.absoluteFill}
-                />
-              )}
-              <View style={styles.glassIconBg} />
-              <Text style={styles.menuIcon}>👥</Text>
-              {pendingRequests.length > 0 && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>
-                    {pendingRequests.length > 9 ? '9+' : pendingRequests.length}
-                  </Text>
-                </View>
-              )}
-            </View>
+            <Text style={styles.menuIcon}>☰</Text>
+            {pendingRequests.length > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>
+                  {pendingRequests.length > 9 ? '9+' : pendingRequests.length}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
 
-          {/* Title with Logo */}
+          {/* Title */}
           <View style={styles.titleContainer}>
-            <DiscoBallLogo size={28} animated={true} />
             <Text style={styles.title}>Tonight</Text>
           </View>
 
-          {/* Profile Button - Glass Avatar Ring */}
+          {/* Profile Button */}
           <TouchableOpacity
             onPress={handleProfilePress}
             style={styles.headerButton}
             activeOpacity={0.7}
           >
-            <View style={styles.avatarRing}>
-              <Avatar
-                uri={user?.avatar_url}
-                name={user?.username}
-                size="small"
-              />
-            </View>
+            <Text style={styles.profileIcon}>👤</Text>
           </TouchableOpacity>
         </View>
 
@@ -418,25 +399,15 @@ const styles = StyleSheet.create({
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  glassIconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  glassIconBg: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: liquidGlass.material.subtle.backgroundColor,
-    borderRadius: 20,
-    borderWidth: liquidGlass.border.width,
-    borderColor: liquidGlass.border.color,
+    position: 'relative',
   },
   menuIcon: {
-    fontSize: 20,
-    zIndex: 1,
+    fontSize: 24,
+    color: glassColors.text.primary,
+  },
+  profileIcon: {
+    fontSize: 24,
+    color: glassColors.text.primary,
   },
   badge: {
     position: 'absolute',
@@ -459,21 +430,14 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.bold,
   },
   titleContainer: {
-    flexDirection: 'row',
+    flex: 1,
     alignItems: 'center',
-    gap: spacing.xs,
   },
   title: {
     fontSize: typography.sizes.xxl,
     fontWeight: typography.weights.bold,
     color: glassColors.text.primary,
     letterSpacing: -0.5,
-  },
-  avatarRing: {
-    borderRadius: 22,
-    padding: 2,
-    borderWidth: 2,
-    borderColor: liquidGlass.border.colorStrong,
   },
   headerDivider: {
     position: 'absolute',

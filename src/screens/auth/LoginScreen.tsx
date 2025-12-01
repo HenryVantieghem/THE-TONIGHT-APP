@@ -17,15 +17,16 @@ import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../hooks/useAuth';
 import { validateLoginForm } from '../../utils/validation';
+import { typography } from '../../constants/typography';
 import type { AuthStackParamList } from '../../types';
 
-// Premium auth color palette
+// iOS auth color palette
 const authColors = {
   background: '#FFFFFF',
-  textPrimary: '#1A1A2E',
-  textSecondary: '#64748B',
-  primary: '#FF6B6B',
-  backButtonBg: '#F8F9FA',
+  textPrimary: '#000000',
+  textSecondary: '#8E8E93',
+  primary: '#007AFF',
+  backButtonBg: '#F2F2F7',
 };
 
 type LoginNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
@@ -125,18 +126,19 @@ export function LoginScreen() {
           <View style={styles.form}>
             <Input
               label="Email"
-              placeholder="you@example.com"
+              placeholder="your@email.com"
               value={email}
               onChangeText={setEmail}
               error={errors.email}
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
+              leftIcon={<Text style={styles.icon}>✉️</Text>}
             />
 
             <Input
               label="Password"
-              placeholder="Enter your password"
+              placeholder="••••••••"
               value={password}
               onChangeText={setPassword}
               error={errors.password}
@@ -203,8 +205,8 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
+    fontSize: typography.sizes.xxxl,
+    fontWeight: typography.weights.bold,
     color: authColors.textPrimary,
     marginBottom: 8,
     letterSpacing: -0.5,
@@ -245,5 +247,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: authColors.primary,
+  },
+  icon: {
+    fontSize: 20,
   },
 });

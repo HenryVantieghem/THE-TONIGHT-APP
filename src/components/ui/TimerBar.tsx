@@ -50,9 +50,6 @@ function getGradientColors(progress: number): readonly [string, string] {
   if (progress > 0.25) {
     return [colors.timerYellow, colors.timerYellowDark] as const;
   }
-  if (progress > 0.1) {
-    return [colors.timerOrange, '#EA580C'] as const;
-  }
   return [colors.timerRed, colors.timerRedDark] as const;
 }
 
@@ -117,8 +114,8 @@ export function TimerBar({
       onExpire?.();
     }
 
-    // Start pulsing when critical (< 10%)
-    if (newProgress < 0.1 && newProgress > 0) {
+    // Start pulsing when critical (< 25%)
+    if (newProgress < 0.25 && newProgress > 0) {
       if (!hasTriggeredUrgency) {
         setHasTriggeredUrgency(true);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -207,8 +204,6 @@ export function TimerBar({
     ? colors.timerGreen
     : currentProgress > 0.25
     ? colors.timerYellow
-    : currentProgress > 0.1
-    ? colors.timerOrange
     : colors.timerRed;
 
   return (
@@ -216,7 +211,7 @@ export function TimerBar({
       {(showLabel || showTimeLeft) && (
         <View style={styles.labelRow}>
           <Text style={[styles.clockIcon, { fontSize: config.iconSize }]}>
-            {currentProgress <= 0.1 ? '🔥' : '⏱️'}
+            {currentProgress <= 0.25 ? '🔥' : '⏱️'}
           </Text>
           <Text
             style={[
@@ -255,7 +250,7 @@ export function TimerBar({
           </Animated.View>
 
           {/* Urgency glow overlay */}
-          {currentProgress <= 0.1 && currentProgress > 0 && (
+          {currentProgress <= 0.25 && currentProgress > 0 && (
             <Animated.View
               style={[
                 styles.glowOverlay,
