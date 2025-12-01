@@ -22,9 +22,21 @@ export function SplashScreen() {
       useNativeDriver: true,
     }).start();
 
-    // Auto-advance after 1 second
-    const timer = setTimeout(() => {
-      navigation.replace('Onboarding');
+    // Check session and navigate accordingly after 1 second
+    const timer = setTimeout(async () => {
+      // Navigation will be handled by RootNavigator based on auth state
+      // If no session, go to onboarding; otherwise RootNavigator will route to Main
+      const { supabase } = await import('../../services/supabase');
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        // User is authenticated, RootNavigator will handle navigation to Main
+        // No need to navigate here as RootNavigator will switch stacks
+        return;
+      } else {
+        // No session, go to onboarding
+        navigation.replace('Onboarding');
+      }
     }, 1000);
 
     return () => clearTimeout(timer);

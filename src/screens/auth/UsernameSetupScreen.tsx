@@ -20,19 +20,19 @@ import { validateUsername } from '../../utils/validation';
 import { config } from '../../constants/config';
 import type { AuthStackParamList } from '../../types';
 
-// Premium auth color palette
+// iOS auth color palette
 const authColors = {
   background: '#FFFFFF',
-  textPrimary: '#1A1A2E',
-  textSecondary: '#64748B',
-  textPlaceholder: '#94A3B8',
-  primary: '#FF6B6B',
-  inputBackground: '#F8F9FA',
-  inputBorder: '#E2E8F0',
-  inputBorderFocused: '#FF6B6B',
-  error: '#EF4444',
-  success: '#22C55E',
-  backButtonBg: '#F8F9FA',
+  textPrimary: '#000000',
+  textSecondary: '#8E8E93',
+  textPlaceholder: '#C7C7CC',
+  primary: '#007AFF',
+  inputBackground: '#F2F2F7',
+  inputBorder: '#E5E5EA',
+  inputBorderFocused: '#007AFF',
+  error: '#FF3B30',
+  success: '#34C759',
+  backButtonBg: '#F2F2F7',
 };
 
 type UsernameSetupNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'UsernameSetup'>;
@@ -170,7 +170,7 @@ export function UsernameSetupScreen() {
       return (
         <View style={styles.statusContainer}>
           <ActivityIndicator size="small" color={authColors.textSecondary} />
-          <Text style={styles.statusText}>Checking...</Text>
+          <Text style={styles.statusText}>Checking availability...</Text>
         </View>
       );
     }
@@ -178,7 +178,7 @@ export function UsernameSetupScreen() {
     if (error) {
       return (
         <View style={styles.statusContainer}>
-          <Ionicons name="close-circle" size={16} color={authColors.error} />
+          <Text style={styles.statusIcon}>✗</Text>
           <Text style={[styles.statusText, styles.statusError]}>{error}</Text>
         </View>
       );
@@ -187,7 +187,7 @@ export function UsernameSetupScreen() {
     if (isAvailable === true) {
       return (
         <View style={styles.statusContainer}>
-          <Ionicons name="checkmark-circle" size={16} color={authColors.success} />
+          <Text style={styles.statusIconSuccess}>✓</Text>
           <Text style={[styles.statusText, styles.statusSuccess]}>Available</Text>
         </View>
       );
@@ -214,7 +214,7 @@ export function UsernameSetupScreen() {
 
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>Choose a Username</Text>
+            <Text style={styles.title}>Choose Your Username</Text>
             <Text style={styles.subtitle}>
               This is how friends will find you
             </Text>
@@ -237,7 +237,7 @@ export function UsernameSetupScreen() {
               ]}>@</Text>
               <TextInput
                 style={styles.input}
-                placeholder="username"
+                placeholder="_"
                 placeholderTextColor={authColors.textPlaceholder}
                 value={username}
                 onChangeText={handleUsernameChange}
