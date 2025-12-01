@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -129,9 +130,55 @@ export function LocationSearchScreen() {
     }
   }, [navigation]);
 
-  const handleUseCurrentLocation = useCallback(() => {
-    if (currentLocationData) {
+  const handleUseCurrentLocation = useCallback(async () => {
+    // If we already have current location data, use it
+    if (currentLocationData && currentLocationData.name !== 'Location Unknown' && 
+        currentLocationData.lat !== 0 && currentLocationData.lng !== 0) {
       handleSelectLocation(currentLocationData);
+      return;
+    }
+
+    // Otherwise, try to load current location
+    setIsLoadingCurrent(true);
+    try {
+      // Check permission first
+      const hasPermission = await hasLocationPermission();
+      
+      if (!hasPermission) {
+        Alert.alert(
+          'Location Permission Required',
+          'Please grant location permission to use your current location.',
+          [{ text: 'OK' }]
+        );
+        setIsLoadingCurrent(false);
+        return;
+      }
+      
+      const { data, error } = await getCurrentLocationWithAddress();
+      
+      if (error || !data) {
+        Alert.alert(
+          'Location Error',
+          error?.message || 'Failed to get your current location. Please try searching for a location instead.',
+          [{ text: 'OK' }]
+        );
+        setIsLoadingCurrent(false);
+        return;
+      }
+
+      if (data) {
+        setCurrentLocationData(data);
+        handleSelectLocation(data);
+      }
+    } catch (err) {
+      console.error('Error loading current location:', err);
+      Alert.alert(
+        'Error',
+        'Failed to get your current location. Please try searching for a location instead.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsLoadingCurrent(false);
     }
   }, [currentLocationData, handleSelectLocation]);
 

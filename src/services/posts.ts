@@ -28,13 +28,23 @@ export async function createPost(
     // Convert to Uint8Array for Supabase storage upload
     let fileData: Uint8Array;
     try {
-      // Read file as base64
-      // expo-file-system readAsStringAsync accepts encoding as string or EncodingType enum
+      // First, check if file exists
+      const fileInfo = await FileSystem.getInfoAsync(mediaUri);
+      if (!fileInfo.exists) {
+        console.error('File does not exist:', mediaUri);
+        return {
+          data: null,
+          error: { message: 'Media file not found. Please try capturing again.' },
+        };
+      }
+
+      // Read file as base64 - use string literal 'base64' for compatibility
       const base64 = await FileSystem.readAsStringAsync(mediaUri, {
-        encoding: FileSystem.EncodingType?.Base64 || 'base64',
-      } as any);
+        encoding: 'base64',
+      });
 
       if (!base64 || base64.length === 0) {
+        console.error('File is empty:', mediaUri);
         return {
           data: null,
           error: { message: 'Media file is empty. Please try capturing again.' },
@@ -42,10 +52,19 @@ export async function createPost(
       }
 
       // Convert base64 to Uint8Array
-      const binaryString = atob(base64);
-      fileData = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        fileData[i] = binaryString.charCodeAt(i);
+      // Use a more robust conversion method
+      try {
+        const binaryString = atob(base64);
+        fileData = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          fileData[i] = binaryString.charCodeAt(i);
+        }
+      } catch (conversionError) {
+        console.error('Base64 conversion error:', conversionError);
+        return {
+          data: null,
+          error: { message: 'Failed to process media file. Please try capturing again.' },
+        };
       }
 
       // Check file size (max 10MB)
@@ -58,16 +77,27 @@ export async function createPost(
           },
         };
       }
+
+      console.log(`File read successfully: ${fileData.length} bytes`);
     } catch (fileError: any) {
       console.error('File read error:', fileError);
       console.error('Media URI:', mediaUri);
+      console.error('Error details:', JSON.stringify(fileError, null, 2));
       
       let errorMessage = 'Failed to read media file. Please try capturing again.';
-      if (fileError.message?.includes('Network')) {
-        errorMessage = 'Network error. Please check your connection and try again.';
-      } else if (mediaType === 'video') {
+      if (fileError.message) {
+        if (fileError.message.includes('Network') || fileError.message.includes('network')) {
+          errorMessage = 'Network error. Please check your connection and try again.';
+        } else if (fileError.message.includes('ENOENT') || fileError.message.includes('not found')) {
+          errorMessage = 'Media file not found. Please try capturing again.';
+        } else if (fileError.message.includes('permission') || fileError.message.includes('Permission')) {
+          errorMessage = 'Permission denied. Please grant media access and try again.';
+        }
+      }
+      
+      if (mediaType === 'video') {
         errorMessage = 'Failed to read video file. Please try recording again.';
-      } else {
+      } else if (mediaType === 'image') {
         errorMessage = 'Failed to read image file. Please try capturing again.';
       }
       
