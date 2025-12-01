@@ -17,11 +17,16 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.tonight.app",
+      "buildNumber": "1",
       "infoPlist": {
         "NSCameraUsageDescription": "Tonight needs camera access to take photos and videos to share with friends.",
         "NSMicrophoneUsageDescription": "Tonight needs microphone access to record videos with audio.",
         "NSPhotoLibraryUsageDescription": "Tonight needs photo library access to save your posts.",
-        "NSLocationWhenInUseUsageDescription": "Tonight uses your location to show where your posts are from."
+        "NSLocationWhenInUseUsageDescription": "Tonight uses your location to show where your posts are from.",
+        "NSUserTrackingUsageDescription": "We use tracking to improve your experience and show you relevant content."
+      },
+      "config": {
+        "usesNonExemptEncryption": false
       }
     },
     "android": {

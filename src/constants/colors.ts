@@ -1,68 +1,68 @@
 // Color system for THE TONIGHT APP
-// Following iOS design guidelines with FOMO-driving timer colors
+// Premium design with vibrant sunset gradients for energy and FOMO
 
 export const colors = {
-  // Primary - iOS Blue for trust and familiarity
-  primary: '#007AFF',
-  primaryDark: '#0056B3',
-  primaryLight: '#4DA3FF',
-  primaryGradient: ['#007AFF', '#5AC8FA'] as const,
+  // Primary - Vibrant sunset gradient for energy (THE SIGNATURE LOOK)
+  primary: '#FF6B6B',
+  primaryDark: '#E85555',
+  primaryLight: '#FF8E8E',
+  primaryGradient: ['#FF6B6B', '#FF8E53'] as const,
 
   // Secondary - Deep purple for contrast and premium feel
-  secondary: '#5856D6',
+  secondary: '#6366F1',
   secondaryDark: '#4F46E5',
   secondaryLight: '#818CF8',
-  secondaryGradient: ['#5856D6', '#AF52DE'] as const,
+  secondaryGradient: ['#6366F1', '#8B5CF6'] as const,
 
   // Accent - Teal for highlights
-  accent: '#34C759',
-  accentLight: '#30D158',
+  accent: '#22C55E',
+  accentLight: '#4ADE80',
 
-  // Backgrounds - Clean iOS style
+  // Backgrounds - Clean premium style
   background: '#FFFFFF',
-  surface: '#F2F2F7',
-  surfaceSecondary: '#E5E5EA',
+  surface: '#F8FAFC',
+  surfaceSecondary: '#F1F5F9',
   surfaceElevated: '#FFFFFF',
 
-  // Text - iOS standard colors
-  text: '#000000',
-  textSecondary: '#8E8E93',
-  textTertiary: '#AEAEB2',
+  // Text - Premium slate tones
+  text: '#0F172A',
+  textSecondary: '#64748B',
+  textTertiary: '#94A3B8',
   textInverse: '#FFFFFF',
 
   // Borders & Dividers
-  border: '#C6C6C8',
-  borderLight: '#E5E5EA',
-  borderFocus: '#007AFF',
-  divider: '#C6C6C8',
+  border: '#E2E8F0',
+  borderLight: '#F1F5F9',
+  borderFocus: '#FF6B6B',
+  divider: '#E2E8F0',
 
   // Timer Colors (THE FOMO DRIVERS - Most important!)
-  timerGreen: '#34C759',
-  timerGreenLight: '#D1FAE5',
-  timerGreenDark: '#22C55E',
-  timerYellow: '#FFCC00',
+  timerGreen: '#22C55E',
+  timerGreenLight: '#DCFCE7',
+  timerGreenDark: '#16A34A',
+  timerYellow: '#EAB308',
   timerYellowLight: '#FEF9C3',
-  timerYellowDark: '#EAB308',
-  timerOrange: '#FF9500',
+  timerYellowDark: '#D97706',
+  timerOrange: '#F97316',
   timerOrangeLight: '#FED7AA',
-  timerRed: '#FF3B30',
+  timerRed: '#EF4444',
   timerRedLight: '#FEE2E2',
   timerRedDark: '#DC2626',
 
-  // Semantic colors (iOS standard)
-  success: '#34C759',
-  successLight: '#D1FAE5',
-  warning: '#FF9500',
+  // Semantic colors
+  success: '#22C55E',
+  successLight: '#DCFCE7',
+  warning: '#F59E0B',
   warningLight: '#FEF3C7',
-  error: '#FF3B30',
+  error: '#EF4444',
   errorLight: '#FEE2E2',
-  info: '#007AFF',
-  infoLight: '#E3F2FF',
+  info: '#3B82F6',
+  infoLight: '#DBEAFE',
 
   // Reactions
-  reactionBackground: '#F2F2F7',
-  reactionActive: '#E3F2FF',
-  reactionBorder: '#007AFF',
+  reactionBackground: '#F1F5F9',
+  reactionActive: '#DBEAFE',
+  reactionBorder: '#3B82F6',
 
   // Neutral colors
   white: '#FFFFFF',
@@ -81,6 +81,9 @@ export const colors = {
   // Glassmorphism
   glass: 'rgba(255, 255, 255, 0.8)',
   glassDark: 'rgba(0, 0, 0, 0.4)',
+
+  // Heart animation color
+  heartRed: '#FF3B6F',
 
   // Dark mode colors
   dark: {
