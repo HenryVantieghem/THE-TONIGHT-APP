@@ -115,23 +115,27 @@ export function validateCaption(caption: string): {
 export function validateSignUpForm(
   email: string,
   password: string,
-  confirmPassword: string
+  confirmPassword: string,
+  username?: string
 ): {
   isValid: boolean;
   errors: {
     email?: string;
     password?: string;
     confirmPassword?: string;
+    username?: string;
   };
 } {
   const emailResult = validateEmail(email);
   const passwordResult = validatePassword(password);
   const confirmResult = validateConfirmPassword(password, confirmPassword);
+  const usernameResult = username ? validateUsername(username) : { isValid: true };
 
   const errors: {
     email?: string;
     password?: string;
     confirmPassword?: string;
+    username?: string;
   } = {};
 
   if (!emailResult.isValid) {
@@ -144,6 +148,10 @@ export function validateSignUpForm(
 
   if (!confirmResult.isValid) {
     errors.confirmPassword = confirmResult.error;
+  }
+
+  if (username && !usernameResult.isValid) {
+    errors.username = usernameResult.error;
   }
 
   return {

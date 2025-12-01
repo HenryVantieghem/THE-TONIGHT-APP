@@ -74,10 +74,10 @@ export function useAuth() {
 
   // Sign up
   const signUp = useCallback(
-    async (email: string, password: string) => {
+    async (email: string, password: string, username?: string) => {
       setIsLoading(true);
       try {
-        const result = await authService.signUp(email, password);
+        const result = await authService.signUp(email, password, username);
         return result;
       } finally {
         setIsLoading(false);

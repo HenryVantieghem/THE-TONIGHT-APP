@@ -16,7 +16,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../hooks/useAuth';
-import { validateSignUpForm } from '../../utils/validation';
+import { validateSignUpForm, validateUsername } from '../../utils/validation';
+import { config } from '../../constants/config';
 import type { AuthStackParamList } from '../../types';
 
 // Premium auth color palette
@@ -32,24 +33,64 @@ type SignUpNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'SignU
 
 export function SignUpScreen() {
   const navigation = useNavigation<SignUpNavigationProp>();
-  const { signUp } = useAuth();
+  const { signUp, checkUsernameAvailable } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [username, setUsername] = useState('');
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+  const [isUsernameAvailable, setIsUsernameAvailable] = useState<boolean | null>(null);
   const [errors, setErrors] = useState<{
     email?: string;
     password?: string;
     confirmPassword?: string;
+    username?: string;
   }>({});
   const [isLoading, setIsLoading] = useState(false);
 
+  const handleUsernameChange = async (text: string) => {
+    const sanitized = text.toLowerCase().replace(/[^a-z0-9_]/g, '');
+    setUsername(sanitized);
+    setIsUsernameAvailable(null);
+    setErrors((prev) => ({ ...prev, username: undefined }));
+
+    // Validate format
+    const validation = validateUsername(sanitized);
+    if (!validation.isValid && sanitized.length > 0) {
+      setErrors((prev) => ({ ...prev, username: validation.error }));
+      return;
+    }
+
+    // Check availability if valid
+    if (validation.isValid && sanitized.length >= config.USERNAME.MIN_LENGTH) {
+      setIsCheckingUsername(true);
+      try {
+        const { data } = await checkUsernameAvailable(sanitized);
+        setIsUsernameAvailable(data ?? false);
+        if (data === false) {
+          setErrors((prev) => ({ ...prev, username: 'Username taken' }));
+        }
+      } catch (err) {
+        console.error('Username check error:', err);
+      } finally {
+        setIsCheckingUsername(false);
+      }
+    }
+  };
+
   const handleSignUp = async () => {
     // Validate form
-    const validation = validateSignUpForm(email, password, confirmPassword);
+    const validation = validateSignUpForm(email, password, confirmPassword, username);
 
     if (!validation.isValid) {
       setErrors(validation.errors);
+      return;
+    }
+
+    // Check username availability if provided
+    if (username && isUsernameAvailable !== true) {
+      setErrors((prev) => ({ ...prev, username: 'Please choose an available username' }));
       return;
     }
 
@@ -57,7 +98,7 @@ export function SignUpScreen() {
     setIsLoading(true);
 
     try {
-      const { data, error } = await signUp(email, password);
+      const { data, error } = await signUp(email, password, username || undefined);
 
       if (error) {
         Alert.alert('Sign Up Failed', error.message);
@@ -65,7 +106,12 @@ export function SignUpScreen() {
       }
 
       if (data) {
-        navigation.replace('UsernameSetup');
+        // If username was provided, skip username setup and go to permissions
+        if (username) {
+          navigation.replace('Permissions');
+        } else {
+          navigation.replace('UsernameSetup');
+        }
       }
     } catch (err) {
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
@@ -143,6 +189,19 @@ export function SignUpScreen() {
               error={errors.confirmPassword}
               isPassword
               autoComplete="new-password"
+            />
+
+            <Input
+              label="Username (Optional)"
+              placeholder="username"
+              value={username}
+              onChangeText={handleUsernameChange}
+              error={errors.username}
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="username"
+              maxLength={config.USERNAME.MAX_LENGTH}
+              hint={isCheckingUsername ? 'Checking...' : isUsernameAvailable === true ? 'Available' : '3-20 characters, letters and numbers only'}
             />
 
             <Button

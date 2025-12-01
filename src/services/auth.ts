@@ -4,7 +4,8 @@ import type { User, ApiResponse } from '../types';
 // Sign up with email and password
 export async function signUp(
   email: string,
-  password: string
+  password: string,
+  username?: string
 ): Promise<ApiResponse<{ userId: string }>> {
   try {
     const { data, error } = await supabase.auth.signUp({
@@ -39,13 +40,23 @@ export async function signUp(
         .from(TABLES.PROFILES)
         .insert({
           id: data.user.id,
-          username: null,
+          username: username ? username.toLowerCase() : null,
           avatar_url: null,
         });
 
       if (profileError && profileError.code !== '23505') {
         // Only log non-duplicate errors
         console.error('Error creating profile:', profileError);
+      }
+    } else if (username) {
+      // Update existing profile with username if provided
+      const { error: updateError } = await supabase
+        .from(TABLES.PROFILES)
+        .update({ username: username.toLowerCase() })
+        .eq('id', data.user.id);
+
+      if (updateError && updateError.code !== '23505') {
+        console.error('Error updating profile with username:', updateError);
       }
     }
 
