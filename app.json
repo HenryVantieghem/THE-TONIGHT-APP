@@ -71,7 +71,6 @@
           "cameraPermission": "Tonight needs camera access to take photos."
         }
       ],
-      "expo-av",
       "expo-video"
     ],
     "extra": {
