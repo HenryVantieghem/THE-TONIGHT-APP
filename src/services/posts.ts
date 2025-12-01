@@ -1,5 +1,7 @@
 import { supabase, TABLES, BUCKETS } from './supabase';
 import { config } from '../constants/config';
+import * as FileSystem from 'expo-file-system';
+import { decode } from 'base64-arraybuffer';
 import type { Post, Reaction, ReactionEmoji, CreatePostPayload, ApiResponse } from '../types';
 
 // Create a new post
@@ -23,28 +25,22 @@ export async function createPost(
       };
     }
 
-    // Read file using fetch (recommended for SDK 54, no deprecation warnings)
-    let fileBlob: Blob;
+    // Read file using expo-file-system (most reliable in React Native)
+    let fileData: ArrayBuffer;
     let fileSize: number;
     
     try {
-      // Use fetch to read the file - React Native fetch handles file:// URIs correctly
-      const response = await fetch(mediaUri);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch media: ${response.status} ${response.statusText}`);
-      }
+      // Get file info first to check size
+      const fileInfo = await FileSystem.getInfoAsync(mediaUri);
 
-      fileBlob = await response.blob();
-
-      if (!fileBlob || fileBlob.size === 0) {
+      if (!fileInfo.exists) {
         return {
           data: null,
-          error: { message: 'Media file is empty. Please try capturing again.' },
+          error: { message: 'Media file not found. Please try capturing again.' },
         };
       }
 
-      fileSize = fileBlob.size;
+      fileSize = fileInfo.size || 0;
 
       // Check file size (max 10MB)
       const maxSize = config.MAX_MEDIA_SIZE_MB * 1024 * 1024;
@@ -56,6 +52,21 @@ export async function createPost(
           },
         };
       }
+
+      // Read file as base64
+      const base64Data = await FileSystem.readAsStringAsync(mediaUri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      if (!base64Data || base64Data.length === 0) {
+        return {
+          data: null,
+          error: { message: 'Media file is empty. Please try capturing again.' },
+        };
+      }
+
+      // Convert base64 to ArrayBuffer
+      fileData = decode(base64Data);
 
       console.log(`File read successfully: ${fileSize} bytes`);
     } catch (fileError: any) {
@@ -80,10 +91,10 @@ export async function createPost(
       };
     }
 
-    // Upload to Supabase storage using Blob (recommended for React Native)
+    // Upload to Supabase storage using ArrayBuffer
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(BUCKETS.POST_MEDIA)
-      .upload(fileName, fileBlob, {
+      .upload(fileName, fileData, {
         contentType,
         cacheControl: '3600',
         upsert: false,

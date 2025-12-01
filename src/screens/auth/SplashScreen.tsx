@@ -12,31 +12,23 @@ type SplashNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Splas
 export function SplashScreen() {
   const navigation = useNavigation<SplashNavigationProp>();
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
-  const scaleAnim = React.useRef(new Animated.Value(0.8)).current;
 
   useEffect(() => {
+    // Check auth state during splash
     // Animate logo appearance
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 500,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        friction: 8,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
 
-    // Navigate after delay
+    // Auto-advance after 1 second
     const timer = setTimeout(() => {
       navigation.replace('Onboarding');
-    }, 1500);
+    }, 1000);
 
     return () => clearTimeout(timer);
-  }, [fadeAnim, scaleAnim, navigation]);
+  }, [fadeAnim, navigation]);
 
   return (
     <View style={styles.container}>
@@ -45,13 +37,13 @@ export function SplashScreen() {
           styles.content,
           {
             opacity: fadeAnim,
-            transform: [{ scale: scaleAnim }],
           },
         ]}
       >
-        <DiscoBallLogo size={80} animated={true} />
+        <View style={styles.logoContainer}>
+          <DiscoBallLogo size={80} animated={false} />
+        </View>
         <Text style={styles.title}>Tonight</Text>
-        <Text style={styles.subtitle}>What's happening right now?</Text>
       </Animated.View>
     </View>
   );
@@ -60,23 +52,20 @@ export function SplashScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
   content: {
     alignItems: 'center',
   },
-  title: {
-    fontSize: typography.sizes.display + 12,
-    fontWeight: typography.weights.bold,
-    color: colors.white,
-    marginBottom: 12,
-    letterSpacing: -1,
+  logoContainer: {
+    marginBottom: 24,
   },
-  subtitle: {
-    fontSize: typography.sizes.lg,
-    color: colors.white,
-    opacity: 0.85,
+  title: {
+    fontSize: typography.sizes.display,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+    letterSpacing: -0.5,
   },
 });

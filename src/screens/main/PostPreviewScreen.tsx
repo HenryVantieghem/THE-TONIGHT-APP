@@ -197,15 +197,27 @@ export function PostPreviewScreen() {
   // Configure video player when it's created
   useEffect(() => {
     if (mediaType === 'video' && videoPlayer) {
-      videoPlayer.loop = true;
-      videoPlayer.muted = true;
-      videoPlayer.play();
+      try {
+        videoPlayer.loop = true;
+        videoPlayer.muted = true;
+        videoPlayer.play();
+      } catch (error) {
+        console.warn('Error configuring video player:', error);
+      }
     }
     
     // Cleanup: pause video when component unmounts
     return () => {
-      if (videoPlayer) {
-        videoPlayer.pause();
+      if (videoPlayer && mediaType === 'video') {
+        try {
+          // Check if player is still valid before calling pause
+          if (videoPlayer.currentTime !== undefined) {
+            videoPlayer.pause();
+          }
+        } catch (error) {
+          // Silently ignore cleanup errors - player may already be destroyed
+          console.warn('Error pausing video player during cleanup:', error);
+        }
       }
     };
   }, [mediaType, videoPlayer]);

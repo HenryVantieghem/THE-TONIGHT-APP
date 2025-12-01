@@ -9,23 +9,22 @@
     "newArchEnabled": true,
     "scheme": "tonight",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#FF6B6B"
     },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.tonight.app",
-      "buildNumber": "1",
+      "bundleIdentifier": "com.henryvantieghem.tonight",
+      "buildNumber": "2",
       "infoPlist": {
-        "NSCameraUsageDescription": "Tonight needs camera access to take photos and videos to share with friends.",
-        "NSMicrophoneUsageDescription": "Tonight needs microphone access to record videos with audio.",
-        "NSPhotoLibraryUsageDescription": "Tonight needs photo library access to save your posts.",
-        "NSLocationWhenInUseUsageDescription": "Tonight uses your location to show where your posts are from.",
-        "NSUserTrackingUsageDescription": "We use tracking to improve your experience and show you relevant content."
+        "NSCameraUsageDescription": "Tonight needs camera access to capture and share moments with friends.",
+        "NSPhotoLibraryUsageDescription": "Tonight needs photo library access to share photos with friends.",
+        "NSLocationWhenInUseUsageDescription": "Tonight shows your location on posts so friends know where you are.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Tonight shows your location on posts so friends know where you are."
       },
       "config": {
         "usesNonExemptEncryption": false
@@ -34,15 +33,15 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#FF6B6B"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.tonight.app",
+      "package": "com.henryvantieghem.tonight",
       "permissions": [
-        "CAMERA",
-        "RECORD_AUDIO",
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
       ]
     },
     "web": {
@@ -75,8 +74,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "your-project-id"
+        "projectId": "4b2be6d8-d112-4b2a-9606-d40033918c65"
       }
-    }
+    },
+    "owner": "henryvantieghem"
   }
 }

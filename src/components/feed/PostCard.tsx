@@ -76,15 +76,27 @@ export function PostCard({
   // Configure video player when it's created
   useEffect(() => {
     if (post.media_type === 'video' && videoPlayer) {
-      videoPlayer.loop = true;
-      videoPlayer.muted = true;
-      videoPlayer.play();
+      try {
+        videoPlayer.loop = true;
+        videoPlayer.muted = true;
+        videoPlayer.play();
+      } catch (error) {
+        console.warn('Error configuring video player:', error);
+      }
     }
     
     // Cleanup: pause video when component unmounts or post changes
     return () => {
-      if (videoPlayer) {
-        videoPlayer.pause();
+      if (videoPlayer && post.media_type === 'video') {
+        try {
+          // Check if player is still valid before calling pause
+          if (videoPlayer.currentTime !== undefined) {
+            videoPlayer.pause();
+          }
+        } catch (error) {
+          // Silently ignore cleanup errors - player may already be destroyed
+          console.warn('Error pausing video player during cleanup:', error);
+        }
       }
     };
   }, [post.media_type, post.media_url, videoPlayer]);

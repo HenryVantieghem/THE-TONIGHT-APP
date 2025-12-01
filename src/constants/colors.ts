@@ -1,13 +1,13 @@
 // Color system for THE TONIGHT APP
-// Premium design with vibrant sunset gradients for energy and FOMO
-// Enhanced with Apple's Liquid Glass design language (iOS 26+)
+// iOS Design System - SF Pro, iOS Blue, Clean & Modern
+// Based on complete UI/UX specification
 
 export const colors = {
-  // Primary - Vibrant sunset gradient for energy (THE SIGNATURE LOOK)
-  primary: '#FF6B6B',
-  primaryDark: '#E85555',
-  primaryLight: '#FF8E8E',
-  primaryGradient: ['#FF6B6B', '#FF8E53'] as const,
+  // Primary - iOS Blue (THE SIGNATURE LOOK)
+  primary: '#007AFF',
+  primaryDark: '#0051D5',
+  primaryLight: '#5AC8FA',
+  primaryGradient: ['#007AFF', '#5AC8FA'] as const,
 
   // Secondary - Deep purple for contrast and premium feel
   secondary: '#6366F1',
@@ -19,36 +19,36 @@ export const colors = {
   accent: '#22C55E',
   accentLight: '#4ADE80',
 
-  // Backgrounds - Clean premium style
+  // Backgrounds - iOS Clean Style
   background: '#FFFFFF',
-  surface: '#F8FAFC',
-  surfaceSecondary: '#F1F5F9',
+  surface: '#F2F2F7',
+  surfaceSecondary: '#FFFFFF',
   surfaceElevated: '#FFFFFF',
 
-  // Text - Premium slate tones
-  text: '#0F172A',
-  textSecondary: '#64748B',
-  textTertiary: '#94A3B8',
+  // Text - iOS Text Colors
+  text: '#000000',
+  textSecondary: '#8E8E93',
+  textTertiary: '#C7C7CC',
   textInverse: '#FFFFFF',
 
-  // Borders & Dividers
-  border: '#E2E8F0',
-  borderLight: '#F1F5F9',
-  borderFocus: '#FF6B6B',
-  divider: '#E2E8F0',
+  // Borders & Dividers - iOS Style
+  border: '#E5E5EA',
+  borderLight: '#F2F2F7',
+  borderFocus: '#007AFF',
+  divider: '#E5E5EA',
 
   // Timer Colors (THE FOMO DRIVERS - Most important!)
-  timerGreen: '#22C55E',
+  timerGreen: '#34C759',
   timerGreenLight: '#DCFCE7',
-  timerGreenDark: '#16A34A',
-  timerYellow: '#EAB308',
+  timerGreenDark: '#30D158',
+  timerYellow: '#FFCC00',
   timerYellowLight: '#FEF9C3',
-  timerYellowDark: '#D97706',
-  timerOrange: '#F97316',
+  timerYellowDark: '#FF9500',
+  timerOrange: '#FF9500',
   timerOrangeLight: '#FED7AA',
-  timerRed: '#EF4444',
+  timerRed: '#FF3B30',
   timerRedLight: '#FEE2E2',
-  timerRedDark: '#DC2626',
+  timerRedDark: '#FF2D55',
 
   // Semantic colors
   success: '#22C55E',

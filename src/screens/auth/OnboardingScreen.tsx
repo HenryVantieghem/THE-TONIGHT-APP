@@ -17,15 +17,15 @@ import type { AuthStackParamList } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-// Premium auth color palette
+// iOS auth color palette
 const authColors = {
   background: '#FFFFFF',
-  textPrimary: '#1A1A2E',
-  textSecondary: '#64748B',
-  primary: '#FF6B6B',
-  primaryGradient: ['#FF6B6B', '#FF8E53'] as const,
-  dotActive: '#FF6B6B',
-  dotInactive: '#E2E8F0',
+  textPrimary: '#000000',
+  textSecondary: '#8E8E93',
+  primary: '#007AFF',
+  primaryGradient: ['#007AFF', '#5AC8FA'] as const,
+  dotActive: '#007AFF',
+  dotInactive: '#E5E5EA',
 };
 
 type OnboardingNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Onboarding'>;
@@ -42,23 +42,23 @@ const slides: OnboardingSlide[] = [
   {
     id: '1',
     icon: 'camera',
-    iconColor: '#FF6B6B',
-    title: 'Share What You\'re Doing',
-    subtitle: 'Capture moments and share them with your friends instantly.',
+    iconColor: '#007AFF',
+    title: 'Share What You\'re Doing Now',
+    subtitle: 'Post a photo with your location',
   },
   {
     id: '2',
     icon: 'people',
-    iconColor: '#6366F1',
-    title: 'See Your Friends',
-    subtitle: 'Discover what your friends are up to right now, in real-time.',
+    iconColor: '#007AFF',
+    title: 'See Where Your Friends Are',
+    subtitle: 'Discover what your friends are up to right now',
   },
   {
     id: '3',
     icon: 'time',
-    iconColor: '#22C55E',
-    title: 'Posts Vanish in 1 Hour',
-    subtitle: 'No pressure, no permanence. Just live in the moment.',
+    iconColor: '#007AFF',
+    title: 'Posts Vanish After 1 Hour',
+    subtitle: 'Live in the now. No pressure, just authentic moments.',
   },
 ];
 
@@ -214,22 +214,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: authColors.background,
   },
-  brandHeader: {
-    alignItems: 'center',
-    paddingTop: 16,
-    paddingBottom: 8,
-  },
-  brandGradient: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  brandText: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: -0.5,
-  },
   slideContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -262,8 +246,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   slideTitle: {
-    fontSize: 28,
-    fontWeight: '700',
+    fontSize: typography.sizes.xxxl,
+    fontWeight: typography.weights.bold,
     color: authColors.textPrimary,
     textAlign: 'center',
     marginBottom: 12,
@@ -271,10 +255,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   slideSubtitle: {
-    fontSize: 16,
+    fontSize: typography.sizes.md,
     color: authColors.textSecondary,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 22,
     paddingHorizontal: 24,
   },
   pagination: {
