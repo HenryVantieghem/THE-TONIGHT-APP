@@ -97,6 +97,21 @@ export async function createPost(
       };
     }
 
+    // Validate location coordinates are valid numbers
+    if (
+      isNaN(location.lat) ||
+      isNaN(location.lng) ||
+      location.lat < -90 ||
+      location.lat > 90 ||
+      location.lng < -180 ||
+      location.lng > 180
+    ) {
+      return {
+        data: null,
+        error: { message: 'Invalid location coordinates. Please select a valid location.' },
+      };
+    }
+
     // Insert post record
     const { data: postData, error: postError } = await supabase
       .from(TABLES.POSTS)

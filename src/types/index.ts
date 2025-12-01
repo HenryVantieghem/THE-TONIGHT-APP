@@ -133,6 +133,7 @@ export type MainStackParamList = {
   Profile: { userId?: string };
   Settings: undefined;
   Friends: undefined;
+  MockData: undefined;
 };
 
 // API Response types

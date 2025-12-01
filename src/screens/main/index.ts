@@ -5,3 +5,4 @@ export { LocationSearchScreen } from './LocationSearchScreen';
 export { ProfileScreen } from './ProfileScreen';
 export { SettingsScreen } from './SettingsScreen';
 export { FriendsScreen } from './FriendsScreen';
+export { MockDataScreen } from './MockDataScreen';
