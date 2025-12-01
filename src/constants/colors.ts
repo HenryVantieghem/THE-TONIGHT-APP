@@ -1,68 +1,68 @@
-// Premium color system for THE TONIGHT APP
-// Designed to create a visually stunning $1B app experience
+// Color system for THE TONIGHT APP
+// Following iOS design guidelines with FOMO-driving timer colors
 
 export const colors = {
-  // Primary - Vibrant sunset gradient for energy and FOMO
-  primary: '#FF6B6B',
-  primaryDark: '#E55555',
-  primaryLight: '#FF8585',
-  primaryGradient: ['#FF6B6B', '#FF8E53'] as const,
+  // Primary - iOS Blue for trust and familiarity
+  primary: '#007AFF',
+  primaryDark: '#0056B3',
+  primaryLight: '#4DA3FF',
+  primaryGradient: ['#007AFF', '#5AC8FA'] as const,
 
   // Secondary - Deep purple for contrast and premium feel
-  secondary: '#6366F1',
+  secondary: '#5856D6',
   secondaryDark: '#4F46E5',
   secondaryLight: '#818CF8',
-  secondaryGradient: ['#6366F1', '#8B5CF6'] as const,
+  secondaryGradient: ['#5856D6', '#AF52DE'] as const,
 
   // Accent - Teal for highlights
-  accent: '#14B8A6',
-  accentLight: '#2DD4BF',
+  accent: '#34C759',
+  accentLight: '#30D158',
 
-  // Backgrounds - Clean and modern
+  // Backgrounds - Clean iOS style
   background: '#FFFFFF',
-  surface: '#F8FAFC',
-  surfaceSecondary: '#F1F5F9',
+  surface: '#F2F2F7',
+  surfaceSecondary: '#E5E5EA',
   surfaceElevated: '#FFFFFF',
 
-  // Text - High contrast and readability
-  text: '#0F172A',
-  textSecondary: '#64748B',
-  textTertiary: '#94A3B8',
+  // Text - iOS standard colors
+  text: '#000000',
+  textSecondary: '#8E8E93',
+  textTertiary: '#AEAEB2',
   textInverse: '#FFFFFF',
 
   // Borders & Dividers
-  border: '#E2E8F0',
-  borderLight: '#F1F5F9',
-  borderFocus: '#FF6B6B',
-  divider: '#E2E8F0',
+  border: '#C6C6C8',
+  borderLight: '#E5E5EA',
+  borderFocus: '#007AFF',
+  divider: '#C6C6C8',
 
   // Timer Colors (THE FOMO DRIVERS - Most important!)
-  timerGreen: '#22C55E',
-  timerGreenLight: '#DCFCE7',
-  timerGreenDark: '#16A34A',
-  timerYellow: '#EAB308',
+  timerGreen: '#34C759',
+  timerGreenLight: '#D1FAE5',
+  timerGreenDark: '#22C55E',
+  timerYellow: '#FFCC00',
   timerYellowLight: '#FEF9C3',
-  timerYellowDark: '#CA8A04',
-  timerOrange: '#F97316',
+  timerYellowDark: '#EAB308',
+  timerOrange: '#FF9500',
   timerOrangeLight: '#FED7AA',
-  timerRed: '#EF4444',
+  timerRed: '#FF3B30',
   timerRedLight: '#FEE2E2',
   timerRedDark: '#DC2626',
 
-  // Semantic colors
-  success: '#22C55E',
-  successLight: '#DCFCE7',
-  warning: '#F59E0B',
+  // Semantic colors (iOS standard)
+  success: '#34C759',
+  successLight: '#D1FAE5',
+  warning: '#FF9500',
   warningLight: '#FEF3C7',
-  error: '#EF4444',
+  error: '#FF3B30',
   errorLight: '#FEE2E2',
-  info: '#3B82F6',
-  infoLight: '#DBEAFE',
+  info: '#007AFF',
+  infoLight: '#E3F2FF',
 
   // Reactions
-  reactionBackground: '#F1F5F9',
-  reactionActive: '#DBEAFE',
-  reactionBorder: '#3B82F6',
+  reactionBackground: '#F2F2F7',
+  reactionActive: '#E3F2FF',
+  reactionBorder: '#007AFF',
 
   // Neutral colors
   white: '#FFFFFF',
@@ -159,12 +159,12 @@ export const shadows = {
 export const gradients = {
   primary: colors.primaryGradient,
   secondary: colors.secondaryGradient,
-  sunset: ['#FF6B6B', '#FF8E53', '#FFB347'] as const,
-  ocean: ['#667EEA', '#764BA2'] as const,
-  forest: ['#11998E', '#38EF7D'] as const,
-  fire: ['#F12711', '#F5AF19'] as const,
-  royal: ['#141E30', '#243B55'] as const,
-  premium: ['#0F0C29', '#302B63', '#24243E'] as const,
+  blue: ['#007AFF', '#5AC8FA'] as const,
+  purple: ['#5856D6', '#AF52DE'] as const,
+  green: ['#34C759', '#30D158'] as const,
+  orange: ['#FF9500', '#FF3B30'] as const,
+  dark: ['#1C1C1E', '#2C2C2E'] as const,
+  premium: ['#000000', '#1C1C1E', '#2C2C2E'] as const,
 } as const;
 
 export type ColorKey = keyof typeof colors;

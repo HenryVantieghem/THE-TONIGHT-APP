@@ -112,9 +112,9 @@ export function Input({
 
   // Floating label animated style
   const labelStyle = useAnimatedStyle(() => {
-    const translateY = interpolate(labelAnim.value, [0, 1], [0, -28]);
-    const scale = interpolate(labelAnim.value, [0, 1], [1, 0.85]);
-    const translateX = interpolate(labelAnim.value, [0, 1], [0, leftIcon ? -8 : 0]);
+    const translateY = interpolate(labelAnim.value, [0, 1], [0, -26]);
+    const scale = interpolate(labelAnim.value, [0, 1], [1, 0.8]);
+    const translateX = interpolate(labelAnim.value, [0, 1], [0, leftIcon ? -8 : -4]);
 
     return {
       transform: [
@@ -312,11 +312,12 @@ const styles = StyleSheet.create({
   label: {
     position: 'absolute',
     left: spacing.md,
+    top: 18,
     fontSize: typography.sizes.md,
     color: colors.textSecondary,
     backgroundColor: colors.surface,
-    paddingHorizontal: 4,
-    zIndex: 1,
+    paddingHorizontal: 6,
+    zIndex: 10,
   },
   labelWithIcon: {
     left: spacing.md + 32,

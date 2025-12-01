@@ -156,24 +156,31 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: spacing.lg,
+    justifyContent: 'center',
   },
   header: {
+    alignItems: 'center',
     marginBottom: spacing.xxl,
   },
+  icon: {
+    fontSize: 64,
+    marginBottom: spacing.lg,
+  },
   title: {
-    fontSize: typography.sizes.xxxl,
+    fontSize: typography.sizes.display,
     fontWeight: typography.weights.bold,
     color: colors.text,
     marginBottom: spacing.sm,
-    letterSpacing: -0.5,
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: typography.sizes.md,
+    fontSize: typography.sizes.lg,
     color: colors.textSecondary,
     lineHeight: typography.lineHeights.lg,
+    textAlign: 'center',
   },
   form: {
-    flex: 1,
+    width: '100%',
   },
   button: {
     marginTop: spacing.lg,
@@ -182,8 +189,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: spacing.xxl,
-    paddingTop: spacing.lg,
+    paddingVertical: spacing.lg,
+    marginTop: spacing.lg,
   },
   footerText: {
     fontSize: typography.sizes.md,

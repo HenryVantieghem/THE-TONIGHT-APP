@@ -67,18 +67,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   icon: {
-    fontSize: 72,
-    marginBottom: 16,
+    fontSize: 80,
+    marginBottom: 20,
   },
   title: {
-    fontSize: 48,
+    fontSize: typography.sizes.display + 12,
     fontWeight: typography.weights.bold,
     color: colors.white,
-    marginBottom: 8,
+    marginBottom: 12,
+    letterSpacing: -1,
   },
   subtitle: {
     fontSize: typography.sizes.lg,
     color: colors.white,
-    opacity: 0.9,
+    opacity: 0.85,
   },
 });

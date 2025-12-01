@@ -10,7 +10,8 @@
       "mcp__context7__resolve-library-id",
       "mcp__context7__get-library-docs",
       "Bash(npx expo-doctor@latest)",
-      "Bash(npm ls:*)"
+      "Bash(npm ls:*)",
+      "Bash(npx expo-doctor)"
     ],
     "deny": [],
     "ask": []

@@ -160,14 +160,19 @@ export function UsernameSetupScreen() {
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
       <View
         style={[
           styles.content,
-          { paddingTop: insets.top + spacing.xxl, paddingBottom: insets.bottom + spacing.lg },
+          {
+            paddingTop: insets.top + spacing.xxl,
+            paddingBottom: insets.bottom + spacing.xl,
+          },
         ]}
       >
         <View style={styles.header}>
+          <Text style={styles.icon}>👤</Text>
           <Text style={styles.title}>Choose Your Username</Text>
           <Text style={styles.subtitle}>
             This is how your friends will find you on Tonight
@@ -176,17 +181,20 @@ export function UsernameSetupScreen() {
 
         <View style={styles.form}>
           <View style={styles.inputWrapper}>
-            <Text style={styles.atSymbol}>@</Text>
-            <Input
-              placeholder="username"
-              value={username}
-              onChangeText={handleUsernameChange}
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoComplete="username"
-              maxLength={config.USERNAME.MAX_LENGTH}
-              containerStyle={styles.inputContainer}
-            />
+            <View style={styles.atSymbolContainer}>
+              <Text style={styles.atSymbol}>@</Text>
+            </View>
+            <View style={styles.inputContainer}>
+              <Input
+                placeholder="username"
+                value={username}
+                onChangeText={handleUsernameChange}
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="username"
+                maxLength={config.USERNAME.MAX_LENGTH}
+              />
+            </View>
           </View>
 
           <Text style={[styles.statusText, { color: getStatusColor() }]}>
@@ -223,42 +231,54 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: spacing.lg,
+    justifyContent: 'center',
   },
   header: {
+    alignItems: 'center',
     marginBottom: spacing.xxl,
   },
+  icon: {
+    fontSize: 64,
+    marginBottom: spacing.lg,
+  },
   title: {
-    fontSize: typography.sizes.xxxl,
+    fontSize: typography.sizes.display,
     fontWeight: typography.weights.bold,
     color: colors.text,
     marginBottom: spacing.sm,
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: typography.sizes.md,
+    fontSize: typography.sizes.lg,
     color: colors.textSecondary,
     lineHeight: typography.lineHeights.lg,
+    textAlign: 'center',
   },
   form: {
-    flex: 1,
+    width: '100%',
   },
   inputWrapper: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+  },
+  atSymbolContainer: {
+    height: 56,
+    justifyContent: 'center',
+    paddingRight: spacing.xs,
   },
   atSymbol: {
     fontSize: typography.sizes.xxl,
     fontWeight: typography.weights.semibold,
     color: colors.text,
-    marginRight: spacing.xs,
-    marginBottom: spacing.md,
   },
   inputContainer: {
     flex: 1,
   },
   statusText: {
     fontSize: typography.sizes.sm,
-    marginTop: -spacing.sm,
+    marginTop: spacing.xs,
     lineHeight: typography.lineHeights.md,
+    textAlign: 'center',
   },
   characterCount: {
     alignItems: 'flex-end',
@@ -269,6 +289,7 @@ const styles = StyleSheet.create({
     color: colors.textTertiary,
   },
   footer: {
+    paddingTop: spacing.xl,
     paddingBottom: spacing.lg,
   },
 });

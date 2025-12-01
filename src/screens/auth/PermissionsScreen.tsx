@@ -171,10 +171,14 @@ export function PermissionsScreen() {
     <View
       style={[
         styles.container,
-        { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing.lg },
+        {
+          paddingTop: insets.top + spacing.xxl,
+          paddingBottom: insets.bottom + spacing.xl,
+        },
       ]}
     >
       <View style={styles.header}>
+        <Text style={styles.icon}>✨</Text>
         <Text style={styles.title}>Before We Start</Text>
         <Text style={styles.subtitle}>
           Tonight needs a few permissions to work its magic
@@ -237,22 +241,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   header: {
-    marginBottom: spacing.xl,
+    alignItems: 'center',
+    marginBottom: spacing.xxl,
+  },
+  icon: {
+    fontSize: 64,
+    marginBottom: spacing.lg,
   },
   title: {
-    fontSize: typography.sizes.xxxl,
+    fontSize: typography.sizes.display,
     fontWeight: typography.weights.bold,
     color: colors.text,
     marginBottom: spacing.sm,
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: typography.sizes.md,
+    fontSize: typography.sizes.lg,
     color: colors.textSecondary,
     lineHeight: typography.lineHeights.lg,
+    textAlign: 'center',
   },
   permissionsList: {
     flex: 1,
     gap: spacing.md,
+    justifyContent: 'center',
   },
   permissionCard: {
     flexDirection: 'row',

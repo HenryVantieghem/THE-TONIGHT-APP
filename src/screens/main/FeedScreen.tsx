@@ -99,14 +99,25 @@ export function FeedScreen() {
   );
 
   const renderHeader = () => (
-    <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-      <TouchableOpacity onPress={handleFriendsPress}>
-        <Text style={styles.menuIcon}>☰</Text>
+    <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
+      <TouchableOpacity
+        onPress={handleFriendsPress}
+        style={styles.headerButton}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.menuIcon}>👥</Text>
       </TouchableOpacity>
 
-      <Text style={styles.title}>Tonight</Text>
+      <View style={styles.titleContainer}>
+        <Text style={styles.titleIcon}>🌙</Text>
+        <Text style={styles.title}>Tonight</Text>
+      </View>
 
-      <TouchableOpacity onPress={handleProfilePress}>
+      <TouchableOpacity
+        onPress={handleProfilePress}
+        style={styles.headerButton}
+        activeOpacity={0.7}
+      >
         <Avatar
           uri={user?.avatar_url}
           name={user?.username}
@@ -185,14 +196,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
-    paddingBottom: spacing.sm,
+    paddingBottom: spacing.md,
     backgroundColor: colors.background,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  headerButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   menuIcon: {
     fontSize: 24,
-    color: colors.text,
+  },
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  titleIcon: {
+    fontSize: 24,
   },
   title: {
     fontSize: typography.sizes.xl,

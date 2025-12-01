@@ -128,19 +128,22 @@ export function OnboardingScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      <FlatList
-        ref={flatListRef}
-        data={slides}
-        renderItem={renderSlide}
-        keyExtractor={(item) => item.id}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onScroll={handleScroll}
-        onMomentumScrollEnd={handleMomentumScrollEnd}
-        scrollEventThrottle={16}
-        bounces={false}
-      />
+      <View style={styles.slideContainer}>
+        <FlatList
+          ref={flatListRef}
+          data={slides}
+          renderItem={renderSlide}
+          keyExtractor={(item) => item.id}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onScroll={handleScroll}
+          onMomentumScrollEnd={handleMomentumScrollEnd}
+          scrollEventThrottle={16}
+          bounces={false}
+          contentContainerStyle={styles.flatListContent}
+        />
+      </View>
 
       {renderPagination()}
 
@@ -172,34 +175,44 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  slideContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  flatListContent: {
+    alignItems: 'center',
+  },
   slide: {
     width: SCREEN_WIDTH,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xxl,
   },
   slideIcon: {
-    fontSize: 80,
-    marginBottom: spacing.lg,
+    fontSize: 96,
+    marginBottom: spacing.xl,
   },
   slideTitle: {
-    fontSize: typography.sizes.xxl,
+    fontSize: typography.sizes.display,
     fontWeight: typography.weights.bold,
     color: colors.text,
     textAlign: 'center',
     marginBottom: spacing.md,
+    paddingHorizontal: spacing.md,
   },
   slideSubtitle: {
     fontSize: typography.sizes.lg,
     color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: typography.lineHeights.xl,
+    paddingHorizontal: spacing.md,
   },
   pagination: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginVertical: spacing.lg,
+    paddingVertical: spacing.lg,
   },
   dot: {
     height: 8,
@@ -209,7 +222,7 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
+    paddingBottom: spacing.xl,
   },
   skipButton: {
     marginTop: spacing.sm,
