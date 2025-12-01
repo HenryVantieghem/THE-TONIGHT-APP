@@ -18,16 +18,18 @@ I need you to fix the post creation flow in my React Native Expo app. Here's wha
 - React Navigation for screen navigation
 
 **What I Need:**
-1. Fix file upload to work reliably in React Native - use expo-file-system to read files as base64, convert to Uint8Array, upload to Supabase storage
+1. Fix file upload to work reliably in React Native - use fetch() to read local file:// URIs as Blob, upload Blob directly to Supabase storage (expo-file-system is DEPRECATED in SDK 54+)
 2. Fix location search flow - when user selects location in LocationSearchScreen, it should update PostPreviewScreen's selectedLocation state properly WITHOUT passing functions in navigation params
 3. Ensure the entire flow works: Camera → PostPreview → LocationSearch → PostPreview (with updated location) → Create Post → Success
+4. Ensure Supabase storage policies exist for authenticated users to upload to their own folder
 
 **Critical Requirements:**
 - NO function callbacks in navigation params (causes serialization warnings)
-- File upload MUST work with local file:// URIs from camera/image picker
+- File upload MUST use fetch() + blob() - NOT expo-file-system (deprecated in SDK 54)
 - Location updates MUST persist when returning from LocationSearchScreen
 - All error handling must be comprehensive with user-friendly messages
 - Code must be production-ready and handle edge cases
+- Supabase storage policies MUST allow authenticated users to upload to buckets
 
 **Files to Focus On:**
 - src/services/posts.ts - File upload logic
@@ -57,17 +59,20 @@ Please fix ALL of these issues comprehensively and ensure the entire flow works 
 
 ## Key Insights from Previous Failures
 
-1. **React Native fetch.blob() doesn't work reliably** - Need expo-file-system
-2. **Navigation callbacks cause serialization issues** - Use route params instead
-3. **Location updates need proper state management** - Use navigation params with useEffect listeners
-4. **Error handling must be comprehensive** - Catch all edge cases
+1. **expo-file-system is DEPRECATED in SDK 54** - Use fetch() + blob() instead
+2. **fetch().blob() DOES work in React Native** - Handles local file:// URIs correctly
+3. **Navigation callbacks cause serialization issues** - Use route params instead
+4. **Location updates need proper state management** - Use navigation params with useEffect listeners
+5. **Error handling must be comprehensive** - Catch all edge cases
+6. **Supabase storage needs RLS policies** - Without policies, uploads silently fail
 
 ## The Solution
 
 The fix involves:
-1. Using `expo-file-system.readAsStringAsync` with 'base64' encoding
-2. Converting base64 to Uint8Array for Supabase upload
+1. Using `fetch(mediaUri)` to read local files, then `.blob()` to get Blob
+2. Uploading Blob directly to Supabase storage (accepts Blob in React Native)
 3. Using navigation params (selectedLocation) instead of callbacks
 4. Listening to route param changes in PostPreviewScreen to update state
 5. Proper error handling at every step
+6. Creating proper RLS policies on storage.objects for authenticated uploads
 
