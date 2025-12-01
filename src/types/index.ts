@@ -126,6 +126,10 @@ export type MainStackParamList = {
     mediaType: 'image' | 'video';
     location: LocationData;
   };
+  LocationSearch: {
+    currentLocation: LocationData | null;
+    onLocationSelect: (location: LocationData) => void;
+  };
   Profile: { userId?: string };
   Settings: undefined;
   Friends: undefined;

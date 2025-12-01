@@ -124,7 +124,9 @@ export function FriendsScreen() {
   };
 
   const handleClose = () => {
-    navigation.goBack();
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    }
   };
 
   const renderFriend = ({ item }: { item: Friendship }) => (

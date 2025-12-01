@@ -61,6 +61,65 @@ export async function getCurrentLocation(): Promise<ApiResponse<{ lat: number; l
   }
 }
 
+// Search for locations by query string (forward geocoding)
+export async function searchLocations(query: string): Promise<ApiResponse<LocationData[]>> {
+  try {
+    if (!query || query.trim().length === 0) {
+      return { data: [], error: null };
+    }
+
+    const results = await Location.geocodeAsync(query);
+
+    if (results.length === 0) {
+      return { data: [], error: null };
+    }
+
+    const locations: LocationData[] = results.map((result) => {
+      // Build location name from available data
+      // expo-location geocodeAsync returns LocationGeocodedLocation with different structure
+      let name = '';
+
+      // Check available properties (expo-location may have different field names)
+      const street = (result as any).street || (result as any).streetNumber || '';
+      const city = (result as any).city || '';
+      const region = (result as any).region || (result as any).administrativeArea || '';
+      const nameField = (result as any).name || '';
+      const district = (result as any).district || (result as any).subAdministrativeArea || '';
+      const subregion = (result as any).subregion || '';
+
+      if (nameField && nameField !== city) {
+        name = nameField;
+      } else if (street) {
+        name = street;
+      } else if (district) {
+        name = district;
+      } else if (subregion) {
+        name = subregion;
+      } else if (city) {
+        name = city;
+      } else {
+        name = query;
+      }
+
+      return {
+        name,
+        lat: result.latitude,
+        lng: result.longitude,
+        city: city || undefined,
+        state: region || undefined,
+      };
+    });
+
+    return { data: locations, error: null };
+  } catch (err) {
+    console.error('Search locations error:', err);
+    return {
+      data: [],
+      error: { message: 'Failed to search locations.' },
+    };
+  }
+}
+
 // Reverse geocode coordinates to address
 export async function reverseGeocode(
   lat: number,
@@ -86,18 +145,27 @@ export async function reverseGeocode(
     const result = results[0];
 
     // Build location name from available data
+    // expo-location reverseGeocodeAsync returns LocationGeocodedAddress
     let name = '';
 
-    if (result.name && result.name !== result.city) {
-      name = result.name;
-    } else if (result.street) {
-      name = result.street;
-    } else if (result.district) {
-      name = result.district;
-    } else if (result.subregion) {
-      name = result.subregion;
-    } else if (result.city) {
-      name = result.city;
+    // Check available properties (expo-location may have different field names)
+    const street = (result as any).street || (result as any).streetNumber || '';
+    const city = (result as any).city || '';
+    const region = (result as any).region || (result as any).administrativeArea || '';
+    const nameField = (result as any).name || '';
+    const district = (result as any).district || (result as any).subAdministrativeArea || '';
+    const subregion = (result as any).subregion || '';
+
+    if (nameField && nameField !== city) {
+      name = nameField;
+    } else if (street) {
+      name = street;
+    } else if (district) {
+      name = district;
+    } else if (subregion) {
+      name = subregion;
+    } else if (city) {
+      name = city;
     } else {
       name = 'Current Location';
     }
@@ -107,8 +175,8 @@ export async function reverseGeocode(
         name,
         lat,
         lng,
-        city: result.city || undefined,
-        state: result.region || undefined,
+        city: city || undefined,
+        state: region || undefined,
       },
       error: null,
     };

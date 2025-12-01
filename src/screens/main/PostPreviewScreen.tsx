@@ -26,7 +26,7 @@ import { validateCaption } from '../../utils/validation';
 import { colors } from '../../constants/colors';
 import { typography } from '../../constants/typography';
 import { spacing, borderRadius, config } from '../../constants/config';
-import type { MainStackParamList } from '../../types';
+import type { MainStackParamList, LocationData } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const PREVIEW_HEIGHT = SCREEN_WIDTH * 1.2;
@@ -171,6 +171,7 @@ export function PostPreviewScreen() {
   const [caption, setCaption] = useState('');
   const [isPosting, setIsPosting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<LocationData>(location);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -210,7 +211,7 @@ export function PostPreviewScreen() {
         mediaUri,
         mediaType,
         caption: caption.trim() || undefined,
-        location,
+        location: selectedLocation,
       });
 
       if (error) {
@@ -229,7 +230,7 @@ export function PostPreviewScreen() {
       Alert.alert('Error', 'Failed to create post. Please try again.');
       setIsPosting(false);
     }
-  }, [isOverLimit, createPost, mediaUri, mediaType, caption, location]);
+  }, [isOverLimit, createPost, mediaUri, mediaType, caption, selectedLocation]);
 
   const handleSuccessComplete = useCallback(() => {
     // Navigate back to feed
@@ -252,7 +253,9 @@ export function PostPreviewScreen() {
           style: 'destructive',
           onPress: () => {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-            navigation.goBack();
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            }
           },
         },
       ]
@@ -330,9 +333,21 @@ export function PostPreviewScreen() {
         </View>
 
         {/* Location */}
-        <View style={styles.locationContainer}>
-          <LocationStripCompact location={location} />
-        </View>
+        <TouchableOpacity
+          style={styles.locationContainer}
+          onPress={() => {
+            navigation.navigate('LocationSearch', {
+              currentLocation: selectedLocation,
+              onLocationSelect: (loc) => {
+                setSelectedLocation(loc);
+              },
+            });
+          }}
+          activeOpacity={0.7}
+        >
+          <LocationStripCompact location={selectedLocation} />
+          <Text style={styles.editLocationText}>Edit</Text>
+        </TouchableOpacity>
 
         {/* Caption input */}
         <View style={styles.captionContainer}>
@@ -462,9 +477,18 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.medium,
   },
   locationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     padding: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
+  },
+  editLocationText: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+    color: colors.primary,
+    marginLeft: spacing.sm,
   },
   captionContainer: {
     padding: spacing.md,

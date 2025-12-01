@@ -151,7 +151,11 @@ export function UsernameSetupScreen() {
   };
 
   const handleGoBack = () => {
-    navigation.goBack();
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.replace('Permissions');
+    }
   };
 
   const canSubmit =

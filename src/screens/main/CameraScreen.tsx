@@ -74,7 +74,9 @@ export function CameraScreen() {
               useNativeDriver: true,
             }),
           ]).start(() => {
-            navigation.goBack();
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            }
           });
         } else {
           // Snap back

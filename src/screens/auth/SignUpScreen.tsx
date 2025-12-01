@@ -125,7 +125,11 @@ export function SignUpScreen() {
   };
 
   const handleGoBack = () => {
-    navigation.goBack();
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.replace('Onboarding');
+    }
   };
 
   return (

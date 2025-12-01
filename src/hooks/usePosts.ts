@@ -137,7 +137,7 @@ export function usePosts() {
         setIsCreating(false);
       }
     },
-    [user, addPost, setError]
+    [user, addPost, setError, setIsCreating]
   );
 
   // Delete a post

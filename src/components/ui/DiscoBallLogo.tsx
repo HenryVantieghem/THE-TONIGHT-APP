@@ -1,15 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, Text, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  withSequence,
-  Easing,
-} from 'react-native-reanimated';
-import { useEffect } from 'react';
 
 interface DiscoBallLogoProps {
   size?: number;
@@ -19,43 +10,11 @@ interface DiscoBallLogoProps {
 
 export function DiscoBallLogo({
   size = 48,
-  animated = true,
+  animated = false,
   style,
 }: DiscoBallLogoProps) {
-  const rotation = useSharedValue(0);
-  const glowOpacity = useSharedValue(0.6);
-
-  useEffect(() => {
-    if (animated) {
-      // Slow rotation animation
-      rotation.value = withRepeat(
-        withTiming(360, {
-          duration: 8000,
-          easing: Easing.linear,
-        }),
-        -1,
-        false
-      );
-
-      // Pulsing glow effect
-      glowOpacity.value = withRepeat(
-        withSequence(
-          withTiming(0.8, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
-          withTiming(0.4, { duration: 2000, easing: Easing.inOut(Easing.ease) })
-        ),
-        -1,
-        true
-      );
-    }
-  }, [animated, rotation, glowOpacity]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${rotation.value}deg` }],
-  }));
-
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: glowOpacity.value,
-  }));
+  // Static logo - no animations
+  const glowOpacity = 0.6;
 
   const ballSize = size;
   const mirrorSize = ballSize / 8;
@@ -64,24 +23,23 @@ export function DiscoBallLogo({
   return (
     <View style={[styles.container, { width: ballSize, height: ballSize }, style]}>
       {/* Outer glow shadow */}
-      <Animated.View
+      <View
         style={[
           styles.glow,
-          glowStyle,
           {
             width: ballSize * 1.3,
             height: ballSize * 1.3,
             borderRadius: (ballSize * 1.3) / 2,
             shadowRadius: size * 0.4,
+            opacity: glowOpacity,
           },
         ]}
       />
 
       {/* Main disco ball container */}
-      <Animated.View
+      <View
         style={[
           styles.ballContainer,
-          animatedStyle,
           {
             width: ballSize,
             height: ballSize,
@@ -137,7 +95,7 @@ export function DiscoBallLogo({
           />
         </LinearGradient>
 
-        {/* 3D shadow effect */}
+          {/* 3D shadow effect */}
         <View
           style={[
             styles.shadow,
@@ -149,7 +107,7 @@ export function DiscoBallLogo({
             },
           ]}
         />
-      </Animated.View>
+      </View>
     </View>
   );
 }

@@ -204,7 +204,9 @@ export function SettingsScreen() {
 
   const handleClose = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    navigation.goBack();
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    }
   }, [navigation]);
 
   const handleLogout = useCallback(() => {

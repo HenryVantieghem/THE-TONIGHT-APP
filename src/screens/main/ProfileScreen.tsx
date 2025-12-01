@@ -24,6 +24,7 @@ import { ShimmerPlaceholder } from '../../components/feed/PostCardSkeleton';
 import { useAuth } from '../../hooks/useAuth';
 import { useFriends } from '../../hooks/useFriends';
 import * as postsService from '../../services/posts';
+import * as authService from '../../services/auth';
 import { supabase, BUCKETS } from '../../services/supabase';
 import { colors, shadows } from '../../constants/colors';
 import { typography } from '../../constants/typography';
@@ -267,7 +268,14 @@ export function ProfileScreen() {
           .getPublicUrl(data.path);
 
         // Update profile
-        await updateAvatar(urlData.publicUrl);
+        const { error: updateError } = await updateAvatar(urlData.publicUrl);
+        if (updateError) {
+          Alert.alert('Error', updateError.message || 'Failed to update avatar');
+          return;
+        }
+        
+        // Reload profile to show updated avatar
+        await loadProfile();
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
     } catch (error) {
@@ -334,7 +342,9 @@ export function ProfileScreen() {
   }, [signOut]);
 
   const handleClose = useCallback(() => {
-    navigation.goBack();
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    }
   }, [navigation]);
 
   const handleSettingsPress = useCallback(() => {

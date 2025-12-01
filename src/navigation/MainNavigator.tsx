@@ -4,6 +4,7 @@ import {
   FeedScreen,
   CameraScreen,
   PostPreviewScreen,
+  LocationSearchScreen,
   ProfileScreen,
   SettingsScreen,
   FriendsScreen,
@@ -53,6 +54,14 @@ export function MainNavigator() {
         options={{
           presentation: 'fullScreenModal',
           animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen
+        name="LocationSearch"
+        component={LocationSearchScreen}
+        options={{
+          presentation: 'modal',
+          animation: 'slide_from_bottom',
         }}
       />
       <Stack.Screen
