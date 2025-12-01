@@ -18,6 +18,7 @@ import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../hooks/useAuth';
 import { validateUsername } from '../../utils/validation';
 import { config } from '../../constants/config';
+import { typography } from '../../constants/typography';
 import type { AuthStackParamList } from '../../types';
 
 // iOS auth color palette
@@ -321,8 +322,8 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
+    fontSize: typography.sizes.xxxl,
+    fontWeight: typography.weights.bold,
     color: authColors.textPrimary,
     marginBottom: 8,
     letterSpacing: -0.5,
@@ -388,6 +389,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 8,
     gap: 6,
+  },
+  statusIcon: {
+    fontSize: 14,
+    color: authColors.error,
+    marginRight: 4,
+  },
+  statusIconSuccess: {
+    fontSize: 14,
+    color: authColors.success,
+    marginRight: 4,
   },
   statusText: {
     fontSize: 13,

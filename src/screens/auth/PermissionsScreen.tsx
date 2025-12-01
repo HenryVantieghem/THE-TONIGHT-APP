@@ -13,16 +13,17 @@ import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components/ui/Button';
 import { useStore } from '../../stores/useStore';
+import { typography } from '../../constants/typography';
 
-// Premium auth color palette
+// iOS auth color palette
 const authColors = {
   background: '#FFFFFF',
-  textPrimary: '#1A1A2E',
-  textSecondary: '#64748B',
-  primary: '#FF6B6B',
-  cardBackground: '#F8F9FA',
-  cardBorder: '#E2E8F0',
-  success: '#22C55E',
+  textPrimary: '#000000',
+  textSecondary: '#8E8E93',
+  primary: '#007AFF',
+  cardBackground: '#F2F2F7',
+  cardBorder: '#E5E5EA',
+  success: '#34C759',
   successLight: '#DCFCE7',
 };
 
@@ -41,16 +42,16 @@ const permissions: PermissionItem[] = [
   {
     key: 'camera',
     icon: 'camera',
-    iconColor: '#FF6B6B',
-    title: 'Camera',
+    iconColor: '#007AFF',
+    title: 'CAMERA',
     description: 'Take photos and videos to share with friends',
     required: true,
   },
   {
     key: 'location',
     icon: 'location',
-    iconColor: '#6366F1',
-    title: 'Location',
+    iconColor: '#007AFF',
+    title: 'LOCATION',
     description: 'Show where you are when you post',
     required: true,
   },
@@ -138,57 +139,40 @@ export function PermissionsScreen() {
     const isDenied = status === 'denied';
 
     return (
-      <View key={item.key} style={[
-        styles.permissionCard,
-        isGranted && styles.permissionCardGranted,
-      ]}>
+      <View key={item.key} style={styles.permissionCard}>
         <View style={styles.cardContent}>
           {/* Icon */}
-          <View style={[styles.iconContainer, { backgroundColor: `${item.iconColor}15` }]}>
-            <Ionicons name={item.icon} size={24} color={item.iconColor} />
-          </View>
+          <Text style={styles.iconEmoji}>
+            {item.key === 'camera' ? '📷' : '📍'}
+          </Text>
 
           {/* Text */}
           <View style={styles.textContainer}>
-            <View style={styles.titleRow}>
-              <Text style={styles.permissionTitle}>{item.title}</Text>
-              {item.required && !isGranted && (
-                <View style={styles.requiredBadge}>
-                  <Text style={styles.requiredText}>Required</Text>
-                </View>
-              )}
-            </View>
+            <Text style={styles.permissionTitle}>{item.title}</Text>
             <Text style={styles.permissionDescription}>{item.description}</Text>
           </View>
 
           {/* Status/Button */}
-          <View style={styles.actionContainer}>
-            {isGranted ? (
-              <View style={styles.grantedContainer}>
-                <Ionicons name="checkmark-circle" size={24} color={authColors.success} />
-              </View>
-            ) : isDenied ? (
-              <TouchableOpacity
-                onPress={openSettings}
-                style={styles.settingsButton}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.settingsButtonText}>Settings</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                onPress={() => requestPermission(item.key)}
-                style={styles.enableButton}
-                activeOpacity={0.7}
-                disabled={loading}
-              >
-                <Text style={styles.enableButtonText}>
-                  {loading ? '...' : 'Enable'}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
+          {isGranted ? (
+            <View style={styles.grantedContainer}>
+              <Text style={styles.checkmark}>✓</Text>
+            </View>
+          ) : (
+            <TouchableOpacity
+              onPress={() => requestPermission(item.key)}
+              style={styles.enableButton}
+              activeOpacity={0.7}
+              disabled={loading}
+            >
+              <Text style={styles.enableButtonText}>
+                {loading ? '...' : 'Enable'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
+        {isGranted && (
+          <Text style={styles.grantedText}>Access granted</Text>
+        )}
       </View>
     );
   };
@@ -203,14 +187,9 @@ export function PermissionsScreen() {
       <View style={styles.content}>
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.iconWrapper}>
-            <View style={styles.headerIconBg}>
-              <Ionicons name="shield-checkmark" size={32} color={authColors.primary} />
-            </View>
-          </View>
-          <Text style={styles.title}>Before We Start</Text>
+          <Text style={styles.title}>Enable Features</Text>
           <Text style={styles.subtitle}>
-            Tonight needs a few permissions to work its magic
+            To use Tonight, we need access to a few things
           </Text>
         </View>
 
@@ -221,16 +200,9 @@ export function PermissionsScreen() {
 
         {/* Footer */}
         <View style={styles.footer}>
-          {requiredGranted ? (
-            <View style={styles.readyContainer}>
-              <Ionicons name="checkmark-circle" size={20} color={authColors.success} />
-              <Text style={styles.readyText}>You're all set!</Text>
-            </View>
-          ) : (
-            <Text style={styles.footerNote}>
-              Enable camera and location to continue
-            </Text>
-          )}
+          <TouchableOpacity onPress={() => {}} activeOpacity={0.7}>
+            <Text style={styles.skipLink}>Skip for now</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </SafeAreaView>
@@ -248,31 +220,20 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: 32,
     marginBottom: 32,
   },
-  iconWrapper: {
-    marginBottom: 16,
-  },
-  headerIconBg: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: `${authColors.primary}15`,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
+    fontSize: typography.sizes.xxxl,
+    fontWeight: typography.weights.bold,
     color: authColors.textPrimary,
     marginBottom: 8,
     letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: typography.sizes.md,
     color: authColors.textSecondary,
-    lineHeight: 24,
+    lineHeight: 22,
     textAlign: 'center',
   },
   permissionsList: {
@@ -281,109 +242,66 @@ const styles = StyleSheet.create({
   },
   permissionCard: {
     backgroundColor: authColors.cardBackground,
-    borderRadius: 16,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: authColors.cardBorder,
     padding: 16,
-  },
-  permissionCardGranted: {
-    backgroundColor: authColors.successLight,
-    borderColor: authColors.success,
+    marginBottom: 16,
   },
   cardContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+  iconEmoji: {
+    fontSize: 24,
+    marginRight: 12,
   },
   textContainer: {
     flex: 1,
-    marginLeft: 12,
-    marginRight: 12,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 2,
   },
   permissionTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: authColors.textPrimary,
-  },
-  requiredBadge: {
-    backgroundColor: `${authColors.primary}20`,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  requiredText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: authColors.primary,
+    marginBottom: 4,
   },
   permissionDescription: {
-    fontSize: 13,
+    fontSize: 14,
     color: authColors.textSecondary,
-    lineHeight: 18,
-  },
-  actionContainer: {
-    minWidth: 80,
-    alignItems: 'flex-end',
+    lineHeight: 20,
   },
   grantedContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    marginLeft: 12,
+  },
+  checkmark: {
+    fontSize: 20,
+    color: authColors.success,
+  },
+  grantedText: {
+    fontSize: 13,
+    color: authColors.textSecondary,
+    marginTop: 8,
+    marginLeft: 36,
   },
   enableButton: {
     backgroundColor: authColors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginLeft: 12,
   },
   enableButtonText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     color: '#FFFFFF',
-  },
-  settingsButton: {
-    backgroundColor: authColors.cardBorder,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  settingsButtonText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: authColors.textSecondary,
   },
   footer: {
     paddingVertical: 24,
     alignItems: 'center',
   },
-  readyContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: authColors.successLight,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-  },
-  readyText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: authColors.success,
-  },
-  footerNote: {
-    fontSize: 14,
+  skipLink: {
+    fontSize: 15,
     color: authColors.textSecondary,
-    textAlign: 'center',
+    fontWeight: '400',
   },
 });

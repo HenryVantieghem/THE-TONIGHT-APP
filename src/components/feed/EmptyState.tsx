@@ -35,14 +35,14 @@ const emptyStateContent: Record<
   'no-posts': {
     icon: '📷',
     title: 'No Posts Yet',
-    subtitle: "Your friends haven't posted anything in the last hour. Be the first to share what you're doing tonight!",
-    defaultAction: 'Take a Photo',
+    subtitle: "Be the first to share what you're up to!",
+    defaultAction: 'Take a Photo 📸',
   },
   'no-friends': {
     icon: '👥',
     title: 'Find Your Friends',
-    subtitle: 'Add friends to see what they\'re up to right now.',
-    defaultAction: 'Add Friends',
+    subtitle: 'Add friends to see their posts here',
+    defaultAction: 'Add Friends ➕',
   },
   'no-requests': {
     icon: '📬',
@@ -50,9 +50,9 @@ const emptyStateContent: Record<
     subtitle: 'You don\'t have any friend requests at the moment.',
   },
   error: {
-    icon: '😕',
-    title: 'Something Went Wrong',
-    subtitle: 'We couldn\'t load the content. Please try again.',
+    icon: '⚠️',
+    title: 'Couldn\'t Load Posts',
+    subtitle: 'Pull down to retry',
     defaultAction: 'Try Again',
   },
 };
