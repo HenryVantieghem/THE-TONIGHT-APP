@@ -109,17 +109,22 @@ export function LocationSearchScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     
     // Navigate back and update PostPreviewScreen's location via navigation params
+    // Use navigate with merge to update the PostPreview route params
     if (navigation.canGoBack()) {
       // Get the navigation state to find PostPreview route
       const state = navigation.getState();
       const postPreviewRoute = state.routes.find(r => r.name === 'PostPreview');
       
       if (postPreviewRoute) {
-        // Update PostPreview params with selected location
-        navigation.setParams({
-          ...postPreviewRoute.params,
-          selectedLocation: location,
-        } as any);
+        // Update PostPreview params with selected location using navigate with merge
+        navigation.navigate({
+          name: 'PostPreview',
+          params: {
+            ...postPreviewRoute.params,
+            selectedLocation: location,
+          } as any,
+          merge: true,
+        });
       }
       navigation.goBack();
     } else {
