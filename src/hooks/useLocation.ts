@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+import * as Location from 'expo-location';
 import { useStore, selectCurrentLocation, selectLocationPrecision } from '../stores/useStore';
 import * as locationService from '../services/location';
 import type { LocationData } from '../types';

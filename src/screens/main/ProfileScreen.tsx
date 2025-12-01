@@ -74,7 +74,12 @@ function AnimatedStat({
   useEffect(() => {
     // Entry animation
     opacity.value = withTiming(1, { duration: glassMotion.duration.smooth });
-    scale.value = withSpring(1, { ...glassMotion.spring.smooth, delay });
+    scale.value = 0.8;
+    setTimeout(() => {
+      scale.value = withSpring(1, {
+        ...glassMotion.spring.smooth,
+      });
+    }, delay);
 
     // Count animation
     countValue.value = withTiming(value, { duration: 800 }, () => {});

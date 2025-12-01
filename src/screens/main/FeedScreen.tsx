@@ -75,10 +75,14 @@ function AnimatedPostCard({
     opacity.value = withTiming(1, {
       duration: glassMotion.duration.smooth,
     });
-    translateY.value = withSpring(0, {
-      ...glassMotion.spring.smooth,
-      delay,
-    });
+    
+    // Apply delay by starting from offset and animating after delay
+    translateY.value = 30;
+    setTimeout(() => {
+      translateY.value = withSpring(0, {
+        ...glassMotion.spring.smooth,
+      });
+    }, delay);
   }, [index, opacity, translateY]);
 
   const animatedStyle = useAnimatedStyle(() => ({
