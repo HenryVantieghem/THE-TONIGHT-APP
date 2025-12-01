@@ -43,6 +43,14 @@ export async function createPost(
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + config.POST_EXPIRY_HOURS);
 
+    // Validate location data
+    if (!location || !location.name || location.lat === undefined || location.lng === undefined) {
+      return {
+        data: null,
+        error: { message: 'Invalid location data. Please select a location.' },
+      };
+    }
+
     // Insert post record
     const { data: postData, error: postError } = await supabase
       .from(TABLES.POSTS)
@@ -70,7 +78,7 @@ export async function createPost(
       console.error('Post insert error:', postError);
       return {
         data: null,
-        error: { message: 'Failed to create post. Please try again.' },
+        error: { message: postError.message || 'Failed to create post. Please try again.' },
       };
     }
 

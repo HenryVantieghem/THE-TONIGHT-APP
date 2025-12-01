@@ -109,6 +109,15 @@ export function FeedScreen() {
     initialLoad();
   }, [loadPosts, loadFriends]);
 
+  // Refresh posts when screen comes into focus (e.g., after creating a post)
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadPosts();
+    });
+
+    return unsubscribe;
+  }, [navigation, loadPosts]);
+
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

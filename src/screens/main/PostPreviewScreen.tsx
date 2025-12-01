@@ -204,6 +204,20 @@ export function PostPreviewScreen() {
       return;
     }
 
+    // Validate location
+    if (!selectedLocation || !selectedLocation.name || selectedLocation.lat === undefined || selectedLocation.lng === undefined) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Location Required', 'Please select a valid location for your post.');
+      return;
+    }
+
+    // Validate media URI
+    if (!mediaUri) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Media Required', 'Please capture a photo or video first.');
+      return;
+    }
+
     setIsPosting(true);
 
     try {
@@ -216,7 +230,8 @@ export function PostPreviewScreen() {
 
       if (error) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        Alert.alert('Error', error.message);
+        console.error('Post creation error:', error);
+        Alert.alert('Error', error.message || 'Failed to create post. Please try again.');
         setIsPosting(false);
         return;
       }
@@ -224,17 +239,25 @@ export function PostPreviewScreen() {
       if (data) {
         // Show success animation
         setShowSuccess(true);
+        // Don't set isPosting to false here - let success animation handle it
+      } else {
+        // No data returned but no error - this shouldn't happen
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        Alert.alert('Error', 'Failed to create post. Please try again.');
+        setIsPosting(false);
       }
     } catch (err) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      console.error('Post creation exception:', err);
       Alert.alert('Error', 'Failed to create post. Please try again.');
       setIsPosting(false);
     }
   }, [isOverLimit, createPost, mediaUri, mediaType, caption, selectedLocation]);
 
   const handleSuccessComplete = useCallback(() => {
-    // Navigate back to feed
+    // Navigate back to feed and refresh
     navigation.popToTop();
+    // The feed will automatically refresh via realtime subscription or on focus
   }, [navigation]);
 
   const handleCancel = useCallback(() => {
