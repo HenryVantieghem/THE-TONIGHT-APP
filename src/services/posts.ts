@@ -124,40 +124,35 @@ export async function createPost(
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + config.POST_EXPIRY_HOURS);
 
-    // Validate location data
-    if (!location) {
-      return {
-        data: null,
-        error: { message: 'Location is required. Please select a location.' },
-      };
+    // Location is now OPTIONAL - validate only if provided
+    let locationName: string | null = null;
+    let lat: number | null = null;
+    let lng: number | null = null;
+    let locationCity: string | null = null;
+    let locationState: string | null = null;
+
+    if (location && location.name && location.name.trim() !== '') {
+      // Validate location coordinates are valid numbers
+      const parsedLat = typeof location.lat === 'number' ? location.lat : parseFloat(String(location.lat));
+      const parsedLng = typeof location.lng === 'number' ? location.lng : parseFloat(String(location.lng));
+
+      if (
+        !isNaN(parsedLat) &&
+        !isNaN(parsedLng) &&
+        parsedLat >= -90 &&
+        parsedLat <= 90 &&
+        parsedLng >= -180 &&
+        parsedLng <= 180
+      ) {
+        locationName = location.name.trim();
+        lat = parsedLat;
+        lng = parsedLng;
+        locationCity = location.city?.trim() || null;
+        locationState = location.state?.trim() || null;
+      }
     }
 
-    if (!location.name || location.name.trim() === '') {
-      return {
-        data: null,
-        error: { message: 'Location name is required. Please select a valid location.' },
-      };
-    }
-
-    // Validate location coordinates are valid numbers
-    const lat = typeof location.lat === 'number' ? location.lat : parseFloat(String(location.lat));
-    const lng = typeof location.lng === 'number' ? location.lng : parseFloat(String(location.lng));
-
-    if (
-      isNaN(lat) ||
-      isNaN(lng) ||
-      lat < -90 ||
-      lat > 90 ||
-      lng < -180 ||
-      lng > 180
-    ) {
-      return {
-        data: null,
-        error: { message: 'Invalid location coordinates. Please select a valid location.' },
-      };
-    }
-
-    // Insert post record
+    // Insert post record - location fields can be null
     const { data: postData, error: postError } = await supabase
       .from(TABLES.POSTS)
       .insert({
@@ -166,11 +161,11 @@ export async function createPost(
         media_type: mediaType,
         thumbnail_url: mediaType === 'video' ? null : mediaUrl,
         caption: caption?.trim() || null,
-        location_name: location.name.trim(),
+        location_name: locationName,
         location_lat: lat,
         location_lng: lng,
-        location_city: location.city?.trim() || null,
-        location_state: location.state?.trim() || null,
+        location_city: locationCity,
+        location_state: locationState,
         expires_at: expiresAt.toISOString(),
         view_count: 0,
       })

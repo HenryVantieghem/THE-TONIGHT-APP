@@ -15,9 +15,9 @@ export interface Post {
   media_type: 'image' | 'video';
   thumbnail_url: string | null;
   caption: string | null;
-  location_name: string;
-  location_lat: number;
-  location_lng: number;
+  location_name: string | null; // Now optional
+  location_lat: number | null;  // Now optional
+  location_lng: number | null;  // Now optional
   location_city: string | null;
   location_state: string | null;
   created_at: string;
@@ -63,8 +63,8 @@ export interface UserStats {
 // Blocked user
 export interface BlockedUser {
   id: string;
-  user_id: string;
-  blocked_user_id: string;
+  blocker_id: string;
+  blocked_id: string;
   created_at: string;
 }
 
@@ -153,7 +153,7 @@ export interface CreatePostPayload {
   mediaUri: string;
   mediaType: 'image' | 'video';
   caption?: string;
-  location: LocationData;
+  location?: LocationData; // Location is now OPTIONAL
 }
 
 // Permission status

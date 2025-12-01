@@ -2,7 +2,7 @@ import type { ReactionEmoji } from '../types';
 
 export const config = {
   // App info
-  APP_NAME: 'Tonight',
+  APP_NAME: 'Experiences',
   APP_VERSION: '1.0.0',
 
   // Post settings

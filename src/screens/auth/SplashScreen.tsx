@@ -52,9 +52,9 @@ export function SplashScreen() {
         ]}
       >
         <View style={styles.logoContainer}>
-          <Text style={styles.logoEmoji}>🌙</Text>
+          <Text style={styles.logoEmoji}>✨</Text>
         </View>
-        <Text style={styles.title}>Tonight</Text>
+        <Text style={styles.title}>Experiences</Text>
       </Animated.View>
     </View>
   );

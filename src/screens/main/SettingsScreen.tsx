@@ -15,6 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../../components/ui/Card';
 import { DiscoBallLogo } from '../../components/ui/DiscoBallLogo';
 import { useAuth } from '../../hooks/useAuth';
@@ -92,7 +93,7 @@ function ToggleRow({
   value,
   onValueChange,
 }: {
-  icon: string;
+  icon: React.ReactNode;
   label: string;
   description?: string;
   value: boolean;
@@ -106,7 +107,7 @@ function ToggleRow({
   return (
     <View style={styles.toggleRow}>
       <View style={styles.toggleIconContainer}>
-        <Text style={styles.toggleIcon}>{icon}</Text>
+        {icon}
       </View>
       <View style={styles.toggleContent}>
         <Text style={styles.toggleLabel}>{label}</Text>
@@ -134,7 +135,7 @@ function TappableRow({
   isLink = false,
   isDanger = false,
 }: {
-  icon?: string;
+  icon?: React.ReactNode;
   label: string;
   value?: string;
   onPress?: () => void;
@@ -152,7 +153,7 @@ function TappableRow({
     <View style={styles.tappableRow}>
       {icon && (
         <View style={[styles.toggleIconContainer, isDanger && styles.dangerIconContainer]}>
-          <Text style={styles.toggleIcon}>{icon}</Text>
+          {icon}
         </View>
       )}
       <View style={styles.tappableContent}>
@@ -168,7 +169,12 @@ function TappableRow({
       </View>
       {value && <Text style={styles.tappableValue}>{value}</Text>}
       {(isLink || onPress) && !value && (
-        <Text style={[styles.tappableArrow, isDanger && styles.dangerText]}>→</Text>
+        <Ionicons
+          name="chevron-forward"
+          size={18}
+          color={isDanger ? colors.error : colors.textTertiary}
+          style={{ marginLeft: spacing.sm }}
+        />
       )}
     </View>
   );
@@ -273,7 +279,7 @@ export function SettingsScreen() {
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           style={styles.backButton}
         >
-          <Text style={styles.backIcon}>←</Text>
+          <Ionicons name="chevron-back" size={22} color={colors.primary} />
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
 
@@ -294,13 +300,13 @@ export function SettingsScreen() {
         <AnimatedSection title="Account" index={0}>
           <Card style={styles.card}>
             <TappableRow
-              icon="👤"
+              icon={<Ionicons name="person-outline" size={18} color={colors.text} />}
               label="Username"
               value={`@${user?.username || 'Not set'}`}
             />
             <View style={styles.divider} />
             <TappableRow
-              icon="🆔"
+              icon={<Ionicons name="finger-print-outline" size={18} color={colors.text} />}
               label="User ID"
               value={user?.id?.slice(0, 8) || 'Unknown'}
             />
@@ -312,7 +318,7 @@ export function SettingsScreen() {
           <Card style={styles.card}>
             <View style={styles.privacyHeader}>
               <View style={styles.toggleIconContainer}>
-                <Text style={styles.toggleIcon}>📍</Text>
+                <Ionicons name="location-outline" size={18} color={colors.text} />
               </View>
               <View style={styles.privacyHeaderText}>
                 <Text style={styles.settingLabel}>Location Precision</Text>
@@ -353,28 +359,28 @@ export function SettingsScreen() {
         <AnimatedSection title="About" index={3}>
           <Card style={styles.card}>
             <TappableRow
-              icon="📜"
+              icon={<Ionicons name="document-text-outline" size={18} color={colors.text} />}
               label="Terms of Service"
-              onPress={() => openLink('https://tonight.app/terms')}
+              onPress={() => openLink('https://experiences.app/terms')}
               isLink
             />
             <View style={styles.divider} />
             <TappableRow
-              icon="🔒"
+              icon={<Ionicons name="lock-closed-outline" size={18} color={colors.text} />}
               label="Privacy Policy"
-              onPress={() => openLink('https://tonight.app/privacy')}
+              onPress={() => openLink('https://experiences.app/privacy')}
               isLink
             />
             <View style={styles.divider} />
             <TappableRow
-              icon="💬"
+              icon={<Ionicons name="chatbubble-outline" size={18} color={colors.text} />}
               label="Send Feedback"
-              onPress={() => openLink('mailto:support@tonight.app')}
+              onPress={() => openLink('mailto:support@experiences.app')}
               isLink
             />
             <View style={styles.divider} />
             <TappableRow
-              icon="ℹ️"
+              icon={<Ionicons name="information-circle-outline" size={18} color={colors.text} />}
               label="Version"
               value={config.APP_VERSION}
             />
@@ -385,14 +391,14 @@ export function SettingsScreen() {
         <AnimatedSection title="Danger Zone" index={3} isDanger>
           <Card style={styles.dangerCard}>
             <TappableRow
-              icon="🚪"
+              icon={<Ionicons name="log-out-outline" size={18} color={colors.error} />}
               label="Log Out"
               onPress={handleLogout}
               isDanger
             />
             <View style={styles.divider} />
             <TappableRow
-              icon="⚠️"
+              icon={<Ionicons name="warning-outline" size={18} color={colors.error} />}
               label="Delete Account"
               onPress={handleDeleteAccount}
               isDanger
@@ -403,7 +409,7 @@ export function SettingsScreen() {
         {/* Footer */}
         <View style={styles.footer}>
           <DiscoBallLogo size={32} animated={true} />
-          <Text style={styles.footerText}>Tonight</Text>
+          <Text style={styles.footerText}>Experiences</Text>
           <Text style={styles.footerSubtext}>
             Share moments that matter, right now.
           </Text>
@@ -431,11 +437,7 @@ const styles = StyleSheet.create({
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
-  },
-  backIcon: {
-    fontSize: typography.sizes.lg,
-    color: colors.primary,
+    gap: 2,
   },
   backText: {
     fontSize: typography.sizes.md,
@@ -488,9 +490,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: spacing.sm,
   },
-  toggleIcon: {
-    fontSize: 18,
-  },
   toggleContent: {
     flex: 1,
     marginRight: spacing.sm,
@@ -522,11 +521,6 @@ const styles = StyleSheet.create({
   tappableValue: {
     fontSize: typography.sizes.md,
     color: colors.textSecondary,
-  },
-  tappableArrow: {
-    fontSize: typography.sizes.md,
-    color: colors.textTertiary,
-    marginLeft: spacing.sm,
   },
   // Privacy section styles
   privacyHeader: {

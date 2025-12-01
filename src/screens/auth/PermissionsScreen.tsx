@@ -8,12 +8,15 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Camera } from 'expo-camera';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components/ui/Button';
 import { useStore } from '../../stores/useStore';
 import { typography } from '../../constants/typography';
+import type { AuthStackParamList } from '../../types';
 
 // iOS auth color palette
 const authColors = {
@@ -52,13 +55,16 @@ const permissions: PermissionItem[] = [
     icon: 'location',
     iconColor: '#007AFF',
     title: 'LOCATION',
-    description: 'Show where you are when you post',
-    required: true,
+    description: 'Show where you are when you post (optional)',
+    required: false, // Location is now OPTIONAL
   },
 ];
 
+type PermissionsNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Permissions'>;
+
 export function PermissionsScreen() {
-  const { setPermissions } = useStore();
+  const navigation = useNavigation<PermissionsNavigationProp>();
+  const { setPermissions, user, setUser } = useStore();
 
   const [permissionStates, setPermissionStates] = useState<
     Record<'camera' | 'location', PermissionStatus>
@@ -68,6 +74,7 @@ export function PermissionsScreen() {
   });
 
   const [isLoading, setIsLoading] = useState<string | null>(null);
+  const [isCompleting, setIsCompleting] = useState(false);
 
   // Check initial permission states
   useEffect(() => {
@@ -177,10 +184,35 @@ export function PermissionsScreen() {
     );
   };
 
-  // Check if required permissions are granted
-  const requiredGranted =
-    permissionStates.camera === 'granted' &&
-    permissionStates.location === 'granted';
+  // Only camera is required, location is optional
+  const cameraGranted = permissionStates.camera === 'granted';
+  const canContinue = cameraGranted;
+
+  // Handle continue to main app
+  const handleContinue = async () => {
+    setIsCompleting(true);
+    // The RootNavigator will automatically switch to MainNavigator
+    // when user is set in the store (which should already be set)
+    // We just need to ensure the transition happens smoothly
+
+    // Small delay for visual feedback
+    setTimeout(() => {
+      setIsCompleting(false);
+      // If user is already set, navigation should happen automatically via RootNavigator
+      // If not, we need to ensure user is set
+      if (!user) {
+        // This shouldn't happen normally, but handle it gracefully
+        console.warn('User not set in store during permissions continue');
+      }
+    }, 100);
+  };
+
+  // Handle skip - proceed with just camera permission or skip entirely
+  const handleSkip = () => {
+    // Allow continuing even without location permission
+    // Camera is recommended but we'll let users proceed
+    handleContinue();
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -189,7 +221,7 @@ export function PermissionsScreen() {
         <View style={styles.header}>
           <Text style={styles.title}>Enable Features</Text>
           <Text style={styles.subtitle}>
-            To use Tonight, we need access to a few things
+            Camera is required to share moments. Location is optional.
           </Text>
         </View>
 
@@ -200,8 +232,28 @@ export function PermissionsScreen() {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <TouchableOpacity onPress={() => {}} activeOpacity={0.7}>
-            <Text style={styles.skipLink}>Skip for now</Text>
+          {canContinue ? (
+            <Button
+              title={isCompleting ? 'Starting...' : 'Continue'}
+              onPress={handleContinue}
+              loading={isCompleting}
+              fullWidth
+              size="lg"
+              variant="primary"
+            />
+          ) : (
+            <Text style={styles.hintText}>
+              Please enable camera access to continue
+            </Text>
+          )}
+          <TouchableOpacity
+            onPress={handleSkip}
+            activeOpacity={0.7}
+            style={styles.skipButton}
+          >
+            <Text style={styles.skipLink}>
+              {canContinue ? 'Skip location' : 'Skip for now'}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -298,6 +350,17 @@ const styles = StyleSheet.create({
   footer: {
     paddingVertical: 24,
     alignItems: 'center',
+  },
+  hintText: {
+    fontSize: 15,
+    color: authColors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  skipButton: {
+    marginTop: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
   },
   skipLink: {
     fontSize: 15,

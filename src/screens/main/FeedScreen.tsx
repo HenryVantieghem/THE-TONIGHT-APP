@@ -24,6 +24,7 @@ import Animated, {
   Extrapolation,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
 import { PostCard } from '../../components/feed/PostCard';
 import { EmptyState } from '../../components/feed/EmptyState';
 import { PostCardSkeleton } from '../../components/feed/PostCardSkeleton';
@@ -257,7 +258,7 @@ export function FeedScreen() {
             style={styles.headerButton}
             activeOpacity={0.7}
           >
-            <Text style={styles.menuIcon}>☰</Text>
+            <Ionicons name="menu" size={24} color={glassColors.text.primary} />
             {pendingRequests.length > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>
@@ -269,7 +270,7 @@ export function FeedScreen() {
 
           {/* Title */}
           <View style={styles.titleContainer}>
-            <Text style={styles.title}>Tonight</Text>
+            <Text style={styles.title}>Experiences</Text>
           </View>
 
           {/* Profile Button */}
@@ -278,7 +279,7 @@ export function FeedScreen() {
             style={styles.headerButton}
             activeOpacity={0.7}
           >
-            <Text style={styles.profileIcon}>👤</Text>
+            <Ionicons name="person-circle-outline" size={26} color={glassColors.text.primary} />
           </TouchableOpacity>
         </View>
 
@@ -400,14 +401,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
-  },
-  menuIcon: {
-    fontSize: 24,
-    color: glassColors.text.primary,
-  },
-  profileIcon: {
-    fontSize: 24,
-    color: glassColors.text.primary,
   },
   badge: {
     position: 'absolute',

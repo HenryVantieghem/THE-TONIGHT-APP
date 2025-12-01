@@ -1,23 +1,23 @@
-// Color system for THE TONIGHT APP
-// iOS Design System - SF Pro, iOS Blue, Clean & Modern
-// Based on complete UI/UX specification
+// Color system for EXPERIENCES APP
+// Modern Minimal Design System - Indigo accent, Clean & Sophisticated
+// Production-ready for App Store
 
 export const colors = {
-  // Primary - iOS Blue (THE SIGNATURE LOOK)
-  primary: '#007AFF',
-  primaryDark: '#0051D5',
-  primaryLight: '#5AC8FA',
-  primaryGradient: ['#007AFF', '#5AC8FA'] as const,
+  // Primary - Indigo (Vibrant but sophisticated)
+  primary: '#6366F1',      // Indigo-500
+  primaryDark: '#4F46E5',  // Indigo-600
+  primaryLight: '#818CF8', // Indigo-400
+  primaryGradient: ['#6366F1', '#818CF8'] as const,
 
-  // Secondary - Deep purple for contrast and premium feel
-  secondary: '#6366F1',
-  secondaryDark: '#4F46E5',
-  secondaryLight: '#818CF8',
-  secondaryGradient: ['#6366F1', '#8B5CF6'] as const,
+  // Secondary - iOS Blue for familiarity
+  secondary: '#007AFF',
+  secondaryDark: '#0051D5',
+  secondaryLight: '#5AC8FA',
+  secondaryGradient: ['#007AFF', '#5AC8FA'] as const,
 
-  // Accent - Teal for highlights
-  accent: '#22C55E',
-  accentLight: '#4ADE80',
+  // Accent - Emerald for success/highlights
+  accent: '#10B981',       // Emerald-500
+  accentLight: '#34D399',  // Emerald-400
 
   // Backgrounds - iOS Clean Style
   background: '#FFFFFF',
@@ -50,15 +50,15 @@ export const colors = {
   timerRedLight: '#FEE2E2',
   timerRedDark: '#FF2D55',
 
-  // Semantic colors
-  success: '#22C55E',
-  successLight: '#DCFCE7',
-  warning: '#F59E0B',
-  warningLight: '#FEF3C7',
-  error: '#EF4444',
-  errorLight: '#FEE2E2',
-  info: '#3B82F6',
-  infoLight: '#DBEAFE',
+  // Semantic colors (consistent with new design)
+  success: '#10B981',      // Emerald-500
+  successLight: '#D1FAE5', // Emerald-100
+  warning: '#F59E0B',      // Amber-500
+  warningLight: '#FEF3C7', // Amber-100
+  error: '#EF4444',        // Red-500
+  errorLight: '#FEE2E2',   // Red-100
+  info: '#6366F1',         // Indigo-500 (matches primary)
+  infoLight: '#E0E7FF',    // Indigo-100
 
   // Reactions
   reactionBackground: '#F1F5F9',
@@ -168,10 +168,11 @@ export const shadows = {
 export const gradients = {
   primary: colors.primaryGradient,
   secondary: colors.secondaryGradient,
+  indigo: ['#6366F1', '#818CF8'] as const,
   blue: ['#007AFF', '#5AC8FA'] as const,
-  purple: ['#5856D6', '#AF52DE'] as const,
-  green: ['#34C759', '#30D158'] as const,
-  orange: ['#FF9500', '#FF3B30'] as const,
+  purple: ['#8B5CF6', '#A78BFA'] as const,
+  green: ['#10B981', '#34D399'] as const,
+  orange: ['#F59E0B', '#FBBF24'] as const,
   dark: ['#1C1C1E', '#2C2C2E'] as const,
   premium: ['#000000', '#1C1C1E', '#2C2C2E'] as const,
 } as const;

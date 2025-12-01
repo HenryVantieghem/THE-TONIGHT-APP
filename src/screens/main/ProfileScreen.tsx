@@ -18,6 +18,7 @@ import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -380,27 +381,27 @@ export function ProfileScreen() {
     switch (friendshipStatus) {
       case 'accepted':
         return {
-          title: 'Friends ✓',
+          title: 'Friends',
           variant: 'glass' as const,
-          icon: '👥',
+          icon: <Ionicons name="checkmark-circle" size={18} color={colors.primary} />,
         };
       case 'pending_sent':
         return {
           title: 'Request Sent',
           variant: 'glass' as const,
-          icon: '⏳',
+          icon: <Ionicons name="time-outline" size={18} color={colors.textSecondary} />,
         };
       case 'pending_received':
         return {
           title: 'Accept Request',
           variant: 'primary' as const,
-          icon: '✓',
+          icon: <Ionicons name="checkmark" size={18} color={colors.white} />,
         };
       default:
         return {
           title: 'Add Friend',
           variant: 'primary' as const,
-          icon: '+',
+          icon: <Ionicons name="person-add" size={18} color={colors.white} />,
         };
     }
   };
@@ -444,7 +445,7 @@ export function ProfileScreen() {
             />
           )}
           <View style={styles.videoOverlayBg} />
-          <Text style={styles.videoIcon}>▶</Text>
+          <Ionicons name="play" size={12} color={colors.white} style={{ zIndex: 1 }} />
         </View>
       )}
     </TouchableOpacity>
@@ -489,7 +490,7 @@ export function ProfileScreen() {
               />
             )}
             <View style={styles.glassIconBg} />
-            <Text style={styles.backIcon}>←</Text>
+            <Ionicons name="chevron-back" size={20} color={glassColors.text.primary} style={{ zIndex: 1 }} />
           </View>
         </TouchableOpacity>
 
@@ -512,7 +513,7 @@ export function ProfileScreen() {
                 />
               )}
               <View style={styles.glassIconBg} />
-              <Text style={styles.settingsIcon}>⚙️</Text>
+              <Ionicons name="settings-outline" size={20} color={glassColors.text.primary} style={{ zIndex: 1 }} />
             </View>
           </TouchableOpacity>
         ) : (
@@ -573,7 +574,7 @@ export function ProfileScreen() {
                       colors={colors.primaryGradient}
                       style={styles.badgeGradient}
                     >
-                      <Text style={styles.changeAvatarIcon}>📷</Text>
+                      <Ionicons name="camera" size={16} color={colors.white} />
                     </LinearGradient>
                   </View>
                 )}
@@ -610,7 +611,7 @@ export function ProfileScreen() {
                   variant="glass"
                   onPress={handleFriendsPress}
                   style={styles.actionButton}
-                  icon={<Text>👥</Text>}
+                  icon={<Ionicons name="people" size={18} color={colors.primary} />}
                 />
                 <Button
                   title="Log Out"
@@ -677,11 +678,11 @@ export function ProfileScreen() {
                   end={{ x: 0.5, y: 0.5 }}
                 />
               </View>
-              <Text style={styles.emptyIcon}>📷</Text>
+              <Ionicons name="camera-outline" size={48} color={glassColors.text.secondary} style={{ marginBottom: spacing.md, zIndex: 1 }} />
               <Text style={styles.emptyText}>No posts yet</Text>
               {isOwnProfile && (
                 <Text style={styles.emptySubtext}>
-                  Share your first moment tonight!
+                  Share your first experience!
                 </Text>
               )}
             </View>
@@ -744,22 +745,12 @@ const styles = StyleSheet.create({
     borderWidth: liquidGlass.border.width,
     borderColor: liquidGlass.border.color,
   },
-  backIcon: {
-    fontSize: 20,
-    color: glassColors.text.primary,
-    fontWeight: '600',
-    zIndex: 1,
-  },
   headerTitle: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.semibold,
     color: glassColors.text.primary,
     flex: 1,
     textAlign: 'center',
-  },
-  settingsIcon: {
-    fontSize: 20,
-    zIndex: 1,
   },
   scrollView: {
     flex: 1,
@@ -798,9 +789,6 @@ const styles = StyleSheet.create({
     height: 32,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  changeAvatarIcon: {
-    fontSize: 16,
   },
   username: {
     fontSize: typography.sizes.xxl,
@@ -934,11 +922,6 @@ const styles = StyleSheet.create({
     backgroundColor: liquidGlass.material.dark.backgroundColor,
     borderRadius: 10,
   },
-  videoIcon: {
-    fontSize: 10,
-    color: colors.white,
-    zIndex: 1,
-  },
   emptyPosts: {
     padding: spacing.xxl,
     alignItems: 'center',
@@ -961,11 +944,6 @@ const styles = StyleSheet.create({
   emptyGlassHighlight: {
     ...StyleSheet.absoluteFillObject,
     height: '50%',
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: spacing.md,
-    zIndex: 1,
   },
   emptyText: {
     fontSize: typography.sizes.lg,

@@ -22,6 +22,7 @@ import { VideoView, useVideoPlayer } from 'expo-video';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components/ui/Button';
 import { usePosts } from '../../hooks/usePosts';
 import { useLocation } from '../../hooks/useLocation';
@@ -112,14 +113,13 @@ function SuccessAnimation({
             colors={[colors.success, '#22C55E']}
             style={successStyles.gradient}
           >
-            <Animated.Text
+            <Animated.View
               style={[
-                successStyles.checkmark,
                 { transform: [{ scale: checkScaleAnim }] },
               ]}
             >
-              ✓
-            </Animated.Text>
+              <Ionicons name="checkmark" size={60} color={colors.white} />
+            </Animated.View>
           </LinearGradient>
         </Animated.View>
         <Animated.Text
@@ -149,11 +149,6 @@ const successStyles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  checkmark: {
-    fontSize: 60,
-    color: colors.white,
-    fontWeight: '700',
   },
   text: {
     marginTop: spacing.lg,
@@ -370,20 +365,6 @@ export function PostPreviewScreen() {
       return;
     }
 
-    // Validate location
-    if (!isLocationValid()) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(
-        'Location Required',
-        'Please select a location for your post before sharing.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Select Location', onPress: handleSelectLocation }
-        ]
-      );
-      return;
-    }
-
     // Validate media
     if (!mediaUri) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -394,19 +375,22 @@ export function PostPreviewScreen() {
     setIsPosting(true);
 
     try {
-      const validLocation: LocationData = {
-        name: selectedLocation!.name.trim(),
-        lat: selectedLocation!.lat,
-        lng: selectedLocation!.lng,
-        city: selectedLocation!.city?.trim() || undefined,
-        state: selectedLocation!.state?.trim() || undefined,
-      };
+      // Location is OPTIONAL - build location object only if valid
+      const validLocation: LocationData | undefined = isLocationValid()
+        ? {
+            name: selectedLocation!.name.trim(),
+            lat: selectedLocation!.lat,
+            lng: selectedLocation!.lng,
+            city: selectedLocation!.city?.trim() || undefined,
+            state: selectedLocation!.state?.trim() || undefined,
+          }
+        : undefined;
 
       console.log('Creating post with:', {
         mediaUri: mediaUri.substring(0, 50) + '...',
         mediaType,
         caption: caption.trim() || '(no caption)',
-        location: validLocation,
+        location: validLocation || '(no location)',
       });
 
       const { data, error } = await createPost({
@@ -483,8 +467,8 @@ export function PostPreviewScreen() {
     return colors.textTertiary;
   };
 
-  // Determine if we can post
-  const canPost = !isPosting && !isOverLimit && isLocationValid() && !isRefreshingLocation;
+  // Determine if we can post - location is OPTIONAL
+  const canPost = !isPosting && !isOverLimit && !isRefreshingLocation;
 
   return (
     <KeyboardAvoidingView
@@ -541,7 +525,7 @@ export function PostPreviewScreen() {
 
           {mediaType === 'video' && (
             <View style={styles.videoIndicator}>
-              <Text style={styles.videoIcon}>🎬</Text>
+              <Ionicons name="videocam" size={14} color={colors.white} />
               <Text style={styles.videoLabel}>Video</Text>
             </View>
           )}
@@ -556,32 +540,25 @@ export function PostPreviewScreen() {
           {/* Location Section */}
           <View style={styles.locationSection}>
             <View style={styles.locationHeader}>
-              <Text style={styles.sectionLabel}>LOCATION</Text>
-              {!isRefreshingLocation && (
-          <TouchableOpacity
+              <Text style={styles.sectionLabel}>LOCATION (OPTIONAL)</Text>
+              {!isRefreshingLocation && hasLocationPermission !== false && (
+                <TouchableOpacity
                   onPress={handleRefreshLocation}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   style={styles.refreshButton}
                 >
-                  <Text style={styles.refreshIcon}>
-                    {hasLocationPermission === false ? '🔓' : '📍'}
-                  </Text>
-                  <Text style={styles.refreshText}>
-                    {hasLocationPermission === false ? 'Enable' : 'Use Current'}
-                  </Text>
+                  <Ionicons name="locate" size={14} color={colors.primary} />
+                  <Text style={styles.refreshText}>Use Current</Text>
                 </TouchableOpacity>
               )}
             </View>
 
             <TouchableOpacity
-              style={[
-                styles.locationCard,
-                !isLocationValid() && styles.locationCardError,
-              ]}
-            onPress={handleSelectLocation}
-            activeOpacity={0.7}
+              style={styles.locationCard}
+              onPress={handleSelectLocation}
+              activeOpacity={0.7}
               disabled={isRefreshingLocation}
-          >
+            >
               {isRefreshingLocation ? (
                 <View style={styles.locationLoading}>
                   <ActivityIndicator size="small" color={colors.primary} />
@@ -590,37 +567,40 @@ export function PostPreviewScreen() {
               ) : selectedLocation && isLocationValid() ? (
                 <>
                   <View style={styles.locationIconContainer}>
-                    <Text style={styles.locationIcon}>📍</Text>
+                    <Ionicons name="location" size={18} color={colors.primary} />
                   </View>
                   <View style={styles.locationTextContainer}>
-                  <Text style={styles.locationName} numberOfLines={1}>
+                    <Text style={styles.locationName} numberOfLines={1}>
                       {selectedLocation.name}
-                  </Text>
-                    {(selectedLocation.city || selectedLocation.state) && (
-                    <Text style={styles.locationDetails} numberOfLines={1}>
-                      {[selectedLocation.city, selectedLocation.state].filter(Boolean).join(', ')}
                     </Text>
-                  )}
+                    {(selectedLocation.city || selectedLocation.state) && (
+                      <Text style={styles.locationDetails} numberOfLines={1}>
+                        {[selectedLocation.city, selectedLocation.state].filter(Boolean).join(', ')}
+                      </Text>
+                    )}
                   </View>
                   <TouchableOpacity onPress={handleSelectLocation} activeOpacity={0.7}>
-                    <Text style={styles.changeText}>Change Location</Text>
+                    <Text style={styles.changeText}>Change</Text>
                   </TouchableOpacity>
                 </>
               ) : (
                 <>
-                  <View style={[styles.locationIconContainer, styles.locationIconError]}>
-                    <Text style={styles.locationIcon}>📍</Text>
-            </View>
+                  <View style={[styles.locationIconContainer, styles.locationIconOptional]}>
+                    <Ionicons name="location-outline" size={18} color={colors.textTertiary} />
+                  </View>
                   <View style={styles.locationTextContainer}>
                     <Text style={styles.locationPlaceholder}>
-                      {locationError || 'Tap to select a location'}
-              </Text>
+                      Add a location
+                    </Text>
+                    <Text style={styles.locationOptionalHint}>
+                      Let friends know where you are
+                    </Text>
                   </View>
-                  <Text style={styles.selectText}>Select</Text>
+                  <Text style={styles.addText}>Add</Text>
                 </>
-          )}
+              )}
             </TouchableOpacity>
-        </View>
+          </View>
 
         {/* Caption input */}
           <View style={styles.captionSection}>
@@ -654,7 +634,7 @@ export function PostPreviewScreen() {
         {/* Timer info */}
         <View style={styles.timerInfo}>
           <View style={styles.timerIconContainer}>
-            <Text style={styles.timerIcon}>⏱️</Text>
+            <Ionicons name="time" size={22} color={colors.timerGreen} />
           </View>
           <View style={styles.timerTextContainer}>
             <Text style={styles.timerTitle}>Disappears in 1 hour</Text>
@@ -669,7 +649,7 @@ export function PostPreviewScreen() {
       {/* Footer with Post button */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
         <Button
-          title={isPosting ? 'Posting...' : 'Post 🚀'}
+          title={isPosting ? 'Posting...' : 'Share with Friends'}
           onPress={handlePost}
           loading={isPosting}
           disabled={!canPost}
@@ -677,11 +657,6 @@ export function PostPreviewScreen() {
           size="lg"
           variant="primary"
         />
-        {!isLocationValid() && !isRefreshingLocation && (
-          <Text style={styles.errorText}>
-            Please select a location to continue
-          </Text>
-        )}
         {isOverLimit && (
           <Text style={styles.errorText}>
             Caption is too long ({characterCount - config.MAX_CAPTION_LENGTH} characters over)
@@ -765,9 +740,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  videoIcon: {
-    fontSize: 14,
-  },
   videoLabel: {
     fontSize: typography.sizes.sm,
     color: colors.white,
@@ -799,9 +771,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryLight + '15',
     borderRadius: borderRadius.sm,
   },
-  refreshIcon: {
-    fontSize: 12,
-  },
   refreshText: {
     fontSize: typography.sizes.xs,
     color: colors.primary,
@@ -816,9 +785,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  locationCardError: {
-    borderColor: colors.error + '50',
-    backgroundColor: colors.error + '08',
+  locationIconOptional: {
+    backgroundColor: colors.textTertiary + '20',
   },
   locationLoading: {
     flexDirection: 'row',
@@ -841,11 +809,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: spacing.md,
   },
-  locationIconError: {
-    backgroundColor: colors.error + '15',
-  },
-  locationIcon: {
-    fontSize: 18,
+  locationOptionalHint: {
+    fontSize: typography.sizes.sm,
+    color: colors.textTertiary,
+    marginTop: 2,
   },
   locationTextContainer: {
     flex: 1,
@@ -870,10 +837,10 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.semibold,
     color: colors.primary,
   },
-  selectText: {
+  addText: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
-    color: colors.error,
+    color: colors.primary,
   },
   captionSection: {
     padding: spacing.md,
@@ -925,9 +892,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.timerGreen + '20',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  timerIcon: {
-    fontSize: 22,
   },
   timerTextContainer: {
     flex: 1,

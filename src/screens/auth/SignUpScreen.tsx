@@ -158,7 +158,7 @@ export function SignUpScreen() {
           <View style={styles.header}>
             <Text style={styles.title}>Create Account</Text>
             <Text style={styles.subtitle}>
-              Join Tonight and share moments with friends
+              Share experiences with friends
             </Text>
           </View>
 

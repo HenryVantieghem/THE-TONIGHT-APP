@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -30,27 +31,27 @@ interface EmptyStateProps {
 
 const emptyStateContent: Record<
   EmptyStateType,
-  { icon: string; title: string; subtitle: string; defaultAction?: string }
+  { icon: keyof typeof Ionicons.glyphMap; title: string; subtitle: string; defaultAction?: string }
 > = {
   'no-posts': {
-    icon: '📷',
+    icon: 'camera-outline',
     title: 'No Posts Yet',
     subtitle: "Be the first to share what you're up to!",
-    defaultAction: 'Take a Photo 📸',
+    defaultAction: 'Take a Photo',
   },
   'no-friends': {
-    icon: '👥',
+    icon: 'people-outline',
     title: 'Find Your Friends',
     subtitle: 'Add friends to see their posts here',
-    defaultAction: 'Add Friends ➕',
+    defaultAction: 'Add Friends',
   },
   'no-requests': {
-    icon: '📬',
+    icon: 'mail-open-outline',
     title: 'No Pending Requests',
     subtitle: 'You don\'t have any friend requests at the moment.',
   },
   error: {
-    icon: '⚠️',
+    icon: 'alert-circle-outline',
     title: 'Couldn\'t Load Posts',
     subtitle: 'Pull down to retry',
     defaultAction: 'Try Again',
@@ -182,9 +183,14 @@ export function EmptyState({
                 end={{ x: 1, y: 1 }}
               />
             </Animated.View>
-            <Animated.Text style={[styles.icon, animatedIconStyle]}>
-              {content.icon}
-            </Animated.Text>
+            <Animated.View style={animatedIconStyle}>
+              <Ionicons
+                name={content.icon}
+                size={64}
+                color={glassColors.text.primary}
+                style={styles.iconShadow}
+              />
+            </Animated.View>
           </View>
 
           <Text style={styles.title}>{content.title}</Text>
@@ -317,8 +323,7 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     overflow: 'hidden',
   },
-  icon: {
-    fontSize: 64,
+  iconShadow: {
     textShadowColor: 'rgba(0, 0, 0, 0.1)',
     textShadowOffset: { width: 0, height: 4 },
     textShadowRadius: 8,

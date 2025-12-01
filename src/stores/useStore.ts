@@ -138,7 +138,7 @@ export const useStore = create<AppState>()(
       reset: () => set(initialState),
     }),
     {
-      name: 'tonight-app-storage',
+      name: 'experiences-app-storage',
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         // Only persist these fields
