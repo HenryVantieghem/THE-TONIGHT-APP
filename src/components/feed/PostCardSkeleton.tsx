@@ -1,92 +1,180 @@
-import React, { useEffect, useRef } from 'react';
-import {
-  View,
-  StyleSheet,
-  Dimensions,
-  Animated,
-} from 'react-native';
+import React, { useEffect } from 'react';
+import { View, StyleSheet, Dimensions, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors } from '../../constants/colors';
-import { spacing, borderRadius, shadows } from '../../constants/config';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing,
+  interpolate,
+  SharedValue,
+} from 'react-native-reanimated';
+import { colors, shadows } from '../../constants/colors';
+import { spacing, borderRadius } from '../../constants/config';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MEDIA_HEIGHT = SCREEN_WIDTH * 0.75;
+
+const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
 
 interface PostCardSkeletonProps {
   animated?: boolean;
 }
 
+// Reusable shimmer skeleton element
+function SkeletonBox({
+  width,
+  height,
+  borderRadius: radius = 4,
+  shimmerProgress,
+  style,
+}: {
+  width: number | `${number}%`;
+  height: number;
+  borderRadius?: number;
+  shimmerProgress: SharedValue<number>;
+  style?: ViewStyle;
+}) {
+  const animatedStyle = useAnimatedStyle(() => {
+    const translateX = interpolate(
+      shimmerProgress.value,
+      [0, 1],
+      [-SCREEN_WIDTH, SCREEN_WIDTH]
+    );
+    return {
+      transform: [{ translateX }],
+    };
+  });
+
+  return (
+    <View
+      style={[
+        {
+          width,
+          height,
+          borderRadius: radius,
+          backgroundColor: colors.surface,
+          overflow: 'hidden',
+        },
+        style,
+      ]}
+    >
+      <AnimatedLinearGradient
+        colors={[colors.surface, colors.surfaceSecondary, colors.surface]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={[StyleSheet.absoluteFill, { width: SCREEN_WIDTH * 2 }, animatedStyle]}
+      />
+    </View>
+  );
+}
+
 export function PostCardSkeleton({ animated = true }: PostCardSkeletonProps) {
-  const shimmerAnim = useRef(new Animated.Value(0)).current;
+  const shimmerProgress = useSharedValue(0);
 
   useEffect(() => {
     if (!animated) return;
 
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(shimmerAnim, {
-          toValue: 1,
-          duration: 1200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(shimmerAnim, {
-          toValue: 0,
-          duration: 1200,
-          useNativeDriver: true,
-        }),
-      ])
+    shimmerProgress.value = withRepeat(
+      withTiming(1, {
+        duration: 1500,
+        easing: Easing.inOut(Easing.ease),
+      }),
+      -1,
+      false
     );
-
-    animation.start();
-
-    return () => animation.stop();
-  }, [animated, shimmerAnim]);
-
-  const shimmerStyle = {
-    opacity: animated
-      ? shimmerAnim.interpolate({
-          inputRange: [0, 1],
-          outputRange: [0.4, 0.8],
-        })
-      : 0.6,
-  };
+  }, [animated, shimmerProgress]);
 
   return (
     <View style={styles.container}>
       {/* Header skeleton */}
       <View style={styles.header}>
-        <Animated.View style={[styles.avatar, shimmerStyle]} />
+        <SkeletonBox
+          width={44}
+          height={44}
+          borderRadius={22}
+          shimmerProgress={shimmerProgress}
+        />
         <View style={styles.headerText}>
-          <Animated.View style={[styles.username, shimmerStyle]} />
-          <Animated.View style={[styles.location, shimmerStyle]} />
+          <SkeletonBox
+            width={100}
+            height={16}
+            borderRadius={borderRadius.xs}
+            shimmerProgress={shimmerProgress}
+          />
+          <SkeletonBox
+            width={150}
+            height={12}
+            borderRadius={borderRadius.xs}
+            shimmerProgress={shimmerProgress}
+            style={{ marginTop: 6 }}
+          />
         </View>
       </View>
 
       {/* Media skeleton */}
-      <Animated.View style={[styles.media, shimmerStyle]} />
+      <SkeletonBox
+        width="100%"
+        height={MEDIA_HEIGHT}
+        borderRadius={0}
+        shimmerProgress={shimmerProgress}
+      />
 
       {/* Caption skeleton */}
       <View style={styles.captionContainer}>
-        <Animated.View style={[styles.captionLine, shimmerStyle]} />
-        <Animated.View style={[styles.captionLineShort, shimmerStyle]} />
+        <SkeletonBox
+          width="90%"
+          height={14}
+          borderRadius={borderRadius.xs}
+          shimmerProgress={shimmerProgress}
+        />
+        <SkeletonBox
+          width="60%"
+          height={14}
+          borderRadius={borderRadius.xs}
+          shimmerProgress={shimmerProgress}
+          style={{ marginTop: 6 }}
+        />
       </View>
 
       {/* Timer skeleton */}
       <View style={styles.timerContainer}>
-        <Animated.View style={[styles.timerText, shimmerStyle]} />
-        <Animated.View style={[styles.timerBar, shimmerStyle]} />
+        <View style={styles.timerLabel}>
+          <SkeletonBox
+            width={16}
+            height={16}
+            borderRadius={8}
+            shimmerProgress={shimmerProgress}
+          />
+          <SkeletonBox
+            width={70}
+            height={12}
+            borderRadius={borderRadius.xs}
+            shimmerProgress={shimmerProgress}
+            style={{ marginLeft: 6 }}
+          />
+        </View>
+        <SkeletonBox
+          width="100%"
+          height={6}
+          borderRadius={borderRadius.round}
+          shimmerProgress={shimmerProgress}
+          style={{ marginTop: 8 }}
+        />
       </View>
 
       {/* Reactions skeleton */}
       <View style={styles.reactionsContainer}>
-        <View style={styles.emojiRow}>
-          {[1, 2, 3, 4].map((_, index) => (
-            <Animated.View
-              key={index}
-              style={[styles.emojiButton, shimmerStyle]}
-            />
-          ))}
-        </View>
+        {[1, 2, 3, 4].map((i) => (
+          <SkeletonBox
+            key={i}
+            width={52}
+            height={36}
+            borderRadius={borderRadius.lg}
+            shimmerProgress={shimmerProgress}
+          />
+        ))}
       </View>
     </View>
   );
@@ -103,56 +191,38 @@ export function PostCardsSkeletonList({ count = 3 }: { count?: number }) {
   );
 }
 
-// Shimmer component that can be used for any element
+// Standalone shimmer placeholder component
 export function ShimmerPlaceholder({
   width,
   height,
   borderRadius: radius = 4,
   style,
 }: {
-  width: number | string;
+  width: number | `${number}%`;
   height: number;
   borderRadius?: number;
-  style?: object;
+  style?: ViewStyle;
 }) {
-  const shimmerAnim = useRef(new Animated.Value(0)).current;
+  const shimmerProgress = useSharedValue(0);
 
   useEffect(() => {
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(shimmerAnim, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(shimmerAnim, {
-          toValue: 0,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-      ])
+    shimmerProgress.value = withRepeat(
+      withTiming(1, {
+        duration: 1500,
+        easing: Easing.inOut(Easing.ease),
+      }),
+      -1,
+      false
     );
-
-    animation.start();
-
-    return () => animation.stop();
-  }, [shimmerAnim]);
+  }, [shimmerProgress]);
 
   return (
-    <Animated.View
-      style={[
-        {
-          width,
-          height,
-          borderRadius: radius,
-          backgroundColor: colors.surfaceSecondary,
-          opacity: shimmerAnim.interpolate({
-            inputRange: [0, 1],
-            outputRange: [0.4, 0.8],
-          }),
-        },
-        style,
-      ]}
+    <SkeletonBox
+      width={width}
+      height={height}
+      borderRadius={radius}
+      shimmerProgress={shimmerProgress}
+      style={style}
     />
   );
 }
@@ -162,7 +232,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     marginBottom: spacing.md,
     borderRadius: borderRadius.md,
-    ...shadows.medium,
+    ...shadows.md,
     overflow: 'hidden',
   },
   header: {
@@ -171,80 +241,26 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     paddingBottom: spacing.sm,
   },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.surfaceSecondary,
-  },
   headerText: {
     marginLeft: spacing.sm,
     flex: 1,
-    gap: 6,
-  },
-  username: {
-    width: 100,
-    height: 14,
-    borderRadius: 4,
-    backgroundColor: colors.surfaceSecondary,
-  },
-  location: {
-    width: 150,
-    height: 12,
-    borderRadius: 4,
-    backgroundColor: colors.surfaceSecondary,
-  },
-  media: {
-    width: '100%',
-    height: MEDIA_HEIGHT,
-    backgroundColor: colors.surfaceSecondary,
   },
   captionContainer: {
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
-    gap: 6,
-  },
-  captionLine: {
-    width: '90%',
-    height: 14,
-    borderRadius: 4,
-    backgroundColor: colors.surfaceSecondary,
-  },
-  captionLineShort: {
-    width: '60%',
-    height: 14,
-    borderRadius: 4,
-    backgroundColor: colors.surfaceSecondary,
   },
   timerContainer: {
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
-    gap: 6,
+    paddingTop: spacing.md,
   },
-  timerText: {
-    width: 80,
-    height: 12,
-    borderRadius: 4,
-    backgroundColor: colors.surfaceSecondary,
-  },
-  timerBar: {
-    width: '100%',
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.surfaceSecondary,
+  timerLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   reactionsContainer: {
+    flexDirection: 'row',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
-  },
-  emojiRow: {
-    flexDirection: 'row',
     gap: spacing.sm,
-  },
-  emojiButton: {
-    width: 44,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.surfaceSecondary,
   },
 });

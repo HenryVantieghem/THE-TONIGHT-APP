@@ -3,29 +3,35 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../hooks/useAuth';
 import { validateLoginForm } from '../../utils/validation';
-import { colors } from '../../constants/colors';
-import { typography } from '../../constants/typography';
-import { spacing } from '../../constants/config';
 import type { AuthStackParamList } from '../../types';
+
+// Premium auth color palette
+const authColors = {
+  background: '#FFFFFF',
+  textPrimary: '#1A1A2E',
+  textSecondary: '#64748B',
+  primary: '#FF6B6B',
+  backButtonBg: '#F8F9FA',
+};
 
 type LoginNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
 
 export function LoginScreen() {
   const navigation = useNavigation<LoginNavigationProp>();
-  const insets = useSafeAreaInsets();
   const { signIn } = useAuth();
 
   const [email, setEmail] = useState('');
@@ -70,6 +76,10 @@ export function LoginScreen() {
     navigation.navigate('SignUp');
   };
 
+  const handleGoBack = () => {
+    navigation.goBack();
+  };
+
   const handleForgotPassword = () => {
     Alert.alert(
       'Reset Password',
@@ -79,145 +89,157 @@ export function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-    >
-      <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          {
-            paddingTop: insets.top + spacing.xxl,
-            paddingBottom: insets.bottom + spacing.xl,
-          },
-        ]}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-        bounces={false}
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
       >
-        <View style={styles.header}>
-          <Text style={styles.icon}>🌙</Text>
-          <Text style={styles.title}>Welcome Back</Text>
-          <Text style={styles.subtitle}>
-            Sign in to see what your friends are up to
-          </Text>
-        </View>
-
-        <View style={styles.form}>
-          <Input
-            label="Email"
-            placeholder="you@example.com"
-            value={email}
-            onChangeText={setEmail}
-            error={errors.email}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoComplete="email"
-          />
-
-          <Input
-            label="Password"
-            placeholder="Enter your password"
-            value={password}
-            onChangeText={setPassword}
-            error={errors.password}
-            secureTextEntry
-            autoComplete="current-password"
-          />
-
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          bounces={false}
+        >
+          {/* Back Button */}
           <TouchableOpacity
-            style={styles.forgotPassword}
-            onPress={handleForgotPassword}
+            onPress={handleGoBack}
+            style={styles.backButton}
             activeOpacity={0.7}
           >
-            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+            <Ionicons name="arrow-back" size={24} color={authColors.textPrimary} />
           </TouchableOpacity>
 
-          <Button
-            title="Log In"
-            onPress={handleLogin}
-            loading={isLoading}
-            disabled={isLoading}
-            fullWidth
-            size="lg"
-            style={styles.button}
-          />
-        </View>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.title}>Welcome Back</Text>
+            <Text style={styles.subtitle}>
+              Log in to see what your friends are up to
+            </Text>
+          </View>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account? </Text>
-          <TouchableOpacity onPress={handleSignUp} activeOpacity={0.7}>
-            <Text style={styles.linkText}>Sign Up</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          {/* Form */}
+          <View style={styles.form}>
+            <Input
+              label="Email"
+              placeholder="you@example.com"
+              value={email}
+              onChangeText={setEmail}
+              error={errors.email}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+            />
+
+            <Input
+              label="Password"
+              placeholder="Enter your password"
+              value={password}
+              onChangeText={setPassword}
+              error={errors.password}
+              isPassword
+              autoComplete="current-password"
+            />
+
+            {/* Forgot Password Link */}
+            <TouchableOpacity
+              onPress={handleForgotPassword}
+              style={styles.forgotPassword}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+            </TouchableOpacity>
+
+            <Button
+              title="Log In"
+              onPress={handleLogin}
+              loading={isLoading}
+              disabled={isLoading}
+              fullWidth
+              size="lg"
+              style={styles.button}
+            />
+          </View>
+
+          {/* Footer */}
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Don't have an account?</Text>
+            <TouchableOpacity onPress={handleSignUp} activeOpacity={0.7}>
+              <Text style={styles.footerLink}> Sign Up</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: authColors.background,
+  },
+  keyboardView: {
+    flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: 24,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: authColors.backButtonBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
   },
   header: {
-    alignItems: 'center',
-    marginBottom: spacing.xxl,
-  },
-  icon: {
-    fontSize: 56,
-    marginBottom: spacing.lg,
+    marginTop: 32,
+    marginBottom: 32,
   },
   title: {
-    fontSize: typography.sizes.xxxl,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
-    marginBottom: spacing.sm,
+    fontSize: 28,
+    fontWeight: '700',
+    color: authColors.textPrimary,
+    marginBottom: 8,
     letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: typography.sizes.md,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: typography.lineHeights.lg,
-    paddingHorizontal: spacing.md,
+    fontSize: 16,
+    color: authColors.textSecondary,
+    lineHeight: 24,
   },
   form: {
     flex: 1,
   },
   forgotPassword: {
     alignSelf: 'flex-end',
-    marginBottom: spacing.lg,
-    marginTop: spacing.xs,
-    paddingVertical: spacing.xs,
+    marginBottom: 24,
+    marginTop: -8,
+    paddingVertical: 4,
   },
   forgotPasswordText: {
-    fontSize: typography.sizes.sm,
-    color: colors.primary,
-    fontWeight: typography.weights.semibold,
+    fontSize: 14,
+    fontWeight: '500',
+    color: authColors.primary,
   },
   button: {
-    marginTop: spacing.md,
+    marginTop: 0,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: spacing.xxl,
-    paddingTop: spacing.lg,
+    paddingVertical: 24,
   },
   footerText: {
-    fontSize: typography.sizes.md,
-    color: colors.textSecondary,
+    fontSize: 14,
+    color: authColors.textSecondary,
   },
-  linkText: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
-    color: colors.primary,
+  footerLink: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: authColors.primary,
   },
 });

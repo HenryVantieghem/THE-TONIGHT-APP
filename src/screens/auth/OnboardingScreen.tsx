@@ -7,22 +7,33 @@ import {
   Dimensions,
   Animated,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components/ui/Button';
-import { colors } from '../../constants/colors';
-import { typography } from '../../constants/typography';
-import { spacing } from '../../constants/config';
 import type { AuthStackParamList } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+// Premium auth color palette
+const authColors = {
+  background: '#FFFFFF',
+  textPrimary: '#1A1A2E',
+  textSecondary: '#64748B',
+  primary: '#FF6B6B',
+  primaryGradient: ['#FF6B6B', '#FF8E53'] as const,
+  dotActive: '#FF6B6B',
+  dotInactive: '#E2E8F0',
+};
 
 type OnboardingNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Onboarding'>;
 
 interface OnboardingSlide {
   id: string;
-  icon: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  iconColor: string;
   title: string;
   subtitle: string;
 }
@@ -30,19 +41,22 @@ interface OnboardingSlide {
 const slides: OnboardingSlide[] = [
   {
     id: '1',
-    icon: '📸',
+    icon: 'camera',
+    iconColor: '#FF6B6B',
     title: 'Share What You\'re Doing',
     subtitle: 'Capture moments and share them with your friends instantly.',
   },
   {
     id: '2',
-    icon: '👥',
+    icon: 'people',
+    iconColor: '#6366F1',
     title: 'See Your Friends',
     subtitle: 'Discover what your friends are up to right now, in real-time.',
   },
   {
     id: '3',
-    icon: '⏰',
+    icon: 'time',
+    iconColor: '#22C55E',
     title: 'Posts Vanish in 1 Hour',
     subtitle: 'No pressure, no permanence. Just live in the moment.',
   },
@@ -50,7 +64,6 @@ const slides: OnboardingSlide[] = [
 
 export function OnboardingScreen() {
   const navigation = useNavigation<OnboardingNavigationProp>();
-  const insets = useSafeAreaInsets();
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollX = useRef(new Animated.Value(0)).current;
   const flatListRef = useRef<FlatList>(null);
@@ -81,7 +94,18 @@ export function OnboardingScreen() {
 
   const renderSlide = ({ item }: { item: OnboardingSlide }) => (
     <View style={styles.slide}>
-      <Text style={styles.slideIcon}>{item.icon}</Text>
+      {/* Icon Container with gradient background */}
+      <View style={styles.iconWrapper}>
+        <LinearGradient
+          colors={[`${item.iconColor}20`, `${item.iconColor}10`]}
+          style={styles.iconGradient}
+        >
+          <View style={[styles.iconCircle, { backgroundColor: `${item.iconColor}15` }]}>
+            <Ionicons name={item.icon} size={48} color={item.iconColor} />
+          </View>
+        </LinearGradient>
+      </View>
+
       <Text style={styles.slideTitle}>{item.title}</Text>
       <Text style={styles.slideSubtitle}>{item.subtitle}</Text>
     </View>
@@ -127,7 +151,20 @@ export function OnboardingScreen() {
   const isLastSlide = currentIndex === slides.length - 1;
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      {/* Logo/Brand Header */}
+      <View style={styles.brandHeader}>
+        <LinearGradient
+          colors={authColors.primaryGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.brandGradient}
+        >
+          <Text style={styles.brandText}>Tonight</Text>
+        </LinearGradient>
+      </View>
+
+      {/* Slides */}
       <View style={styles.slideContainer}>
         <FlatList
           ref={flatListRef}
@@ -145,8 +182,10 @@ export function OnboardingScreen() {
         />
       </View>
 
+      {/* Pagination Dots */}
       {renderPagination()}
 
+      {/* Buttons */}
       <View style={styles.buttonContainer}>
         <Button
           title={isLastSlide ? 'Get Started' : 'Next'}
@@ -166,14 +205,30 @@ export function OnboardingScreen() {
           />
         )}
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: authColors.background,
+  },
+  brandHeader: {
+    alignItems: 'center',
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  brandGradient: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  brandText: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: -0.5,
   },
   slideContainer: {
     flex: 1,
@@ -186,45 +241,59 @@ const styles = StyleSheet.create({
     width: SCREEN_WIDTH,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.xxl,
+    paddingHorizontal: 32,
+    paddingVertical: 24,
   },
-  slideIcon: {
-    fontSize: 96,
-    marginBottom: spacing.xl,
+  iconWrapper: {
+    marginBottom: 32,
+  },
+  iconGradient: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   slideTitle: {
-    fontSize: typography.sizes.display,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
+    fontSize: 28,
+    fontWeight: '700',
+    color: authColors.textPrimary,
     textAlign: 'center',
-    marginBottom: spacing.md,
-    paddingHorizontal: spacing.md,
+    marginBottom: 12,
+    letterSpacing: -0.5,
+    paddingHorizontal: 16,
   },
   slideSubtitle: {
-    fontSize: typography.sizes.lg,
-    color: colors.textSecondary,
+    fontSize: 16,
+    color: authColors.textSecondary,
     textAlign: 'center',
-    lineHeight: typography.lineHeights.xl,
-    paddingHorizontal: spacing.md,
+    lineHeight: 24,
+    paddingHorizontal: 24,
   },
   pagination: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: spacing.lg,
+    paddingVertical: 24,
   },
   dot: {
     height: 8,
     borderRadius: 4,
-    backgroundColor: colors.primary,
+    backgroundColor: authColors.dotActive,
     marginHorizontal: 4,
   },
   buttonContainer: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
+    paddingHorizontal: 24,
+    paddingBottom: 16,
   },
   skipButton: {
-    marginTop: spacing.sm,
+    marginTop: 8,
   },
 });

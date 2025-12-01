@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,20 +6,31 @@ import {
   TouchableOpacity,
   Dimensions,
   Alert,
+  Pressable,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Video, ResizeMode } from 'expo-av';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  withSequence,
+  runOnJS,
+  Easing,
+} from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Avatar } from '../ui/Avatar';
 import { TimerBar } from '../ui/TimerBar';
 import { EmojiReactions } from './EmojiReactions';
-import { colors } from '../../constants/colors';
+import { colors, shadows } from '../../constants/colors';
 import { typography } from '../../constants/typography';
-import { spacing, borderRadius, shadows } from '../../constants/config';
+import { spacing, borderRadius } from '../../constants/config';
 import type { Post, ReactionEmoji } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MEDIA_HEIGHT = SCREEN_WIDTH * 0.75;
+const DOUBLE_TAP_DELAY = 300;
 
 interface PostCardProps {
   post: Post;
@@ -38,12 +49,69 @@ export function PostCard({
   onUserPress,
   onMediaPress,
 }: PostCardProps) {
+  // Double tap detection
+  const lastTapRef = useRef<number>(0);
+  const [showExpandedCaption, setShowExpandedCaption] = useState(false);
+
+  // Heart animation values
+  const heartScale = useSharedValue(0);
+  const heartOpacity = useSharedValue(0);
+
   const handleReact = useCallback(
     (emoji: ReactionEmoji) => {
       onReact(post.id, emoji);
     },
     [post.id, onReact]
   );
+
+  // Trigger heart animation and add reaction
+  const triggerHeartAnimation = useCallback(() => {
+    'worklet';
+    heartScale.value = 0;
+    heartOpacity.value = 1;
+
+    // Scale up with spring
+    heartScale.value = withSpring(1.2, {
+      damping: 8,
+      stiffness: 200,
+    });
+
+    // After animation, fade out
+    heartOpacity.value = withSequence(
+      withTiming(1, { duration: 100 }),
+      withTiming(1, { duration: 400 }),
+      withTiming(0, { duration: 300, easing: Easing.out(Easing.ease) })
+    );
+  }, [heartScale, heartOpacity]);
+
+  const handleDoubleTap = useCallback(async () => {
+    // Trigger haptic
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    // Add heart reaction
+    onReact(post.id, '❤️');
+
+    // Trigger animation (on JS thread, animation runs on UI thread)
+    triggerHeartAnimation();
+  }, [post.id, onReact, triggerHeartAnimation]);
+
+  const handleMediaPress = useCallback(() => {
+    const now = Date.now();
+    const timeSinceLastTap = now - lastTapRef.current;
+
+    if (timeSinceLastTap < DOUBLE_TAP_DELAY) {
+      // Double tap detected
+      handleDoubleTap();
+    } else {
+      // Single tap - open fullscreen after delay if no double tap
+      lastTapRef.current = now;
+      setTimeout(() => {
+        if (Date.now() - lastTapRef.current >= DOUBLE_TAP_DELAY) {
+          onMediaPress(post);
+        }
+      }, DOUBLE_TAP_DELAY);
+    }
+  }, [handleDoubleTap, onMediaPress, post]);
 
   const handleLongPress = useCallback(async () => {
     if (!isOwner) return;
@@ -70,13 +138,21 @@ export function PostCard({
     }
   }, [post.user, onUserPress]);
 
-  const handleMediaPress = useCallback(() => {
-    onMediaPress(post);
-  }, [post, onMediaPress]);
+  // Heart animation styles
+  const heartAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: heartScale.value }],
+    opacity: heartOpacity.value,
+  }));
 
   const locationDisplay = post.location_city
     ? `${post.location_name}\n${post.location_city}${post.location_state ? `, ${post.location_state}` : ''}`
     : post.location_name;
+
+  // Caption truncation
+  const shouldTruncateCaption = post.caption && post.caption.length > 100;
+  const displayCaption = shouldTruncateCaption && !showExpandedCaption
+    ? `${post.caption!.slice(0, 100)}...`
+    : post.caption;
 
   return (
     <View style={styles.container}>
@@ -100,12 +176,11 @@ export function PostCard({
         </View>
       </TouchableOpacity>
 
-      {/* Media */}
-      <TouchableOpacity
+      {/* Media with double-tap detection */}
+      <Pressable
         style={styles.mediaContainer}
         onPress={handleMediaPress}
         onLongPress={handleLongPress}
-        activeOpacity={0.95}
         delayLongPress={500}
       >
         {post.media_type === 'video' ? (
@@ -126,18 +201,33 @@ export function PostCard({
           />
         )}
 
+        {/* Video indicator */}
         {post.media_type === 'video' && (
           <View style={styles.videoIndicator}>
             <Text style={styles.videoIcon}>▶️</Text>
           </View>
         )}
-      </TouchableOpacity>
 
-      {/* Caption */}
+        {/* Large heart animation overlay */}
+        <Animated.View style={[styles.heartContainer, heartAnimatedStyle]}>
+          <Text style={styles.heartEmoji}>❤️</Text>
+        </Animated.View>
+      </Pressable>
+
+      {/* Caption with "see more" */}
       {post.caption && (
-        <View style={styles.captionContainer}>
-          <Text style={styles.caption}>{post.caption}</Text>
-        </View>
+        <TouchableOpacity
+          style={styles.captionContainer}
+          onPress={() => shouldTruncateCaption && setShowExpandedCaption(!showExpandedCaption)}
+          activeOpacity={shouldTruncateCaption ? 0.7 : 1}
+        >
+          <Text style={styles.caption}>
+            {displayCaption}
+            {shouldTruncateCaption && !showExpandedCaption && (
+              <Text style={styles.seeMore}> see more</Text>
+            )}
+          </Text>
+        </TouchableOpacity>
       )}
 
       {/* Timer Bar */}
@@ -165,8 +255,8 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.white,
     marginBottom: spacing.md,
-    borderRadius: borderRadius.md,
-    ...shadows.medium,
+    borderRadius: borderRadius.lg,
+    ...shadows.md,
     overflow: 'hidden',
   },
   header: {
@@ -181,7 +271,7 @@ const styles = StyleSheet.create({
   },
   username: {
     fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
+    fontWeight: '600',
     color: colors.text,
   },
   locationRow: {
@@ -202,6 +292,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: MEDIA_HEIGHT,
     backgroundColor: colors.surface,
+    position: 'relative',
   },
   media: {
     width: '100%',
@@ -219,6 +310,22 @@ const styles = StyleSheet.create({
   videoIcon: {
     fontSize: 12,
   },
+  heartContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    pointerEvents: 'none',
+  },
+  heartEmoji: {
+    fontSize: 100,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 4 },
+    textShadowRadius: 12,
+  },
   captionContainer: {
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
@@ -226,7 +333,11 @@ const styles = StyleSheet.create({
   caption: {
     fontSize: typography.sizes.md,
     color: colors.text,
-    lineHeight: typography.lineHeights.md,
+    lineHeight: 22,
+  },
+  seeMore: {
+    color: colors.textSecondary,
+    fontWeight: '500',
   },
   timerContainer: {
     paddingHorizontal: spacing.md,

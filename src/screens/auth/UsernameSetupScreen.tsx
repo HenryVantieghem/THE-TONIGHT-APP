@@ -2,29 +2,43 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
+  TextInput,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Input } from '../../components/ui/Input';
+import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../hooks/useAuth';
 import { validateUsername } from '../../utils/validation';
 import { config } from '../../constants/config';
-import { colors } from '../../constants/colors';
-import { typography } from '../../constants/typography';
-import { spacing } from '../../constants/config';
 import type { AuthStackParamList } from '../../types';
+
+// Premium auth color palette
+const authColors = {
+  background: '#FFFFFF',
+  textPrimary: '#1A1A2E',
+  textSecondary: '#64748B',
+  textPlaceholder: '#94A3B8',
+  primary: '#FF6B6B',
+  inputBackground: '#F8F9FA',
+  inputBorder: '#E2E8F0',
+  inputBorderFocused: '#FF6B6B',
+  error: '#EF4444',
+  success: '#22C55E',
+  backButtonBg: '#F8F9FA',
+};
 
 type UsernameSetupNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'UsernameSetup'>;
 
 export function UsernameSetupScreen() {
   const navigation = useNavigation<UsernameSetupNavigationProp>();
-  const insets = useSafeAreaInsets();
   const { updateUsername, checkUsernameAvailable } = useAuth();
 
   const [username, setUsername] = useState('');
@@ -32,6 +46,7 @@ export function UsernameSetupScreen() {
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -63,7 +78,7 @@ export function UsernameSetupScreen() {
         setIsAvailable(data ?? null);
 
         if (data === false) {
-          setError('This username is already taken.');
+          setError('Username taken');
         }
       } catch (err) {
         console.error('Username check error:', err);
@@ -79,8 +94,6 @@ export function UsernameSetupScreen() {
       const sanitized = text.toLowerCase().replace(/[^a-z0-9_]/g, '');
       setUsername(sanitized);
       setIsAvailable(null);
-
-      // Clear previous error
       setError(undefined);
 
       // Validate format
@@ -113,7 +126,7 @@ export function UsernameSetupScreen() {
     }
 
     if (!isAvailable) {
-      setError('Please choose an available username.');
+      setError('Please choose an available username');
       return;
     }
 
@@ -137,17 +150,8 @@ export function UsernameSetupScreen() {
     }
   };
 
-  const getStatusText = () => {
-    if (isChecking) return 'Checking availability...';
-    if (error) return error;
-    if (isAvailable === true) return '✓ Username available';
-    return config.USERNAME.RULES;
-  };
-
-  const getStatusColor = () => {
-    if (error) return colors.error;
-    if (isAvailable === true) return colors.success;
-    return colors.textSecondary;
+  const handleGoBack = () => {
+    navigation.goBack();
   };
 
   const canSubmit =
@@ -156,140 +160,255 @@ export function UsernameSetupScreen() {
     isAvailable === true &&
     validateUsername(username).isValid;
 
-  return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-    >
-      <View
-        style={[
-          styles.content,
-          {
-            paddingTop: insets.top + spacing.xxl,
-            paddingBottom: insets.bottom + spacing.xl,
-          },
-        ]}
-      >
-        <View style={styles.header}>
-          <Text style={styles.icon}>👤</Text>
-          <Text style={styles.title}>Choose Your Username</Text>
-          <Text style={styles.subtitle}>
-            This is how your friends will find you on Tonight
-          </Text>
+  // Status indicator
+  const renderStatusIndicator = () => {
+    if (isChecking) {
+      return (
+        <View style={styles.statusContainer}>
+          <ActivityIndicator size="small" color={authColors.textSecondary} />
+          <Text style={styles.statusText}>Checking...</Text>
         </View>
+      );
+    }
 
-        <View style={styles.form}>
-          <View style={styles.inputWrapper}>
-            <View style={styles.atSymbolContainer}>
-              <Text style={styles.atSymbol}>@</Text>
-            </View>
-            <View style={styles.inputContainer}>
-              <Input
+    if (error) {
+      return (
+        <View style={styles.statusContainer}>
+          <Ionicons name="close-circle" size={16} color={authColors.error} />
+          <Text style={[styles.statusText, styles.statusError]}>{error}</Text>
+        </View>
+      );
+    }
+
+    if (isAvailable === true) {
+      return (
+        <View style={styles.statusContainer}>
+          <Ionicons name="checkmark-circle" size={16} color={authColors.success} />
+          <Text style={[styles.statusText, styles.statusSuccess]}>Available</Text>
+        </View>
+      );
+    }
+
+    return null;
+  };
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
+      >
+        <View style={styles.content}>
+          {/* Back Button */}
+          <TouchableOpacity
+            onPress={handleGoBack}
+            style={styles.backButton}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-back" size={24} color={authColors.textPrimary} />
+          </TouchableOpacity>
+
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.title}>Choose a Username</Text>
+            <Text style={styles.subtitle}>
+              This is how friends will find you
+            </Text>
+          </View>
+
+          {/* Username Input */}
+          <View style={styles.form}>
+            <Text style={styles.label}>Username</Text>
+            <View style={[
+              styles.inputContainer,
+              isFocused && styles.inputContainerFocused,
+              error && styles.inputContainerError,
+              isAvailable === true && styles.inputContainerSuccess,
+            ]}>
+              <Text style={[
+                styles.atSymbol,
+                isFocused && styles.atSymbolFocused,
+                error && styles.atSymbolError,
+                isAvailable === true && styles.atSymbolSuccess,
+              ]}>@</Text>
+              <TextInput
+                style={styles.input}
                 placeholder="username"
+                placeholderTextColor={authColors.textPlaceholder}
                 value={username}
                 onChangeText={handleUsernameChange}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setIsFocused(false)}
                 autoCapitalize="none"
                 autoCorrect={false}
                 autoComplete="username"
                 maxLength={config.USERNAME.MAX_LENGTH}
               />
+              {/* Right side status icon */}
+              {isChecking && (
+                <ActivityIndicator size="small" color={authColors.textSecondary} />
+              )}
+              {!isChecking && isAvailable === true && (
+                <Ionicons name="checkmark-circle" size={20} color={authColors.success} />
+              )}
+              {!isChecking && error && (
+                <Ionicons name="close-circle" size={20} color={authColors.error} />
+              )}
+            </View>
+
+            {/* Status Text */}
+            {renderStatusIndicator()}
+
+            {/* Rules hint */}
+            {!error && !isAvailable && !isChecking && (
+              <Text style={styles.hint}>
+                3-20 characters, letters and numbers only
+              </Text>
+            )}
+
+            {/* Character count */}
+            <View style={styles.characterCountContainer}>
+              <Text style={styles.characterCount}>
+                {username.length}/{config.USERNAME.MAX_LENGTH}
+              </Text>
             </View>
           </View>
 
-          <Text style={[styles.statusText, { color: getStatusColor() }]}>
-            {getStatusText()}
-          </Text>
-
-          <View style={styles.characterCount}>
-            <Text style={styles.characterCountText}>
-              {username.length}/{config.USERNAME.MAX_LENGTH}
-            </Text>
+          {/* Continue Button */}
+          <View style={styles.buttonContainer}>
+            <Button
+              title="Continue"
+              onPress={handleSubmit}
+              loading={isSubmitting}
+              disabled={!canSubmit}
+              fullWidth
+              size="lg"
+            />
           </View>
         </View>
-
-        <View style={styles.footer}>
-          <Button
-            title="Continue"
-            onPress={handleSubmit}
-            loading={isSubmitting}
-            disabled={!canSubmit}
-            fullWidth
-            size="lg"
-          />
-        </View>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: authColors.background,
+  },
+  keyboardView: {
+    flex: 1,
   },
   content: {
     flex: 1,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: 24,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: authColors.backButtonBg,
+    alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 8,
   },
   header: {
-    alignItems: 'center',
-    marginBottom: spacing.xxl,
-  },
-  icon: {
-    fontSize: 64,
-    marginBottom: spacing.lg,
+    marginTop: 32,
+    marginBottom: 32,
   },
   title: {
-    fontSize: typography.sizes.display,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
-    marginBottom: spacing.sm,
-    textAlign: 'center',
+    fontSize: 28,
+    fontWeight: '700',
+    color: authColors.textPrimary,
+    marginBottom: 8,
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: typography.sizes.lg,
-    color: colors.textSecondary,
-    lineHeight: typography.lineHeights.lg,
-    textAlign: 'center',
+    fontSize: 16,
+    color: authColors.textSecondary,
+    lineHeight: 24,
   },
   form: {
-    width: '100%',
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  atSymbolContainer: {
-    height: 56,
-    justifyContent: 'center',
-    paddingRight: spacing.xs,
-  },
-  atSymbol: {
-    fontSize: typography.sizes.xxl,
-    fontWeight: typography.weights.semibold,
-    color: colors.text,
-  },
-  inputContainer: {
     flex: 1,
   },
+  label: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: authColors.textSecondary,
+    marginBottom: 8,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: authColors.inputBackground,
+    borderWidth: 1.5,
+    borderColor: authColors.inputBorder,
+    borderRadius: 12,
+    height: 52,
+    paddingHorizontal: 16,
+  },
+  inputContainerFocused: {
+    borderColor: authColors.inputBorderFocused,
+    backgroundColor: authColors.background,
+  },
+  inputContainerError: {
+    borderColor: authColors.error,
+  },
+  inputContainerSuccess: {
+    borderColor: authColors.success,
+  },
+  atSymbol: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: authColors.textSecondary,
+    marginRight: 2,
+  },
+  atSymbolFocused: {
+    color: authColors.primary,
+  },
+  atSymbolError: {
+    color: authColors.error,
+  },
+  atSymbolSuccess: {
+    color: authColors.success,
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    color: authColors.textPrimary,
+    height: '100%',
+    paddingVertical: 0,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    gap: 6,
+  },
   statusText: {
-    fontSize: typography.sizes.sm,
-    marginTop: spacing.xs,
-    lineHeight: typography.lineHeights.md,
-    textAlign: 'center',
+    fontSize: 13,
+    color: authColors.textSecondary,
+  },
+  statusError: {
+    color: authColors.error,
+  },
+  statusSuccess: {
+    color: authColors.success,
+  },
+  hint: {
+    fontSize: 13,
+    color: authColors.textPlaceholder,
+    marginTop: 8,
+  },
+  characterCountContainer: {
+    alignItems: 'flex-end',
+    marginTop: 8,
   },
   characterCount: {
-    alignItems: 'flex-end',
-    marginTop: spacing.xs,
+    fontSize: 12,
+    color: authColors.textPlaceholder,
   },
-  characterCountText: {
-    fontSize: typography.sizes.xs,
-    color: colors.textTertiary,
-  },
-  footer: {
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.lg,
+  buttonContainer: {
+    paddingVertical: 24,
   },
 });

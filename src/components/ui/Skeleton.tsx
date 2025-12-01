@@ -15,7 +15,7 @@ import { borderRadius as br } from '../../constants/config';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface SkeletonProps {
-  width?: number | string;
+  width?: number | `${number}%`;
   height?: number;
   borderRadius?: number;
   style?: ViewStyle;
@@ -58,7 +58,7 @@ export function Skeleton({
   });
 
   // Variant-specific configurations
-  const variantStyles = {
+  const variantStyles: Record<string, ViewStyle> = {
     default: {
       width,
       height,
@@ -75,7 +75,7 @@ export function Skeleton({
       borderRadius: br.xs,
     },
     media: {
-      width: '100%' as const,
+      width: '100%',
       height: 200,
       borderRadius: br.md,
     },
@@ -111,11 +111,11 @@ export function SkeletonAvatar({ size = 40 }: { size?: number }) {
 }
 
 export function SkeletonText({
-  width = '100%',
+  width = '100%' as const,
   lines = 1,
   spacing = 8,
 }: {
-  width?: number | string;
+  width?: number | `${number}%`;
   lines?: number;
   spacing?: number;
 }) {
@@ -125,7 +125,7 @@ export function SkeletonText({
         <Skeleton
           key={index}
           variant="text"
-          width={index === lines - 1 && lines > 1 ? '60%' : width}
+          width={index === lines - 1 && lines > 1 ? ('60%' as const) : width}
         />
       ))}
     </View>

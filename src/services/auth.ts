@@ -26,31 +26,52 @@ export async function signUp(
       };
     }
 
-    // Create profile record
-    const { error: profileError } = await supabase
+    // Create profile record (use upsert to handle duplicate key errors)
+    // Check if profile already exists first to avoid unnecessary upsert
+    const { data: existingProfile } = await supabase
       .from(TABLES.PROFILES)
-      .insert({
-        id: data.user.id,
-        username: null,
-        avatar_url: null,
-      });
+      .select('id')
+      .eq('id', data.user.id)
+      .maybeSingle();
 
-    if (profileError) {
-      console.error('Error creating profile:', profileError);
+    if (!existingProfile) {
+      const { error: profileError } = await supabase
+        .from(TABLES.PROFILES)
+        .insert({
+          id: data.user.id,
+          username: null,
+          avatar_url: null,
+        });
+
+      if (profileError && profileError.code !== '23505') {
+        // Only log non-duplicate errors
+        console.error('Error creating profile:', profileError);
+      }
     }
 
     // Create user stats record
-    const { error: statsError } = await supabase
+    // Check if stats already exist first
+    const { data: existingStats } = await supabase
       .from(TABLES.USER_STATS)
-      .insert({
-        user_id: data.user.id,
-        total_posts: 0,
-        total_friends: 0,
-        total_views: 0,
-      });
+      .select('user_id')
+      .eq('user_id', data.user.id)
+      .maybeSingle();
 
-    if (statsError) {
-      console.error('Error creating user stats:', statsError);
+    if (!existingStats) {
+      const { error: statsError } = await supabase
+        .from(TABLES.USER_STATS)
+        .insert({
+          user_id: data.user.id,
+          total_posts: 0,
+          total_friends: 0,
+          total_views: 0,
+        });
+
+      // Silently ignore RLS errors (42501) - record might be created via trigger
+      // Silently ignore duplicate errors (23505)
+      if (statsError && statsError.code !== '42501' && statsError.code !== '23505') {
+        console.error('Error creating user stats:', statsError);
+      }
     }
 
     return { data: { userId: data.user.id }, error: null };

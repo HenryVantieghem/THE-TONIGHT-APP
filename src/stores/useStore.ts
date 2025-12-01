@@ -36,10 +36,6 @@ interface AppState {
   permissions: PermissionStatus;
   setPermissions: (permissions: Partial<PermissionStatus>) => void;
 
-  // Settings state
-  notificationsEnabled: boolean;
-  setNotificationsEnabled: (enabled: boolean) => void;
-
   // Loading state
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
@@ -63,9 +59,7 @@ const initialState = {
   permissions: {
     camera: 'undetermined' as const,
     location: 'undetermined' as const,
-    notifications: 'undetermined' as const,
   },
-  notificationsEnabled: true,
   isLoading: false,
   error: null,
 };
@@ -120,14 +114,19 @@ export const useStore = create<AppState>()(
         })),
       setPendingRequestCount: (pendingRequestCount) => set({ pendingRequestCount }),
 
-      // Permission actions
+      // Permission actions - use shallow equality to prevent infinite loops
       setPermissions: (permissions) =>
-        set((state) => ({
-          permissions: { ...state.permissions, ...permissions },
-        })),
-
-      // Settings actions
-      setNotificationsEnabled: (notificationsEnabled) => set({ notificationsEnabled }),
+        set((state) => {
+          const newPermissions = { ...state.permissions, ...permissions };
+          // Only update if permissions actually changed
+          if (
+            state.permissions.camera === newPermissions.camera &&
+            state.permissions.location === newPermissions.location
+          ) {
+            return state;
+          }
+          return { permissions: newPermissions };
+        }),
 
       // Loading actions
       setIsLoading: (isLoading) => set({ isLoading }),
@@ -145,7 +144,6 @@ export const useStore = create<AppState>()(
         // Only persist these fields
         locationPrecision: state.locationPrecision,
         permissions: state.permissions,
-        notificationsEnabled: state.notificationsEnabled,
       }),
     }
   )
@@ -155,6 +153,8 @@ export const useStore = create<AppState>()(
 export const selectUser = (state: AppState) => state.user;
 export const selectIsAuthenticated = (state: AppState) => state.isAuthenticated;
 export const selectPosts = (state: AppState) => state.posts;
+// Note: selectActivePosts should be computed in hooks using useMemo to avoid infinite loops
+// This selector is kept for backward compatibility but should not be used directly
 export const selectActivePosts = (state: AppState) =>
   state.posts.filter((post) => new Date(post.expires_at) > new Date());
 export const selectCurrentLocation = (state: AppState) => state.currentLocation;
@@ -162,6 +162,5 @@ export const selectLocationPrecision = (state: AppState) => state.locationPrecis
 export const selectFriendIds = (state: AppState) => state.friendIds;
 export const selectPendingRequestCount = (state: AppState) => state.pendingRequestCount;
 export const selectPermissions = (state: AppState) => state.permissions;
-export const selectNotificationsEnabled = (state: AppState) => state.notificationsEnabled;
 export const selectIsLoading = (state: AppState) => state.isLoading;
 export const selectError = (state: AppState) => state.error;

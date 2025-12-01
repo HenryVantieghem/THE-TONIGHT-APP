@@ -1,11 +1,12 @@
-import React from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Animated,
-} from 'react-native';
+import React, { useCallback } from 'react';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { colors } from '../../constants/colors';
 import { typography } from '../../constants/typography';
@@ -34,12 +35,6 @@ export function EmojiReactions({
     {} as Record<ReactionEmoji, number>
   );
 
-  const handlePress = async (emoji: ReactionEmoji) => {
-    if (disabled) return;
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onReact(emoji);
-  };
-
   return (
     <View style={styles.container}>
       {config.REACTIONS.map((emoji) => {
@@ -52,7 +47,7 @@ export function EmojiReactions({
             emoji={emoji}
             count={count}
             isSelected={isSelected}
-            onPress={() => handlePress(emoji)}
+            onPress={() => onReact(emoji)}
             disabled={disabled}
           />
         );
@@ -76,49 +71,73 @@ function EmojiButton({
   onPress,
   disabled,
 }: EmojiButtonProps) {
-  const scaleValue = React.useRef(new Animated.Value(1)).current;
+  const scale = useSharedValue(1);
+  const emojiScale = useSharedValue(1);
 
-  const handlePressIn = () => {
-    Animated.spring(scaleValue, {
-      toValue: 0.85,
-      useNativeDriver: true,
-    }).start();
-  };
+  const handlePress = useCallback(async () => {
+    if (disabled) return;
 
-  const handlePressOut = () => {
-    Animated.spring(scaleValue, {
-      toValue: 1,
-      friction: 3,
-      tension: 40,
-      useNativeDriver: true,
-    }).start();
-  };
+    // Haptic feedback
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    // Bounce animation for the whole button
+    scale.value = withSequence(
+      withSpring(0.85, { damping: 10, stiffness: 400 }),
+      withSpring(1, { damping: 8, stiffness: 300 })
+    );
+
+    // Extra bounce for the emoji itself when selecting
+    if (!isSelected) {
+      emojiScale.value = withSequence(
+        withTiming(1.4, { duration: 100 }),
+        withSpring(1, { damping: 6, stiffness: 200 })
+      );
+    }
+
+    onPress();
+  }, [disabled, isSelected, onPress, scale, emojiScale]);
+
+  const handlePressIn = useCallback(() => {
+    if (disabled) return;
+    scale.value = withSpring(0.92, { damping: 15, stiffness: 400 });
+  }, [disabled, scale]);
+
+  const handlePressOut = useCallback(() => {
+    scale.value = withSpring(1, { damping: 12, stiffness: 300 });
+  }, [scale]);
+
+  const animatedButtonStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const animatedEmojiStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: emojiScale.value }],
+  }));
 
   return (
-    <TouchableOpacity
-      onPress={onPress}
+    <Pressable
+      onPress={handlePress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       disabled={disabled}
-      activeOpacity={0.9}
     >
       <Animated.View
         style={[
           styles.emojiButton,
           isSelected && styles.emojiButtonSelected,
-          { transform: [{ scale: scaleValue }] },
+          animatedButtonStyle,
         ]}
       >
-        <Text style={styles.emoji}>{emoji}</Text>
+        <Animated.Text style={[styles.emoji, animatedEmojiStyle]}>
+          {emoji}
+        </Animated.Text>
         {count > 0 && (
-          <Text
-            style={[styles.count, isSelected && styles.countSelected]}
-          >
+          <Text style={[styles.count, isSelected && styles.countSelected]}>
             {count}
           </Text>
         )}
       </Animated.View>
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
@@ -156,29 +175,30 @@ const styles = StyleSheet.create({
   emojiButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.xs + 2,
     borderRadius: borderRadius.lg,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.reactionBackground,
     gap: 4,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
   },
   emojiButtonSelected: {
-    backgroundColor: colors.primaryLight + '30',
-    borderWidth: 1,
-    borderColor: colors.primary,
+    backgroundColor: colors.reactionActive,
+    borderColor: colors.reactionBorder,
   },
   emoji: {
     fontSize: 20,
   },
   count: {
     fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.medium,
+    fontWeight: '600',
     color: colors.textSecondary,
-    minWidth: 16,
+    minWidth: 14,
     textAlign: 'center',
   },
   countSelected: {
-    color: colors.primary,
+    color: colors.reactionBorder,
   },
 
   // Compact styles
@@ -194,5 +214,6 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.xs,
     color: colors.textSecondary,
     marginLeft: spacing.xs,
+    fontWeight: '500',
   },
 });

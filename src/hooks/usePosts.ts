@@ -1,5 +1,5 @@
-import { useEffect, useCallback, useRef, useState } from 'react';
-import { useStore, selectPosts, selectActivePosts, selectFriendIds, selectUser } from '../stores/useStore';
+import { useEffect, useCallback, useRef, useState, useMemo } from 'react';
+import { useStore, selectPosts, selectFriendIds, selectUser } from '../stores/useStore';
 import * as postsService from '../services/posts';
 import { config } from '../constants/config';
 import type { Post, CreatePostPayload, ReactionEmoji, Reaction } from '../types';
@@ -7,7 +7,11 @@ import type { Post, CreatePostPayload, ReactionEmoji, Reaction } from '../types'
 export function usePosts() {
   const user = useStore(selectUser);
   const posts = useStore(selectPosts);
-  const activePosts = useStore(selectActivePosts);
+  // Compute activePosts with useMemo to prevent infinite loops
+  const activePosts = useMemo(
+    () => posts.filter((post) => new Date(post.expires_at) > new Date()),
+    [posts]
+  );
   const friendIds = useStore(selectFriendIds);
   const { setPosts, addPost, updatePost, removePost, removeExpiredPosts, setIsLoading, setError } = useStore();
 

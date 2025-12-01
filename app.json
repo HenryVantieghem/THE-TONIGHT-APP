@@ -69,13 +69,6 @@
           "cameraPermission": "Tonight needs camera access to take photos."
         }
       ],
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/notification-icon.png",
-          "color": "#007AFF"
-        }
-      ],
       "expo-av"
     ],
     "extra": {

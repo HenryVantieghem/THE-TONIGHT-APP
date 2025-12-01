@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,16 +7,20 @@ import {
   TouchableOpacity,
   Alert,
   Linking,
+  Animated,
+  Switch,
+  Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 import { Card } from '../../components/ui/Card';
 import { useAuth } from '../../hooks/useAuth';
 import { useLocation } from '../../hooks/useLocation';
 import { colors } from '../../constants/colors';
 import { typography } from '../../constants/typography';
-import { spacing, config } from '../../constants/config';
+import { spacing, borderRadius, config } from '../../constants/config';
 import type { LocationPrecision, MainStackParamList } from '../../types';
 
 type SettingsNavigationProp = NativeStackNavigationProp<MainStackParamList, 'Settings'>;
@@ -27,17 +31,183 @@ const locationPrecisionOptions: { value: LocationPrecision; label: string; descr
   { value: 'city', label: 'City Only', description: 'Show only the city' },
 ];
 
+// Animated settings section component
+function AnimatedSection({
+  title,
+  children,
+  index,
+  isDanger = false,
+}: {
+  title: string;
+  children: React.ReactNode;
+  index: number;
+  isDanger?: boolean;
+}) {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
+
+  useEffect(() => {
+    const delay = index * 100;
+
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 400,
+        delay,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 400,
+        delay,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [index, fadeAnim, slideAnim]);
+
+  return (
+    <Animated.View
+      style={[
+        styles.section,
+        {
+          opacity: fadeAnim,
+          transform: [{ translateY: slideAnim }],
+        },
+      ]}
+    >
+      <Text style={[styles.sectionTitle, isDanger && styles.dangerTitle]}>
+        {title}
+      </Text>
+      {children}
+    </Animated.View>
+  );
+}
+
+// Toggle setting row component
+function ToggleRow({
+  icon,
+  label,
+  description,
+  value,
+  onValueChange,
+}: {
+  icon: string;
+  label: string;
+  description?: string;
+  value: boolean;
+  onValueChange: (value: boolean) => void;
+}) {
+  const handleChange = (newValue: boolean) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onValueChange(newValue);
+  };
+
+  return (
+    <View style={styles.toggleRow}>
+      <View style={styles.toggleIconContainer}>
+        <Text style={styles.toggleIcon}>{icon}</Text>
+      </View>
+      <View style={styles.toggleContent}>
+        <Text style={styles.toggleLabel}>{label}</Text>
+        {description && (
+          <Text style={styles.toggleDescription}>{description}</Text>
+        )}
+      </View>
+      <Switch
+        value={value}
+        onValueChange={handleChange}
+        trackColor={{ false: colors.border, true: colors.primaryLight }}
+        thumbColor={value ? colors.primary : colors.white}
+        ios_backgroundColor={colors.border}
+      />
+    </View>
+  );
+}
+
+// Tappable row component with icon
+function TappableRow({
+  icon,
+  label,
+  value,
+  onPress,
+  isLink = false,
+  isDanger = false,
+}: {
+  icon?: string;
+  label: string;
+  value?: string;
+  onPress?: () => void;
+  isLink?: boolean;
+  isDanger?: boolean;
+}) {
+  const handlePress = () => {
+    if (onPress) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      onPress();
+    }
+  };
+
+  const content = (
+    <View style={styles.tappableRow}>
+      {icon && (
+        <View style={[styles.toggleIconContainer, isDanger && styles.dangerIconContainer]}>
+          <Text style={styles.toggleIcon}>{icon}</Text>
+        </View>
+      )}
+      <View style={styles.tappableContent}>
+        <Text
+          style={[
+            styles.tappableLabel,
+            isLink && styles.linkText,
+            isDanger && styles.dangerText,
+          ]}
+        >
+          {label}
+        </Text>
+      </View>
+      {value && <Text style={styles.tappableValue}>{value}</Text>}
+      {(isLink || onPress) && !value && (
+        <Text style={[styles.tappableArrow, isDanger && styles.dangerText]}>→</Text>
+      )}
+    </View>
+  );
+
+  if (onPress) {
+    return (
+      <TouchableOpacity onPress={handlePress} activeOpacity={0.7}>
+        {content}
+      </TouchableOpacity>
+    );
+  }
+
+  return content;
+}
+
 export function SettingsScreen() {
   const navigation = useNavigation<SettingsNavigationProp>();
   const insets = useSafeAreaInsets();
   const { user, signOut, deleteAccount } = useAuth();
   const { locationPrecision, updateLocationPrecision } = useLocation();
 
-  const handleClose = () => {
+
+  // Header animation
+  const headerOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(headerOpacity, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  }, [headerOpacity]);
+
+  const handleClose = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     navigation.goBack();
-  };
+  }, [navigation]);
 
   const handleLogout = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert(
       'Log Out',
       'Are you sure you want to log out?',
@@ -46,13 +216,17 @@ export function SettingsScreen() {
         {
           text: 'Log Out',
           style: 'destructive',
-          onPress: signOut,
+          onPress: () => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            signOut();
+          },
         },
       ]
     );
   }, [signOut]);
 
   const handleDeleteAccount = useCallback(() => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     Alert.alert(
       'Delete Account',
       'This will permanently delete your account and all your data. This action cannot be undone.',
@@ -62,6 +236,7 @@ export function SettingsScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             const { error } = await deleteAccount();
             if (error) {
               Alert.alert('Error', error.message);
@@ -72,21 +247,37 @@ export function SettingsScreen() {
     );
   }, [deleteAccount]);
 
-  const openLink = (url: string) => {
+  const openLink = useCallback((url: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Linking.openURL(url);
-  };
+  }, []);
+
+  const handleLocationPrecisionChange = useCallback((value: LocationPrecision) => {
+    Haptics.selectionAsync();
+    updateLocationPrecision(value);
+  }, [updateLocationPrecision]);
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-        <TouchableOpacity onPress={handleClose}>
-          <Text style={styles.backText}>← Back</Text>
+      <Animated.View
+        style={[
+          styles.header,
+          { paddingTop: insets.top + spacing.sm, opacity: headerOpacity },
+        ]}
+      >
+        <TouchableOpacity
+          onPress={handleClose}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={styles.backButton}
+        >
+          <Text style={styles.backIcon}>←</Text>
+          <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>Settings</Text>
 
         <View style={{ width: 60 }} />
-      </View>
+      </Animated.View>
 
       <ScrollView
         style={styles.scrollView}
@@ -94,38 +285,50 @@ export function SettingsScreen() {
           styles.scrollContent,
           { paddingBottom: insets.bottom + spacing.lg },
         ]}
+        showsVerticalScrollIndicator={false}
       >
         {/* Account Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account</Text>
+        <AnimatedSection title="Account" index={0}>
           <Card style={styles.card}>
-            <View style={styles.settingRow}>
-              <Text style={styles.settingLabel}>Email</Text>
-              <Text style={styles.settingValue}>{user?.username || 'Not set'}@</Text>
-            </View>
+            <TappableRow
+              icon="👤"
+              label="Username"
+              value={`@${user?.username || 'Not set'}`}
+            />
             <View style={styles.divider} />
-            <View style={styles.settingRow}>
-              <Text style={styles.settingLabel}>Username</Text>
-              <Text style={styles.settingValue}>@{user?.username || 'Not set'}</Text>
-            </View>
+            <TappableRow
+              icon="🆔"
+              label="User ID"
+              value={user?.id?.slice(0, 8) || 'Unknown'}
+            />
           </Card>
-        </View>
+        </AnimatedSection>
 
         {/* Privacy Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Privacy</Text>
+        <AnimatedSection title="Privacy" index={1}>
           <Card style={styles.card}>
-            <Text style={styles.settingLabel}>Location Precision</Text>
-            <Text style={styles.settingDescription}>
-              Choose how your location appears on posts
-            </Text>
+            <View style={styles.privacyHeader}>
+              <View style={styles.toggleIconContainer}>
+                <Text style={styles.toggleIcon}>📍</Text>
+              </View>
+              <View style={styles.privacyHeaderText}>
+                <Text style={styles.settingLabel}>Location Precision</Text>
+                <Text style={styles.settingDescription}>
+                  How your location appears on posts
+                </Text>
+              </View>
+            </View>
 
             <View style={styles.radioGroup}>
               {locationPrecisionOptions.map((option) => (
                 <TouchableOpacity
                   key={option.value}
-                  style={styles.radioOption}
-                  onPress={() => updateLocationPrecision(option.value)}
+                  style={[
+                    styles.radioOption,
+                    locationPrecision === option.value && styles.radioOptionSelected,
+                  ]}
+                  onPress={() => handleLocationPrecisionChange(option.value)}
+                  activeOpacity={0.7}
                 >
                   <View style={styles.radioButton}>
                     {locationPrecision === option.value && (
@@ -140,55 +343,66 @@ export function SettingsScreen() {
               ))}
             </View>
           </Card>
-        </View>
+        </AnimatedSection>
 
         {/* About Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About</Text>
+        <AnimatedSection title="About" index={2}>
           <Card style={styles.card}>
-            <TouchableOpacity
-              style={styles.linkRow}
+            <TappableRow
+              icon="📜"
+              label="Terms of Service"
               onPress={() => openLink('https://tonight.app/terms')}
-            >
-              <Text style={styles.linkText}>Terms of Service</Text>
-              <Text style={styles.linkArrow}>→</Text>
-            </TouchableOpacity>
-
+              isLink
+            />
             <View style={styles.divider} />
-
-            <TouchableOpacity
-              style={styles.linkRow}
+            <TappableRow
+              icon="🔒"
+              label="Privacy Policy"
               onPress={() => openLink('https://tonight.app/privacy')}
-            >
-              <Text style={styles.linkText}>Privacy Policy</Text>
-              <Text style={styles.linkArrow}>→</Text>
-            </TouchableOpacity>
-
+              isLink
+            />
             <View style={styles.divider} />
-
-            <View style={styles.settingRow}>
-              <Text style={styles.settingLabel}>Version</Text>
-              <Text style={styles.settingValue}>{config.APP_VERSION}</Text>
-            </View>
+            <TappableRow
+              icon="💬"
+              label="Send Feedback"
+              onPress={() => openLink('mailto:support@tonight.app')}
+              isLink
+            />
+            <View style={styles.divider} />
+            <TappableRow
+              icon="ℹ️"
+              label="Version"
+              value={config.APP_VERSION}
+            />
           </Card>
-        </View>
+        </AnimatedSection>
 
         {/* Danger Zone */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, styles.dangerTitle]}>Danger Zone</Text>
-          <Card style={styles.card}>
-            <TouchableOpacity style={styles.dangerRow} onPress={handleLogout}>
-              <Text style={styles.dangerText}>Log Out</Text>
-            </TouchableOpacity>
-
+        <AnimatedSection title="Danger Zone" index={3} isDanger>
+          <Card style={styles.dangerCard}>
+            <TappableRow
+              icon="🚪"
+              label="Log Out"
+              onPress={handleLogout}
+              isDanger
+            />
             <View style={styles.divider} />
-
-            <TouchableOpacity style={styles.dangerRow} onPress={handleDeleteAccount}>
-              <Text style={[styles.dangerText, styles.deleteText]}>
-                Delete Account
-              </Text>
-            </TouchableOpacity>
+            <TappableRow
+              icon="⚠️"
+              label="Delete Account"
+              onPress={handleDeleteAccount}
+              isDanger
+            />
           </Card>
+        </AnimatedSection>
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <Text style={styles.footerIcon}>🌙</Text>
+          <Text style={styles.footerText}>Tonight</Text>
+          <Text style={styles.footerSubtext}>
+            Share moments that matter, right now.
+          </Text>
         </View>
       </ScrollView>
     </View>
@@ -207,12 +421,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.sm,
     backgroundColor: colors.background,
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  backIcon: {
+    fontSize: typography.sizes.lg,
+    color: colors.primary,
   },
   backText: {
     fontSize: typography.sizes.md,
     color: colors.primary,
+    fontWeight: typography.weights.medium,
   },
   headerTitle: {
     fontSize: typography.sizes.lg,
@@ -229,48 +453,114 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   sectionTitle: {
-    fontSize: typography.sizes.sm,
+    fontSize: typography.sizes.xs,
     fontWeight: typography.weights.semibold,
     color: colors.textSecondary,
     marginBottom: spacing.sm,
     marginLeft: spacing.sm,
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   card: {
     padding: spacing.md,
   },
-  settingRow: {
+  dangerCard: {
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.error + '30',
+  },
+  // Toggle row styles
+  toggleRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: spacing.xs,
+  },
+  toggleIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.sm,
+  },
+  toggleIcon: {
+    fontSize: 18,
+  },
+  toggleContent: {
+    flex: 1,
+    marginRight: spacing.sm,
+  },
+  toggleLabel: {
+    fontSize: typography.sizes.md,
+    color: colors.text,
+    fontWeight: typography.weights.medium,
+  },
+  toggleDescription: {
+    fontSize: typography.sizes.xs,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  // Tappable row styles
+  tappableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+  },
+  tappableContent: {
+    flex: 1,
+  },
+  tappableLabel: {
+    fontSize: typography.sizes.md,
+    color: colors.text,
+    fontWeight: typography.weights.medium,
+  },
+  tappableValue: {
+    fontSize: typography.sizes.md,
+    color: colors.textSecondary,
+  },
+  tappableArrow: {
+    fontSize: typography.sizes.md,
+    color: colors.textTertiary,
+    marginLeft: spacing.sm,
+  },
+  // Privacy section styles
+  privacyHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: spacing.md,
+  },
+  privacyHeaderText: {
+    flex: 1,
   },
   settingLabel: {
     fontSize: typography.sizes.md,
     color: colors.text,
-  },
-  settingValue: {
-    fontSize: typography.sizes.md,
-    color: colors.textSecondary,
+    fontWeight: typography.weights.medium,
   },
   settingDescription: {
-    fontSize: typography.sizes.sm,
+    fontSize: typography.sizes.xs,
     color: colors.textSecondary,
-    marginTop: spacing.xs,
-    marginBottom: spacing.md,
+    marginTop: 2,
   },
   divider: {
-    height: 1,
+    height: StyleSheet.hairlineWidth,
     backgroundColor: colors.border,
     marginVertical: spacing.sm,
   },
   radioGroup: {
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   radioOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.sm,
+    marginHorizontal: -spacing.xs,
+  },
+  radioOptionSelected: {
+    backgroundColor: colors.primaryLight + '15',
   },
   radioButton: {
     width: 20,
@@ -294,37 +584,45 @@ const styles = StyleSheet.create({
   radioLabel: {
     fontSize: typography.sizes.md,
     color: colors.text,
+    fontWeight: typography.weights.medium,
   },
   radioDescription: {
     fontSize: typography.sizes.xs,
     color: colors.textSecondary,
     marginTop: 2,
   },
-  linkRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.xs,
-  },
+  // Link styles
   linkText: {
-    fontSize: typography.sizes.md,
     color: colors.primary,
   },
-  linkArrow: {
-    fontSize: typography.sizes.md,
-    color: colors.textSecondary,
-  },
+  // Danger zone styles
   dangerTitle: {
     color: colors.error,
   },
-  dangerRow: {
-    paddingVertical: spacing.xs,
+  dangerIconContainer: {
+    backgroundColor: colors.error + '15',
   },
   dangerText: {
-    fontSize: typography.sizes.md,
     color: colors.error,
   },
-  deleteText: {
-    fontWeight: typography.weights.semibold,
+  // Footer styles
+  footer: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
+    marginTop: spacing.md,
+  },
+  footerIcon: {
+    fontSize: 32,
+    marginBottom: spacing.xs,
+  },
+  footerText: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+  },
+  footerSubtext: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
   },
 });

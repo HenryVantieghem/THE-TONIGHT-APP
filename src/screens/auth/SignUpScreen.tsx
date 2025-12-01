@@ -3,29 +3,35 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../hooks/useAuth';
 import { validateSignUpForm } from '../../utils/validation';
-import { colors } from '../../constants/colors';
-import { typography } from '../../constants/typography';
-import { spacing } from '../../constants/config';
 import type { AuthStackParamList } from '../../types';
+
+// Premium auth color palette
+const authColors = {
+  background: '#FFFFFF',
+  textPrimary: '#1A1A2E',
+  textSecondary: '#64748B',
+  primary: '#FF6B6B',
+  backButtonBg: '#F8F9FA',
+};
 
 type SignUpNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'SignUp'>;
 
 export function SignUpScreen() {
   const navigation = useNavigation<SignUpNavigationProp>();
-  const insets = useSafeAreaInsets();
   const { signUp } = useAuth();
 
   const [email, setEmail] = useState('');
@@ -72,133 +78,153 @@ export function SignUpScreen() {
     navigation.navigate('Login');
   };
 
+  const handleGoBack = () => {
+    navigation.goBack();
+  };
+
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingTop: insets.top + spacing.xxl, paddingBottom: insets.bottom + spacing.xl },
-        ]}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-        bounces={false}
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
       >
-        <View style={styles.header}>
-          <Text style={styles.icon}>🌙</Text>
-          <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>
-            Join Tonight and share moments with friends
-          </Text>
-        </View>
-
-        <View style={styles.form}>
-          <Input
-            label="Email"
-            placeholder="you@example.com"
-            value={email}
-            onChangeText={setEmail}
-            error={errors.email}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoComplete="email"
-          />
-
-          <Input
-            label="Password"
-            placeholder="At least 8 characters"
-            value={password}
-            onChangeText={setPassword}
-            error={errors.password}
-            secureTextEntry
-            autoComplete="new-password"
-          />
-
-          <Input
-            label="Confirm Password"
-            placeholder="Re-enter your password"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            error={errors.confirmPassword}
-            secureTextEntry
-            autoComplete="new-password"
-          />
-
-          <Button
-            title="Create Account"
-            onPress={handleSignUp}
-            loading={isLoading}
-            disabled={isLoading}
-            fullWidth
-            size="lg"
-            style={styles.button}
-          />
-        </View>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Already have an account? </Text>
-          <TouchableOpacity onPress={handleLogin} activeOpacity={0.7}>
-            <Text style={styles.linkText}>Log In</Text>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          bounces={false}
+        >
+          {/* Back Button */}
+          <TouchableOpacity
+            onPress={handleGoBack}
+            style={styles.backButton}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-back" size={24} color={authColors.textPrimary} />
           </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.title}>Create Account</Text>
+            <Text style={styles.subtitle}>
+              Join Tonight and share moments with friends
+            </Text>
+          </View>
+
+          {/* Form */}
+          <View style={styles.form}>
+            <Input
+              label="Email"
+              placeholder="you@example.com"
+              value={email}
+              onChangeText={setEmail}
+              error={errors.email}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+            />
+
+            <Input
+              label="Password"
+              placeholder="Enter password"
+              value={password}
+              onChangeText={setPassword}
+              error={errors.password}
+              isPassword
+              autoComplete="new-password"
+              hint="At least 8 characters"
+            />
+
+            <Input
+              label="Confirm Password"
+              placeholder="Re-enter password"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              error={errors.confirmPassword}
+              isPassword
+              autoComplete="new-password"
+            />
+
+            <Button
+              title="Create Account"
+              onPress={handleSignUp}
+              loading={isLoading}
+              disabled={isLoading}
+              fullWidth
+              size="lg"
+              style={styles.button}
+            />
+          </View>
+
+          {/* Footer */}
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Already have an account?</Text>
+            <TouchableOpacity onPress={handleLogin} activeOpacity={0.7}>
+              <Text style={styles.footerLink}> Log In</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: authColors.background,
+  },
+  keyboardView: {
+    flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: 24,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: authColors.backButtonBg,
+    alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 8,
   },
   header: {
-    alignItems: 'center',
-    marginBottom: spacing.xxl,
-  },
-  icon: {
-    fontSize: 64,
-    marginBottom: spacing.lg,
+    marginTop: 32,
+    marginBottom: 32,
   },
   title: {
-    fontSize: typography.sizes.display,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
-    marginBottom: spacing.sm,
-    textAlign: 'center',
+    fontSize: 28,
+    fontWeight: '700',
+    color: authColors.textPrimary,
+    marginBottom: 8,
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: typography.sizes.lg,
-    color: colors.textSecondary,
-    lineHeight: typography.lineHeights.lg,
-    textAlign: 'center',
+    fontSize: 16,
+    color: authColors.textSecondary,
+    lineHeight: 24,
   },
   form: {
-    width: '100%',
+    flex: 1,
   },
   button: {
-    marginTop: spacing.lg,
+    marginTop: 8,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: spacing.lg,
-    marginTop: spacing.lg,
+    paddingVertical: 24,
   },
   footerText: {
-    fontSize: typography.sizes.md,
-    color: colors.textSecondary,
+    fontSize: 14,
+    color: authColors.textSecondary,
   },
-  linkText: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
-    color: colors.primary,
+  footerLink: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: authColors.primary,
   },
 });

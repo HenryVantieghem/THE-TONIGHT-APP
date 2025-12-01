@@ -1,398 +1,243 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   TextInput,
   Text,
-  StyleSheet,
   TouchableOpacity,
+  StyleSheet,
   TextInputProps,
   ViewStyle,
 } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withSpring,
-  withSequence,
-  interpolate,
-  interpolateColor,
-  Easing,
-} from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { colors, shadows } from '../../constants/colors';
-import { typography } from '../../constants/typography';
-import { spacing, borderRadius } from '../../constants/config';
+
+// Premium auth color palette
+const authColors = {
+  primary: '#FF6B6B',
+  background: '#FFFFFF',
+  inputBackground: '#F8F9FA',
+  inputBorder: '#E2E8F0',
+  inputBorderFocused: '#FF6B6B',
+  textPrimary: '#1A1A2E',
+  textSecondary: '#64748B',
+  textPlaceholder: '#94A3B8',
+  error: '#EF4444',
+  errorBackground: '#FEF2F2',
+  success: '#22C55E',
+};
 
 interface InputProps extends Omit<TextInputProps, 'style'> {
-  label?: string;
+  label: string;
   error?: string;
-  helper?: string;
-  success?: boolean;
+  hint?: string;
+  isPassword?: boolean;
+  containerStyle?: ViewStyle;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
-  containerStyle?: ViewStyle;
-  maxLength?: number;
-  showCharacterCount?: boolean;
+  success?: boolean;
 }
-
-const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
-const AnimatedView = Animated.View;
 
 export function Input({
   label,
   error,
-  helper,
-  success = false,
+  hint,
+  isPassword = false,
+  containerStyle,
   leftIcon,
   rightIcon,
-  containerStyle,
-  secureTextEntry,
-  maxLength,
-  showCharacterCount = false,
+  success = false,
   value,
-  onChangeText,
   onFocus,
   onBlur,
   ...props
 }: InputProps) {
   const [isFocused, setIsFocused] = useState(false);
-  const [isSecure, setIsSecure] = useState(secureTextEntry);
-  const [internalValue, setInternalValue] = useState(value || '');
+  const [showPassword, setShowPassword] = useState(false);
 
-  // Animation values
-  const focusAnim = useSharedValue(0);
-  const labelAnim = useSharedValue(value ? 1 : 0);
-  const shakeAnim = useSharedValue(0);
-  const borderColorAnim = useSharedValue(0);
-  const eyeRotation = useSharedValue(0);
-
-  const hasError = !!error;
-  const hasValue = !!(value || internalValue);
-
-  // Update animations when focus/value changes
-  useEffect(() => {
-    focusAnim.value = withTiming(isFocused ? 1 : 0, {
-      duration: 200,
-      easing: Easing.bezier(0.4, 0, 0.2, 1),
-    });
-
-    const shouldFloat = isFocused || hasValue;
-    labelAnim.value = withTiming(shouldFloat ? 1 : 0, {
-      duration: 200,
-      easing: Easing.bezier(0.4, 0, 0.2, 1),
-    });
-  }, [isFocused, hasValue, focusAnim, labelAnim]);
-
-  // Border color animation
-  useEffect(() => {
-    if (hasError) {
-      borderColorAnim.value = withTiming(2, { duration: 200 });
-    } else if (success) {
-      borderColorAnim.value = withTiming(3, { duration: 200 });
-    } else if (isFocused) {
-      borderColorAnim.value = withTiming(1, { duration: 200 });
-    } else {
-      borderColorAnim.value = withTiming(0, { duration: 200 });
-    }
-  }, [hasError, success, isFocused, borderColorAnim]);
-
-  // Shake animation on error
-  useEffect(() => {
-    if (hasError) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      shakeAnim.value = withSequence(
-        withTiming(-10, { duration: 50 }),
-        withTiming(10, { duration: 50 }),
-        withTiming(-10, { duration: 50 }),
-        withTiming(10, { duration: 50 }),
-        withTiming(0, { duration: 50 })
-      );
-    }
-  }, [hasError, shakeAnim]);
-
-  // Floating label animated style
-  const labelStyle = useAnimatedStyle(() => {
-    const translateY = interpolate(labelAnim.value, [0, 1], [0, -26]);
-    const scale = interpolate(labelAnim.value, [0, 1], [1, 0.8]);
-    const translateX = interpolate(labelAnim.value, [0, 1], [0, leftIcon ? -8 : -4]);
-
-    return {
-      transform: [
-        { translateY },
-        { scale },
-        { translateX },
-      ],
-    };
-  });
-
-  // Label color animated style
-  const labelColorStyle = useAnimatedStyle(() => {
-    const color = interpolateColor(
-      borderColorAnim.value,
-      [0, 1, 2, 3],
-      [colors.textSecondary, colors.primary, colors.error, colors.success]
-    );
-
-    return { color };
-  });
-
-  // Container animated style (shake + border)
-  const containerAnimStyle = useAnimatedStyle(() => {
-    const borderColor = interpolateColor(
-      borderColorAnim.value,
-      [0, 1, 2, 3],
-      [colors.border, colors.primary, colors.error, colors.success]
-    );
-
-    return {
-      transform: [{ translateX: shakeAnim.value }],
-      borderColor,
-      borderWidth: isFocused || hasError || success ? 1.5 : 1,
-    };
-  });
-
-  // Eye icon animated style
-  const eyeStyle = useAnimatedStyle(() => ({
-    transform: [{ rotateY: `${eyeRotation.value}deg` }],
-  }));
-
-  const handleFocus = useCallback((e: any) => {
+  const handleFocus = (e: any) => {
     setIsFocused(true);
     Haptics.selectionAsync();
     onFocus?.(e);
-  }, [onFocus]);
+  };
 
-  const handleBlur = useCallback((e: any) => {
+  const handleBlur = (e: any) => {
     setIsFocused(false);
     onBlur?.(e);
-  }, [onBlur]);
+  };
 
-  const handleChangeText = useCallback((text: string) => {
-    setInternalValue(text);
-    onChangeText?.(text);
-  }, [onChangeText]);
-
-  const toggleSecure = useCallback(() => {
-    setIsSecure(!isSecure);
-    eyeRotation.value = withSpring(isSecure ? 0 : 180, {
-      damping: 15,
-      stiffness: 200,
-    });
-    Haptics.selectionAsync();
-  }, [isSecure, eyeRotation]);
-
-  const handleClear = useCallback(() => {
-    setInternalValue('');
-    onChangeText?.('');
+  const togglePassword = () => {
+    setShowPassword(!showPassword);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  }, [onChangeText]);
+  };
 
-  const currentValue = value !== undefined ? value : internalValue;
-  const characterCount = currentValue?.length || 0;
+  const hasError = !!error;
+  const hasSuccess = success && !hasError;
 
   return (
     <View style={[styles.container, containerStyle]}>
-      {/* Input Container */}
-      <AnimatedView style={[styles.inputContainer, containerAnimStyle, shadows.sm]}>
-        {/* Left Icon */}
-        {leftIcon && <View style={styles.iconContainer}>{leftIcon}</View>}
+      {/* Label */}
+      <Text style={[
+        styles.label,
+        hasError && styles.labelError,
+        hasSuccess && styles.labelSuccess,
+      ]}>
+        {label}
+      </Text>
 
-        {/* Floating Label */}
-        {label && (
-          <Animated.Text
-            style={[
-              styles.label,
-              labelStyle,
-              labelColorStyle,
-              leftIcon ? styles.labelWithIcon : undefined,
-            ]}
-            pointerEvents="none"
-          >
-            {label}
-          </Animated.Text>
+      {/* Input Container */}
+      <View style={[
+        styles.inputContainer,
+        isFocused && styles.inputContainerFocused,
+        hasError && styles.inputContainerError,
+        hasSuccess && styles.inputContainerSuccess,
+      ]}>
+        {/* Left Icon */}
+        {leftIcon && (
+          <View style={styles.leftIconContainer}>
+            {leftIcon}
+          </View>
         )}
 
-        {/* Input Field */}
+        {/* Text Input */}
         <TextInput
           style={[
             styles.input,
-            leftIcon ? styles.inputWithLeftIcon : undefined,
-            (rightIcon || secureTextEntry || (hasValue && !hasError)) ? styles.inputWithRightIcon : undefined,
-            label ? styles.inputWithLabel : undefined,
+            leftIcon ? styles.inputWithLeftIcon : null,
+            (isPassword || rightIcon) ? styles.inputWithRightIcon : null,
           ]}
-          value={currentValue}
-          onChangeText={handleChangeText}
+          placeholderTextColor={authColors.textPlaceholder}
+          secureTextEntry={isPassword && !showPassword}
+          value={value}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          placeholderTextColor={colors.textTertiary}
-          secureTextEntry={isSecure}
           autoCapitalize="none"
           autoCorrect={false}
-          maxLength={maxLength}
           {...props}
         />
 
-        {/* Right Side Icons */}
-        <View style={styles.rightIcons}>
-          {/* Success Checkmark */}
-          {success && !hasError && (
-            <View style={styles.iconContainer}>
-              <Text style={styles.successIcon}>✓</Text>
-            </View>
-          )}
-
-          {/* Clear Button */}
-          {hasValue && !hasError && !success && !secureTextEntry && (
-            <TouchableOpacity
-              style={styles.iconContainer}
-              onPress={handleClear}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <View style={styles.clearButton}>
-                <Text style={styles.clearIcon}>×</Text>
-              </View>
-            </TouchableOpacity>
-          )}
-
-          {/* Password Toggle */}
-          {secureTextEntry && (
-            <TouchableOpacity
-              style={styles.iconContainer}
-              onPress={toggleSecure}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Animated.Text style={[styles.eyeIcon, eyeStyle]}>
-                {isSecure ? '👁️' : '🔒'}
-              </Animated.Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Custom Right Icon */}
-          {rightIcon && !secureTextEntry && !success && (
-            <View style={styles.iconContainer}>{rightIcon}</View>
-          )}
-        </View>
-      </AnimatedView>
-
-      {/* Helper Text / Error / Character Count */}
-      <View style={styles.bottomRow}>
-        {(error || helper) && (
-          <Text style={[styles.helperText, hasError && styles.errorText]}>
-            {error || helper}
-          </Text>
+        {/* Password Toggle */}
+        {isPassword && (
+          <TouchableOpacity
+            onPress={togglePassword}
+            style={styles.eyeButton}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Ionicons
+              name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+              size={20}
+              color={authColors.textSecondary}
+            />
+          </TouchableOpacity>
         )}
 
-        {showCharacterCount && maxLength && (
-          <Text style={[
-            styles.characterCount,
-            characterCount >= maxLength && styles.characterCountFull,
-          ]}>
-            {characterCount}/{maxLength}
-          </Text>
+        {/* Right Icon */}
+        {rightIcon && !isPassword && (
+          <View style={styles.rightIconContainer}>
+            {rightIcon}
+          </View>
+        )}
+
+        {/* Success Checkmark */}
+        {hasSuccess && !isPassword && !rightIcon && (
+          <View style={styles.rightIconContainer}>
+            <Ionicons name="checkmark-circle" size={20} color={authColors.success} />
+          </View>
         )}
       </View>
+
+      {/* Hint Text */}
+      {hint && !hasError && (
+        <Text style={styles.hint}>{hint}</Text>
+      )}
+
+      {/* Error Text */}
+      {hasError && (
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle" size={14} color={authColors.error} />
+          <Text style={styles.error}>{error}</Text>
+        </View>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: spacing.md,
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: authColors.textSecondary,
+    marginBottom: 8,
+  },
+  labelError: {
+    color: authColors.error,
+  },
+  labelSuccess: {
+    color: authColors.success,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    minHeight: 56,
-    position: 'relative',
+    backgroundColor: authColors.inputBackground,
+    borderWidth: 1.5,
+    borderColor: authColors.inputBorder,
+    borderRadius: 12,
+    height: 52,
+    paddingHorizontal: 16,
   },
-  label: {
-    position: 'absolute',
-    left: spacing.md,
-    top: 18,
-    fontSize: typography.sizes.md,
-    color: colors.textSecondary,
-    backgroundColor: colors.surface,
-    paddingHorizontal: 6,
-    zIndex: 10,
+  inputContainerFocused: {
+    borderColor: authColors.inputBorderFocused,
+    backgroundColor: authColors.background,
   },
-  labelWithIcon: {
-    left: spacing.md + 32,
+  inputContainerError: {
+    borderColor: authColors.error,
+    backgroundColor: authColors.errorBackground,
+  },
+  inputContainerSuccess: {
+    borderColor: authColors.success,
+    backgroundColor: authColors.background,
   },
   input: {
     flex: 1,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    fontSize: typography.sizes.md,
-    color: colors.text,
+    fontSize: 16,
+    color: authColors.textPrimary,
     height: '100%',
-  },
-  inputWithLabel: {
-    paddingTop: spacing.md + 4,
-    paddingBottom: spacing.sm,
+    paddingVertical: 0,
   },
   inputWithLeftIcon: {
-    paddingLeft: spacing.xs,
+    marginLeft: 8,
   },
   inputWithRightIcon: {
-    paddingRight: spacing.xs,
+    paddingRight: 8,
   },
-  iconContainer: {
-    paddingHorizontal: spacing.sm,
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: '100%',
+  leftIconContainer: {
+    marginRight: 4,
   },
-  rightIcons: {
+  rightIconContainer: {
+    marginLeft: 8,
+  },
+  eyeButton: {
+    padding: 4,
+    marginLeft: 8,
+  },
+  hint: {
+    fontSize: 12,
+    color: authColors.textPlaceholder,
+    marginTop: 6,
+    lineHeight: 16,
+  },
+  errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: 6,
+    gap: 4,
   },
-  clearButton: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: colors.textTertiary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  clearIcon: {
-    fontSize: 14,
-    color: colors.white,
-    fontWeight: '600',
-    marginTop: -1,
-  },
-  eyeIcon: {
-    fontSize: 18,
-  },
-  successIcon: {
-    fontSize: 18,
-    color: colors.success,
-    fontWeight: '700',
-  },
-  bottomRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: spacing.xs,
-    minHeight: 18,
-  },
-  helperText: {
-    fontSize: typography.sizes.xs,
-    color: colors.textSecondary,
+  error: {
+    fontSize: 12,
+    color: authColors.error,
+    lineHeight: 16,
     flex: 1,
-  },
-  errorText: {
-    color: colors.error,
-  },
-  characterCount: {
-    fontSize: typography.sizes.xs,
-    color: colors.textTertiary,
-    marginLeft: spacing.sm,
-  },
-  characterCountFull: {
-    color: colors.error,
   },
 });

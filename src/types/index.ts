@@ -155,5 +155,4 @@ export interface CreatePostPayload {
 export interface PermissionStatus {
   camera: 'granted' | 'denied' | 'undetermined';
   location: 'granted' | 'denied' | 'undetermined';
-  notifications: 'granted' | 'denied' | 'undetermined';
 }

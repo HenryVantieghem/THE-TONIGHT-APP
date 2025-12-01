@@ -1,13 +1,17 @@
-import React, { useRef, useState, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  Animated,
-  GestureResponderEvent,
-} from 'react-native';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
+import { View, StyleSheet, Pressable } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  withSequence,
+  Easing,
+  runOnJS,
+} from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { colors } from '../../constants/colors';
+import { config } from '../../constants/config';
 
 interface CaptureButtonProps {
   onCapture: () => void;
@@ -20,7 +24,9 @@ interface CaptureButtonProps {
 
 const BUTTON_SIZE = 80;
 const INNER_SIZE = 64;
+const STROKE_WIDTH = 4;
 const RECORDING_COLOR = colors.error;
+const MAX_RECORDING_TIME = config.VIDEO_MAX_DURATION_SECONDS * 1000;
 
 export function CaptureButton({
   onCapture,
@@ -30,45 +36,108 @@ export function CaptureButton({
   isRecording = false,
   videoEnabled = true,
 }: CaptureButtonProps) {
-  const [isPressed, setIsPressed] = useState(false);
-  const scaleValue = useRef(new Animated.Value(1)).current;
-  const innerScaleValue = useRef(new Animated.Value(1)).current;
+  const [localRecording, setLocalRecording] = useState(false);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isLongPressRef = useRef(false);
+  const recordingStartRef = useRef<number>(0);
+
+  // Animation values
+  const buttonScale = useSharedValue(1);
+  const innerScale = useSharedValue(1);
+  const innerBorderRadius = useSharedValue(INNER_SIZE / 2);
+  const flashOpacity = useSharedValue(0);
+  const recordingProgress = useSharedValue(0);
+
+  const isActiveRecording = isRecording || localRecording;
+
+  // Clean up timers on unmount
+  useEffect(() => {
+    return () => {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+      }
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Handle recording progress updates
+  const startRecordingProgress = useCallback(() => {
+    recordingStartRef.current = Date.now();
+    recordingProgress.value = 0;
+    setLocalRecording(true);
+
+    recordingTimerRef.current = setInterval(() => {
+      const elapsed = Date.now() - recordingStartRef.current;
+      const progress = Math.min(elapsed / MAX_RECORDING_TIME, 1);
+
+      recordingProgress.value = withTiming(progress, {
+        duration: 100,
+        easing: Easing.linear,
+      });
+
+      // Auto-stop at max duration
+      if (progress >= 1) {
+        runOnJS(stopRecording)();
+      }
+    }, 100);
+  }, [recordingProgress]);
+
+  const stopRecording = useCallback(() => {
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    recordingProgress.value = withTiming(0, { duration: 200 });
+    isLongPressRef.current = false;
+    setLocalRecording(false);
+    onVideoEnd?.();
+  }, [recordingProgress, onVideoEnd]);
 
   const handlePressIn = useCallback(() => {
     if (disabled) return;
 
-    setIsPressed(true);
+    // Scale down with spring
+    buttonScale.value = withSpring(0.95, {
+      damping: 15,
+      stiffness: 400,
+    });
 
-    // Scale down animation
-    Animated.spring(scaleValue, {
-      toValue: 0.95,
-      useNativeDriver: true,
-    }).start();
-
-    // Start long press timer for video (if enabled)
+    // Start long press timer for video
     if (videoEnabled && onVideoStart) {
       longPressTimerRef.current = setTimeout(() => {
         isLongPressRef.current = true;
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
 
-        // Animate inner circle to indicate recording
-        Animated.timing(innerScaleValue, {
-          toValue: 0.6,
+        // Morph inner circle to rounded square
+        innerScale.value = withTiming(0.6, {
           duration: 200,
-          useNativeDriver: true,
-        }).start();
+          easing: Easing.out(Easing.ease),
+        });
+        innerBorderRadius.value = withTiming(8, {
+          duration: 200,
+          easing: Easing.out(Easing.ease),
+        });
 
+        // Start recording
         onVideoStart();
+        startRecordingProgress();
       }, 500);
     }
-  }, [disabled, videoEnabled, onVideoStart, scaleValue, innerScaleValue]);
+  }, [
+    disabled,
+    videoEnabled,
+    onVideoStart,
+    buttonScale,
+    innerScale,
+    innerBorderRadius,
+    startRecordingProgress,
+  ]);
 
   const handlePressOut = useCallback(() => {
     if (disabled) return;
-
-    setIsPressed(false);
 
     // Clear long press timer
     if (longPressTimerRef.current) {
@@ -76,126 +145,117 @@ export function CaptureButton({
       longPressTimerRef.current = null;
     }
 
-    // Scale back animation
-    Animated.spring(scaleValue, {
-      toValue: 1,
-      friction: 3,
-      tension: 40,
-      useNativeDriver: true,
-    }).start();
+    // Scale back with spring
+    buttonScale.value = withSpring(1, {
+      damping: 12,
+      stiffness: 300,
+    });
 
-    // Reset inner scale
-    Animated.timing(innerScaleValue, {
-      toValue: 1,
+    // Reset inner circle
+    innerScale.value = withSpring(1, {
+      damping: 12,
+      stiffness: 300,
+    });
+    innerBorderRadius.value = withTiming(INNER_SIZE / 2, {
       duration: 200,
-      useNativeDriver: true,
-    }).start();
+      easing: Easing.out(Easing.ease),
+    });
 
+    // Stop video recording if in progress
     if (isLongPressRef.current) {
-      // End video recording
-      isLongPressRef.current = false;
-      onVideoEnd?.();
+      stopRecording();
     }
-  }, [disabled, scaleValue, innerScaleValue, onVideoEnd]);
+  }, [disabled, buttonScale, innerScale, innerBorderRadius, stopRecording]);
 
-  const handlePress = useCallback(() => {
+  const handlePress = useCallback(async () => {
     if (disabled || isLongPressRef.current) return;
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onCapture();
-  }, [disabled, onCapture]);
-
-  const outerColor = isRecording ? RECORDING_COLOR : colors.white;
-  const innerColor = isRecording ? RECORDING_COLOR : colors.white;
-
-  return (
-    <TouchableOpacity
-      onPress={handlePress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      disabled={disabled}
-      activeOpacity={1}
-      style={styles.touchable}
-    >
-      <Animated.View
-        style={[
-          styles.outerRing,
-          {
-            borderColor: outerColor,
-            transform: [{ scale: scaleValue }],
-            opacity: disabled ? 0.5 : 1,
-          },
-        ]}
-      >
-        <Animated.View
-          style={[
-            styles.innerCircle,
-            {
-              backgroundColor: innerColor,
-              transform: [{ scale: innerScaleValue }],
-            },
-            isRecording && styles.innerRecording,
-          ]}
-        />
-      </Animated.View>
-    </TouchableOpacity>
-  );
-}
-
-// Small floating camera button for feed
-export function FloatingCameraButton({
-  onPress,
-}: {
-  onPress: () => void;
-}) {
-  const scaleValue = useRef(new Animated.Value(1)).current;
-
-  const handlePressIn = () => {
-    Animated.spring(scaleValue, {
-      toValue: 0.9,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handlePressOut = () => {
-    Animated.spring(scaleValue, {
-      toValue: 1,
-      friction: 3,
-      tension: 40,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handlePress = async () => {
+    // Haptic feedback
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onPress();
-  };
+
+    // Flash animation for photo capture
+    flashOpacity.value = withSequence(
+      withTiming(1, { duration: 50 }),
+      withTiming(0, { duration: 200 })
+    );
+
+    onCapture();
+  }, [disabled, onCapture, flashOpacity]);
+
+  // Animated styles
+  const animatedButtonStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: buttonScale.value }],
+    opacity: disabled ? 0.5 : 1,
+  }));
+
+  const animatedInnerStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: innerScale.value }],
+    borderRadius: innerBorderRadius.value,
+  }));
+
+  const animatedFlashStyle = useAnimatedStyle(() => ({
+    opacity: flashOpacity.value,
+  }));
+
+  // Progress ring style (using border approach)
+  const animatedProgressStyle = useAnimatedStyle(() => {
+    // Calculate rotation based on progress (360 degrees for full circle)
+    const rotation = recordingProgress.value * 360;
+    return {
+      transform: [{ rotate: `${rotation}deg` }],
+    };
+  });
+
+  const outerColor = isActiveRecording ? RECORDING_COLOR : colors.white;
+  const innerColor = isActiveRecording ? RECORDING_COLOR : colors.white;
 
   return (
-    <TouchableOpacity
-      onPress={handlePress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      activeOpacity={1}
-      style={styles.floatingTouchable}
-    >
-      <Animated.View
-        style={[
-          styles.floatingButton,
-          { transform: [{ scale: scaleValue }] },
-        ]}
+    <View style={styles.container}>
+      {/* Flash overlay */}
+      <Animated.View style={[styles.flash, animatedFlashStyle]} />
+
+      <Pressable
+        onPress={handlePress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={disabled}
+        style={styles.touchable}
       >
-        <View style={styles.floatingInner}>
-          <View style={styles.cameraIconOuter}>
-            <View style={styles.cameraIconLens} />
-          </View>
-        </View>
-      </Animated.View>
-    </TouchableOpacity>
+        <Animated.View style={[styles.outerRing, animatedButtonStyle]}>
+          {/* Progress indicator for recording */}
+          {isActiveRecording && (
+            <Animated.View style={[styles.progressContainer, animatedProgressStyle]}>
+              <View style={styles.progressIndicator} />
+            </Animated.View>
+          )}
+
+          {/* Outer ring border */}
+          <View
+            style={[
+              styles.outerRingBorder,
+              { borderColor: outerColor },
+            ]}
+          />
+
+          {/* Inner circle */}
+          <Animated.View
+            style={[
+              styles.innerCircle,
+              animatedInnerStyle,
+              { backgroundColor: innerColor },
+            ]}
+          />
+        </Animated.View>
+      </Pressable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    width: BUTTON_SIZE,
+    height: BUTTON_SIZE,
+  },
   touchable: {
     width: BUTTON_SIZE,
     height: BUTTON_SIZE,
@@ -204,61 +264,39 @@ const styles = StyleSheet.create({
     width: BUTTON_SIZE,
     height: BUTTON_SIZE,
     borderRadius: BUTTON_SIZE / 2,
-    borderWidth: 4,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  outerRingBorder: {
+    position: 'absolute',
+    width: BUTTON_SIZE,
+    height: BUTTON_SIZE,
+    borderRadius: BUTTON_SIZE / 2,
+    borderWidth: STROKE_WIDTH,
     backgroundColor: 'transparent',
   },
   innerCircle: {
     width: INNER_SIZE,
     height: INNER_SIZE,
-    borderRadius: INNER_SIZE / 2,
   },
-  innerRecording: {
-    borderRadius: 8,
-    width: 32,
-    height: 32,
-  },
-
-  // Floating button styles
-  floatingTouchable: {
+  progressContainer: {
     position: 'absolute',
-    bottom: 24,
-    alignSelf: 'center',
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  floatingButton: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
+    width: BUTTON_SIZE,
+    height: BUTTON_SIZE,
+    justifyContent: 'flex-start',
     alignItems: 'center',
   },
-  floatingInner: {
-    width: 32,
-    height: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cameraIconOuter: {
-    width: 32,
-    height: 24,
+  progressIndicator: {
+    width: 8,
+    height: 8,
     borderRadius: 4,
-    backgroundColor: colors.white,
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: RECORDING_COLOR,
+    marginTop: -2,
   },
-  cameraIconLens: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: colors.primary,
-    borderWidth: 2,
-    borderColor: colors.white,
+  flash: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.white,
+    zIndex: 100,
+    pointerEvents: 'none',
   },
 });
