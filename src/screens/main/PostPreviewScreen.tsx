@@ -232,9 +232,25 @@ export function PostPreviewScreen() {
     }
 
     // Validate location
-    if (!selectedLocation || !selectedLocation.name || selectedLocation.lat === undefined || selectedLocation.lng === undefined) {
+    if (!selectedLocation) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Location Required', 'Please select a valid location for your post.');
+      Alert.alert('Location Required', 'Please select a location for your post.');
+      return;
+    }
+
+    if (!selectedLocation.name || selectedLocation.name.trim() === '' || selectedLocation.name === 'Location Unknown') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Location Required', 'Please select a valid location. Tap the location to search or use current location.');
+      return;
+    }
+
+    // Validate coordinates
+    const lat = typeof selectedLocation.lat === 'number' ? selectedLocation.lat : parseFloat(String(selectedLocation.lat));
+    const lng = typeof selectedLocation.lng === 'number' ? selectedLocation.lng : parseFloat(String(selectedLocation.lng));
+
+    if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0 || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Invalid Location', 'Please select a valid location. Tap the location to search or refresh your current location.');
       return;
     }
 
@@ -248,11 +264,20 @@ export function PostPreviewScreen() {
     setIsPosting(true);
 
     try {
+      // Ensure location has valid coordinates
+      const validLocation: LocationData = {
+        name: selectedLocation.name.trim(),
+        lat: typeof selectedLocation.lat === 'number' ? selectedLocation.lat : parseFloat(String(selectedLocation.lat)),
+        lng: typeof selectedLocation.lng === 'number' ? selectedLocation.lng : parseFloat(String(selectedLocation.lng)),
+        city: selectedLocation.city?.trim() || undefined,
+        state: selectedLocation.state?.trim() || undefined,
+      };
+
       const { data, error } = await createPost({
         mediaUri,
         mediaType,
         caption: caption.trim() || undefined,
-        location: selectedLocation,
+        location: validLocation,
       });
 
       if (error) {

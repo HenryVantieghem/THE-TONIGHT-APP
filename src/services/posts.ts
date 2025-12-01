@@ -1,6 +1,5 @@
 import { supabase, TABLES, BUCKETS } from './supabase';
 import { config } from '../constants/config';
-import * as FileSystem from 'expo-file-system';
 import type { Post, Reaction, ReactionEmoji, CreatePostPayload, ApiResponse } from '../types';
 
 // Create a new post
@@ -24,42 +23,65 @@ export async function createPost(
       };
     }
 
-    // Read file as base64 (works reliably in React Native)
-    let base64: string;
+    // Read file using fetch (works reliably in React Native)
+    // This is the same approach used for avatar uploads in ProfileScreen
+    let fileBlob: Blob;
     try {
-      base64 = await FileSystem.readAsStringAsync(mediaUri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
+      // Use the URI directly - React Native fetch handles file:// URIs
+      // Don't modify the URI as expo-camera and expo-image-picker provide correct URIs
+      const response = await fetch(mediaUri);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch media: ${response.status} ${response.statusText}`);
+      }
 
-      if (!base64 || base64.length === 0) {
+      fileBlob = await response.blob();
+
+      if (!fileBlob || fileBlob.size === 0) {
         return {
           data: null,
           error: { message: 'Media file is empty. Please try capturing again.' },
         };
       }
+
+      // Check file size (max 10MB)
+      const maxSize = config.MAX_MEDIA_SIZE_MB * 1024 * 1024;
+      if (fileBlob.size > maxSize) {
+        return {
+          data: null,
+          error: { 
+            message: `File is too large. Maximum size is ${config.MAX_MEDIA_SIZE_MB}MB.` 
+          },
+        };
+      }
     } catch (fileError: any) {
       console.error('File read error:', fileError);
-      const errorMessage = mediaType === 'video' 
-        ? 'Failed to read video file. Please try recording again.'
-        : 'Failed to read image file. Please try capturing again.';
+      console.error('Media URI:', mediaUri);
+      console.error('Error details:', JSON.stringify(fileError, null, 2));
+      
+      // More specific error messages
+      let errorMessage = 'Failed to read media file. Please try capturing again.';
+      if (fileError.message?.includes('Network')) {
+        errorMessage = 'Network error. Please check your connection and try again.';
+      } else if (fileError.message?.includes('fetch')) {
+        errorMessage = 'Failed to access media file. Please try capturing again.';
+      } else if (mediaType === 'video') {
+        errorMessage = 'Failed to read video file. Please try recording again.';
+      } else {
+        errorMessage = 'Failed to read image file. Please try capturing again.';
+      }
+      
       return {
         data: null,
         error: { message: errorMessage },
       };
     }
 
-    // Convert base64 directly to Uint8Array (React Native compatible)
-    // This avoids using Blob which doesn't exist in React Native
-    const binaryString = atob(base64);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-
-    // Upload to Supabase storage using Uint8Array
+    // Upload to Supabase storage using Blob
+    // Supabase storage accepts Blob objects in React Native
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(BUCKETS.POST_MEDIA)
-      .upload(fileName, bytes, {
+      .upload(fileName, fileBlob, {
         contentType,
         cacheControl: '3600',
         upsert: false,
@@ -90,21 +112,31 @@ export async function createPost(
     expiresAt.setHours(expiresAt.getHours() + config.POST_EXPIRY_HOURS);
 
     // Validate location data
-    if (!location || !location.name || location.lat === undefined || location.lng === undefined) {
+    if (!location) {
       return {
         data: null,
-        error: { message: 'Invalid location data. Please select a location.' },
+        error: { message: 'Location is required. Please select a location.' },
+      };
+    }
+
+    if (!location.name || location.name.trim() === '') {
+      return {
+        data: null,
+        error: { message: 'Location name is required. Please select a valid location.' },
       };
     }
 
     // Validate location coordinates are valid numbers
+    const lat = typeof location.lat === 'number' ? location.lat : parseFloat(String(location.lat));
+    const lng = typeof location.lng === 'number' ? location.lng : parseFloat(String(location.lng));
+
     if (
-      isNaN(location.lat) ||
-      isNaN(location.lng) ||
-      location.lat < -90 ||
-      location.lat > 90 ||
-      location.lng < -180 ||
-      location.lng > 180
+      isNaN(lat) ||
+      isNaN(lng) ||
+      lat < -90 ||
+      lat > 90 ||
+      lng < -180 ||
+      lng > 180
     ) {
       return {
         data: null,
@@ -121,11 +153,11 @@ export async function createPost(
         media_type: mediaType,
         thumbnail_url: mediaType === 'video' ? null : mediaUrl,
         caption: caption?.trim() || null,
-        location_name: location.name,
-        location_lat: location.lat,
-        location_lng: location.lng,
-        location_city: location.city || null,
-        location_state: location.state || null,
+        location_name: location.name.trim(),
+        location_lat: lat,
+        location_lng: lng,
+        location_city: location.city?.trim() || null,
+        location_state: location.state?.trim() || null,
         expires_at: expiresAt.toISOString(),
         view_count: 0,
       })

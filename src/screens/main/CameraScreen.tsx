@@ -15,6 +15,7 @@ import * as Haptics from 'expo-haptics';
 import { CameraViewComponent } from '../../components/camera/CameraView';
 import { Button } from '../../components/ui/Button';
 import { useLocation } from '../../hooks/useLocation';
+import * as locationService from '../../services/location';
 import { colors } from '../../constants/colors';
 import { typography } from '../../constants/typography';
 import { spacing } from '../../constants/config';
@@ -105,18 +106,28 @@ export function CameraScreen() {
       const { status } = await Camera.getCameraPermissionsAsync();
       setHasPermission(status === 'granted');
 
-      // Get location - try to get current location automatically
+      // Check location permission first, then get location
       setIsLoadingLocation(true);
       try {
-        const location = await getCurrentLocation();
-        // If location fetch failed, try refreshing
-        if (!location) {
-          // Wait a bit and try again
-          setTimeout(async () => {
-            await getCurrentLocation();
+        // Check if location permission is granted
+        const hasLocationPermission = await locationService.hasLocationPermission();
+        
+        if (hasLocationPermission) {
+          // Get location - try to get current location automatically
+          const location = await getCurrentLocation();
+          // If location fetch failed, try refreshing once
+          if (!location) {
+            // Wait a bit and try again
+            setTimeout(async () => {
+              await getCurrentLocation();
+              setIsLoadingLocation(false);
+            }, 1000);
+          } else {
             setIsLoadingLocation(false);
-          }, 1000);
+          }
         } else {
+          // Permission not granted, but don't block camera usage
+          // Location can be set later in PostPreview
           setIsLoadingLocation(false);
         }
       } catch (error) {
