@@ -8,7 +8,6 @@ import {
   ProfileScreen,
   SettingsScreen,
   FriendsScreen,
-  MockDataScreen,
 } from '../screens/main';
 import type { MainStackParamList, LocationData } from '../types';
 
@@ -84,14 +83,6 @@ export function MainNavigator() {
         component={FriendsScreen}
         options={{
           animation: 'slide_from_right',
-        }}
-      />
-      <Stack.Screen
-        name="MockData"
-        component={MockDataScreen}
-        options={{
-          animation: 'slide_from_right',
-          presentation: 'card',
         }}
       />
     </Stack.Navigator>

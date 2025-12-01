@@ -25,7 +25,7 @@ type LocationSearchNavigationProp = NativeStackNavigationProp<MainStackParamList
 
 interface LocationSearchScreenParams {
   currentLocation: LocationData | null;
-  onLocationSelect: (location: LocationData) => void;
+  locationKey?: string;
 }
 
 export function LocationSearchScreen() {
@@ -34,7 +34,7 @@ export function LocationSearchScreen() {
   const insets = useSafeAreaInsets();
   
   const params = route.params as LocationSearchScreenParams;
-  const { currentLocation, onLocationSelect } = params || {};
+  const { currentLocation, locationKey } = params || {};
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<LocationData[]>([]);
@@ -107,9 +107,25 @@ export function LocationSearchScreen() {
   const handleSelectLocation = useCallback((location: LocationData) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    onLocationSelect(location);
-    navigation.goBack();
-  }, [onLocationSelect, navigation]);
+    
+    // Navigate back and update PostPreviewScreen's location via navigation params
+    if (navigation.canGoBack()) {
+      // Get the navigation state to find PostPreview route
+      const state = navigation.getState();
+      const postPreviewRoute = state.routes.find(r => r.name === 'PostPreview');
+      
+      if (postPreviewRoute) {
+        // Update PostPreview params with selected location
+        navigation.setParams({
+          ...postPreviewRoute.params,
+          selectedLocation: location,
+        } as any);
+      }
+      navigation.goBack();
+    } else {
+      navigation.goBack();
+    }
+  }, [navigation]);
 
   const handleUseCurrentLocation = useCallback(() => {
     if (currentLocationData) {

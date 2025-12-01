@@ -125,15 +125,15 @@ export type MainStackParamList = {
     mediaUri: string;
     mediaType: 'image' | 'video';
     location: LocationData;
+    selectedLocation?: LocationData; // For updates from LocationSearch
   };
   LocationSearch: {
     currentLocation: LocationData | null;
-    onLocationSelect: (location: LocationData) => void;
+    locationKey?: string;
   };
   Profile: { userId?: string };
   Settings: undefined;
   Friends: undefined;
-  MockData: undefined;
 };
 
 // API Response types

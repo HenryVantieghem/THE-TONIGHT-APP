@@ -1,5 +1,6 @@
 import { supabase, TABLES, BUCKETS } from './supabase';
 import { config } from '../constants/config';
+import * as FileSystem from 'expo-file-system';
 import type { Post, Reaction, ReactionEmoji, CreatePostPayload, ApiResponse } from '../types';
 
 // Create a new post
@@ -23,30 +24,32 @@ export async function createPost(
       };
     }
 
-    // Read file using fetch (works reliably in React Native)
-    // This is the same approach used for avatar uploads in ProfileScreen
-    let fileBlob: Blob;
+    // Read file using expo-file-system (most reliable for React Native)
+    // Convert to Uint8Array for Supabase storage upload
+    let fileData: Uint8Array;
     try {
-      // Use the URI directly - React Native fetch handles file:// URIs
-      // Don't modify the URI as expo-camera and expo-image-picker provide correct URIs
-      const response = await fetch(mediaUri);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch media: ${response.status} ${response.statusText}`);
-      }
+      // Read file as base64 - expo-file-system v19+ uses string literal
+      const base64 = await FileSystem.readAsStringAsync(mediaUri, {
+        encoding: 'base64',
+      } as any);
 
-      fileBlob = await response.blob();
-
-      if (!fileBlob || fileBlob.size === 0) {
+      if (!base64 || base64.length === 0) {
         return {
           data: null,
           error: { message: 'Media file is empty. Please try capturing again.' },
         };
       }
 
+      // Convert base64 to Uint8Array
+      const binaryString = atob(base64);
+      fileData = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        fileData[i] = binaryString.charCodeAt(i);
+      }
+
       // Check file size (max 10MB)
       const maxSize = config.MAX_MEDIA_SIZE_MB * 1024 * 1024;
-      if (fileBlob.size > maxSize) {
+      if (fileData.length > maxSize) {
         return {
           data: null,
           error: { 
@@ -57,14 +60,10 @@ export async function createPost(
     } catch (fileError: any) {
       console.error('File read error:', fileError);
       console.error('Media URI:', mediaUri);
-      console.error('Error details:', JSON.stringify(fileError, null, 2));
       
-      // More specific error messages
       let errorMessage = 'Failed to read media file. Please try capturing again.';
       if (fileError.message?.includes('Network')) {
         errorMessage = 'Network error. Please check your connection and try again.';
-      } else if (fileError.message?.includes('fetch')) {
-        errorMessage = 'Failed to access media file. Please try capturing again.';
       } else if (mediaType === 'video') {
         errorMessage = 'Failed to read video file. Please try recording again.';
       } else {
@@ -77,11 +76,10 @@ export async function createPost(
       };
     }
 
-    // Upload to Supabase storage using Blob
-    // Supabase storage accepts Blob objects in React Native
+    // Upload to Supabase storage using Uint8Array
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(BUCKETS.POST_MEDIA)
-      .upload(fileName, fileBlob, {
+      .upload(fileName, fileData, {
         contentType,
         cacheControl: '3600',
         upsert: false,
@@ -103,7 +101,7 @@ export async function createPost(
     // Get public URL
     const { data: urlData } = supabase.storage
       .from(BUCKETS.POST_MEDIA)
-      .getPublicUrl(uploadData.path);
+      .getPublicUrl(fileName);
 
     const mediaUrl = urlData.publicUrl;
 

@@ -237,10 +237,6 @@ export function PostPreviewScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     navigation.navigate('LocationSearch', {
       currentLocation: selectedLocation,
-      onLocationSelect: (loc: LocationData) => {
-        setSelectedLocation(loc);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      },
     });
   }, [navigation, selectedLocation]);
 
