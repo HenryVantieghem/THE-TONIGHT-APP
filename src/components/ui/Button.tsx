@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   ViewStyle,
+  View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -29,6 +30,7 @@ interface ButtonProps {
   style?: ViewStyle;
   fullWidth?: boolean;
   size?: 'sm' | 'md' | 'lg';
+  icon?: React.ReactNode;
 }
 
 export function Button({
@@ -40,6 +42,7 @@ export function Button({
   style,
   fullWidth = false,
   size = 'md',
+  icon,
 }: ButtonProps) {
   const handlePress = () => {
     if (!disabled && !loading) {
@@ -81,7 +84,10 @@ export function Button({
           {loading ? (
             <ActivityIndicator color={authColors.textWhite} size="small" />
           ) : (
-            <Text style={[styles.primaryText, { fontSize }]}>{title}</Text>
+            <View style={styles.buttonContent}>
+              {icon && <View style={styles.iconContainer}>{icon}</View>}
+              <Text style={[styles.primaryText, { fontSize }]}>{title}</Text>
+            </View>
           )}
         </LinearGradient>
       </TouchableOpacity>
@@ -106,7 +112,10 @@ export function Button({
         {loading ? (
           <ActivityIndicator color={authColors.primary} size="small" />
         ) : (
-          <Text style={[styles.secondaryText, { fontSize }]}>{title}</Text>
+          <View style={styles.buttonContent}>
+            {icon && <View style={styles.iconContainer}>{icon}</View>}
+            <Text style={[styles.secondaryText, { fontSize }]}>{title}</Text>
+          </View>
         )}
       </TouchableOpacity>
     );
@@ -125,13 +134,16 @@ export function Button({
         isDisabled && styles.disabledOpacity,
         style,
       ]}
-    >
-      {loading ? (
-        <ActivityIndicator color={authColors.primary} size="small" />
-      ) : (
-        <Text style={[styles.ghostText, { fontSize: fontSize - 2 }]}>{title}</Text>
-      )}
-    </TouchableOpacity>
+      >
+        {loading ? (
+          <ActivityIndicator color={authColors.primary} size="small" />
+        ) : (
+          <View style={styles.buttonContent}>
+            {icon && <View style={styles.iconContainer}>{icon}</View>}
+            <Text style={[styles.ghostText, { fontSize: fontSize - 2 }]}>{title}</Text>
+          </View>
+        )}
+      </TouchableOpacity>
   );
 }
 
@@ -179,5 +191,14 @@ const styles = StyleSheet.create({
   },
   disabledOpacity: {
     opacity: 0.5,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  iconContainer: {
+    marginRight: -4,
   },
 });

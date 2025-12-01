@@ -17,7 +17,7 @@ import * as Haptics from 'expo-haptics';
 import { PostCard } from '../../components/feed/PostCard';
 import { EmptyState } from '../../components/feed/EmptyState';
 import { PostCardSkeleton } from '../../components/feed/PostCardSkeleton';
-import { FloatingCameraButton } from '../../components/camera/CaptureButton';
+import { FloatingCameraButton } from '../../components/ui/FloatingCameraButton';
 import { Avatar } from '../../components/ui/Avatar';
 import { usePosts } from '../../hooks/usePosts';
 import { useAuth } from '../../hooks/useAuth';

@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useRef } from 'react';
+import React, { useCallback, useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -95,9 +95,26 @@ export function PostCard({
     triggerHeartAnimation();
   }, [post.id, onReact, triggerHeartAnimation]);
 
+  const singleTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (singleTapTimerRef.current) {
+        clearTimeout(singleTapTimerRef.current);
+      }
+    };
+  }, []);
+
   const handleMediaPress = useCallback(() => {
     const now = Date.now();
     const timeSinceLastTap = now - lastTapRef.current;
+
+    // Clear any pending single tap timer
+    if (singleTapTimerRef.current) {
+      clearTimeout(singleTapTimerRef.current);
+      singleTapTimerRef.current = null;
+    }
 
     if (timeSinceLastTap < DOUBLE_TAP_DELAY) {
       // Double tap detected
@@ -105,10 +122,11 @@ export function PostCard({
     } else {
       // Single tap - open fullscreen after delay if no double tap
       lastTapRef.current = now;
-      setTimeout(() => {
+      singleTapTimerRef.current = setTimeout(() => {
         if (Date.now() - lastTapRef.current >= DOUBLE_TAP_DELAY) {
           onMediaPress(post);
         }
+        singleTapTimerRef.current = null;
       }, DOUBLE_TAP_DELAY);
     }
   }, [handleDoubleTap, onMediaPress, post]);
