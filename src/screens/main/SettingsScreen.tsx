@@ -16,6 +16,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { Card } from '../../components/ui/Card';
+import { DiscoBallLogo } from '../../components/ui/DiscoBallLogo';
 import { useAuth } from '../../hooks/useAuth';
 import { useLocation } from '../../hooks/useLocation';
 import { colors } from '../../constants/colors';
@@ -398,7 +399,7 @@ export function SettingsScreen() {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerIcon}>🌙</Text>
+          <DiscoBallLogo size={32} animated={true} />
           <Text style={styles.footerText}>Tonight</Text>
           <Text style={styles.footerSubtext}>
             Share moments that matter, right now.
@@ -610,10 +611,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing.xl,
     marginTop: spacing.md,
-  },
-  footerIcon: {
-    fontSize: 32,
-    marginBottom: spacing.xs,
   },
   footerText: {
     fontSize: typography.sizes.lg,

@@ -19,6 +19,7 @@ import { EmptyState } from '../../components/feed/EmptyState';
 import { PostCardSkeleton } from '../../components/feed/PostCardSkeleton';
 import { FloatingCameraButton } from '../../components/ui/FloatingCameraButton';
 import { Avatar } from '../../components/ui/Avatar';
+import { DiscoBallLogo } from '../../components/ui/DiscoBallLogo';
 import { usePosts } from '../../hooks/usePosts';
 import { useAuth } from '../../hooks/useAuth';
 import { useFriends } from '../../hooks/useFriends';
@@ -204,7 +205,7 @@ export function FeedScreen() {
         </TouchableOpacity>
 
         <View style={styles.titleContainer}>
-          <Text style={styles.titleIcon}>🌙</Text>
+          <DiscoBallLogo size={28} animated={true} />
           <Text style={styles.title}>Tonight</Text>
         </View>
 
@@ -351,9 +352,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-  },
-  titleIcon: {
-    fontSize: 28,
   },
   title: {
     fontSize: typography.sizes.xxl,

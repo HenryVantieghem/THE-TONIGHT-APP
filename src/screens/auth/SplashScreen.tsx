@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { DiscoBallLogo } from '../../components/ui/DiscoBallLogo';
 import { colors } from '../../constants/colors';
 import { typography } from '../../constants/typography';
 import type { AuthStackParamList } from '../../types';
@@ -48,7 +49,7 @@ export function SplashScreen() {
           },
         ]}
       >
-        <Text style={styles.icon}>🌙</Text>
+        <DiscoBallLogo size={80} animated={true} />
         <Text style={styles.title}>Tonight</Text>
         <Text style={styles.subtitle}>What's happening right now?</Text>
       </Animated.View>
@@ -65,10 +66,6 @@ const styles = StyleSheet.create({
   },
   content: {
     alignItems: 'center',
-  },
-  icon: {
-    fontSize: 80,
-    marginBottom: 20,
   },
   title: {
     fontSize: typography.sizes.display + 12,
