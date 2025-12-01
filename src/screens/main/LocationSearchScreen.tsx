@@ -15,7 +15,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
-import { searchLocations, reverseGeocode, getCurrentLocationWithAddress } from '../../services/location';
+import { searchLocations, reverseGeocode, getCurrentLocationWithAddress, hasLocationPermission } from '../../services/location';
 import { colors } from '../../constants/colors';
 import { typography } from '../../constants/typography';
 import { spacing, borderRadius, config } from '../../constants/config';
@@ -54,12 +54,22 @@ export function LocationSearchScreen() {
   const loadCurrentLocation = useCallback(async () => {
     setIsLoadingCurrent(true);
     try {
+      // Check permission first
+      const hasPermission = await hasLocationPermission();
+      
+      if (!hasPermission) {
+        // Don't show error, just don't load current location
+        setIsLoadingCurrent(false);
+        return;
+      }
+      
       const { data } = await getCurrentLocationWithAddress();
       if (data) {
         setCurrentLocationData(data);
       }
     } catch (err) {
       console.error('Error loading current location:', err);
+      // Silently fail - user can still search for locations
     } finally {
       setIsLoadingCurrent(false);
     }

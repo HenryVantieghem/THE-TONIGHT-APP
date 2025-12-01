@@ -8,6 +8,7 @@ import {
   Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
@@ -15,11 +16,22 @@ import * as mockDataService from '../../services/mockData';
 import { colors } from '../../constants/colors';
 import { typography } from '../../constants/typography';
 import { spacing, borderRadius } from '../../constants/config';
+import * as Haptics from 'expo-haptics';
 
 export function MockDataScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+
+  const handleGoBack = () => {
+    if (navigation.canGoBack()) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      navigation.goBack();
+    } else {
+      navigation.navigate('Settings' as never);
+    }
+  };
 
   const handleCreateMockData = async () => {
     if (!user) {
@@ -30,10 +42,13 @@ export function MockDataScreen() {
     setIsLoading(true);
     try {
       await mockDataService.initializeMockData(user.id);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('Success', 'Mock data created successfully! Refresh your feed to see it.');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating mock data:', error);
-      Alert.alert('Error', 'Failed to create mock data. Check console for details.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      const errorMessage = error?.message || 'Failed to create mock data. Check console for details.';
+      Alert.alert('Error', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -83,7 +98,18 @@ export function MockDataScreen() {
         { paddingTop: insets.top + spacing.md },
       ]}
     >
-      <Text style={styles.title}>Mock Data Generator</Text>
+      {/* Header with back button */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={handleGoBack}
+          style={styles.backButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Text style={styles.backButtonText}>←</Text>
+        </TouchableOpacity>
+        <Text style={styles.title}>Mock Data Generator</Text>
+        <View style={styles.backButtonPlaceholder} />
+      </View>
       <Text style={styles.subtitle}>
         Create test data to see how the app looks with users and posts
       </Text>
@@ -148,11 +174,30 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     paddingBottom: spacing.xxl,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xs,
+  },
+  backButton: {
+    padding: spacing.xs,
+    marginLeft: -spacing.xs,
+  },
+  backButtonText: {
+    fontSize: typography.sizes.xxl,
+    color: colors.primary,
+    fontWeight: typography.weights.bold,
+  },
+  backButtonPlaceholder: {
+    width: 40, // Same width as back button for centering
+  },
   title: {
     fontSize: typography.sizes.xxl,
     fontWeight: typography.weights.bold,
     color: colors.text,
-    marginBottom: spacing.xs,
+    flex: 1,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: typography.sizes.md,

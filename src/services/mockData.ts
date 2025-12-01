@@ -135,42 +135,39 @@ export async function generateMockPosts(currentUserId: string): Promise<void> {
     const postsToCreate = [];
     const now = new Date();
 
-    // Create 2-3 posts per user
-    for (const user of users) {
-      if (user.id === currentUserId) continue; // Skip current user
+    // Create posts only for the current user (RLS policy requires user_id = auth.uid())
+    // Create 5-8 posts for the current user to simulate a feed
+    const numPosts = Math.floor(Math.random() * 4) + 5; // 5-8 posts
 
-      const numPosts = Math.floor(Math.random() * 2) + 2; // 2-3 posts
-
-      for (let i = 0; i < numPosts; i++) {
-        const location = MOCK_LOCATIONS[Math.floor(Math.random() * MOCK_LOCATIONS.length)];
-        const caption = MOCK_CAPTIONS[Math.floor(Math.random() * MOCK_CAPTIONS.length)];
-        const mediaType = Math.random() > 0.7 ? 'video' : 'image';
-        
-        // Create expiry time (some expired, some active)
-        const expiresAt = new Date(now);
-        if (Math.random() > 0.3) {
-          // 70% chance of active post
-          expiresAt.setHours(expiresAt.getHours() + Math.random() * 0.8 + 0.2); // 0.2-1 hour
-        } else {
-          // 30% chance of expired post
-          expiresAt.setHours(expiresAt.getHours() - Math.random() * 2 - 0.5); // 0.5-2.5 hours ago
-        }
-
-        postsToCreate.push({
-          user_id: user.id,
-          media_url: `https://picsum.photos/800/1000?random=${Date.now()}-${user.id}-${i}`,
-          media_type: mediaType,
-          thumbnail_url: mediaType === 'image' ? null : `https://picsum.photos/400/400?random=${Date.now()}-${user.id}-${i}`,
-          caption: Math.random() > 0.3 ? caption : null, // 70% have captions
-          location_name: location.name,
-          location_lat: location.lat,
-          location_lng: location.lng,
-          location_city: location.city || null,
-          location_state: location.state || null,
-          expires_at: expiresAt.toISOString(),
-          view_count: Math.floor(Math.random() * 100),
-        });
+    for (let i = 0; i < numPosts; i++) {
+      const location = MOCK_LOCATIONS[Math.floor(Math.random() * MOCK_LOCATIONS.length)];
+      const caption = MOCK_CAPTIONS[Math.floor(Math.random() * MOCK_CAPTIONS.length)];
+      const mediaType = Math.random() > 0.7 ? 'video' : 'image';
+      
+      // Create expiry time (some expired, some active)
+      const expiresAt = new Date(now);
+      if (Math.random() > 0.3) {
+        // 70% chance of active post
+        expiresAt.setHours(expiresAt.getHours() + Math.random() * 0.8 + 0.2); // 0.2-1 hour
+      } else {
+        // 30% chance of expired post
+        expiresAt.setHours(expiresAt.getHours() - Math.random() * 2 - 0.5); // 0.5-2.5 hours ago
       }
+
+      postsToCreate.push({
+        user_id: currentUserId, // Only create posts for current user (RLS requirement)
+        media_url: `https://picsum.photos/800/1000?random=${Date.now()}-${currentUserId}-${i}`,
+        media_type: mediaType,
+        thumbnail_url: mediaType === 'image' ? null : `https://picsum.photos/400/400?random=${Date.now()}-${currentUserId}-${i}`,
+        caption: Math.random() > 0.3 ? caption : null, // 70% have captions
+        location_name: location.name,
+        location_lat: location.lat,
+        location_lng: location.lng,
+        location_city: location.city || null,
+        location_state: location.state || null,
+        expires_at: expiresAt.toISOString(),
+        view_count: Math.floor(Math.random() * 100),
+      });
     }
 
     if (postsToCreate.length === 0) {
@@ -178,22 +175,33 @@ export async function generateMockPosts(currentUserId: string): Promise<void> {
       return;
     }
 
-    // Insert posts in batches
-    const batchSize = 5;
-    for (let i = 0; i < postsToCreate.length; i += batchSize) {
-      const batch = postsToCreate.slice(i, i + batchSize);
+    // Insert posts one at a time to avoid RLS issues and get better error handling
+    let successCount = 0;
+    let errorCount = 0;
+    
+    for (let i = 0; i < postsToCreate.length; i++) {
+      const post = postsToCreate[i];
       const { error } = await supabase
         .from(TABLES.POSTS)
-        .insert(batch);
+        .insert(post);
 
       if (error) {
-        console.error(`Error inserting batch ${i / batchSize + 1}:`, error);
+        console.error(`Error inserting post ${i + 1}:`, error);
+        errorCount++;
+        // If it's an RLS error, stop trying - all will fail
+        if (error.code === '42501') {
+          throw new Error(`RLS policy error: Cannot create posts. Make sure you're authenticated and have permission to create posts.`);
+        }
       } else {
-        console.log(`Created batch ${i / batchSize + 1} (${batch.length} posts)`);
+        successCount++;
       }
     }
 
-    console.log(`Successfully created ${postsToCreate.length} mock posts`);
+    if (errorCount > 0) {
+      console.warn(`Created ${successCount} posts, ${errorCount} failed`);
+    }
+
+    console.log(`Successfully created ${successCount} mock posts`);
   } catch (error) {
     console.error('Error generating mock posts:', error);
   }
@@ -271,4 +279,5 @@ export async function initializeMockData(currentUserId: string): Promise<void> {
     console.error('Error initializing mock data:', error);
   }
 }
+
 

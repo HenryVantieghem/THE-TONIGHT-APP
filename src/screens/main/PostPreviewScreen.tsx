@@ -12,6 +12,7 @@ import {
   Animated,
   Modal,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -169,36 +170,43 @@ export function PostPreviewScreen() {
 
   const insets = useSafeAreaInsets();
   const { createPost } = usePosts();
-  const { getCurrentLocation: refreshLocation } = useLocation();
+  const { getCurrentLocation: refreshLocation, requestPermission: requestLocationPermission, checkPermission: checkLocationPermission } = useLocation();
 
   const [caption, setCaption] = useState('');
   const [isPosting, setIsPosting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<LocationData>(location);
   const [isRefreshingLocation, setIsRefreshingLocation] = useState(false);
+  const [hasLocationPermission, setHasLocationPermission] = useState<boolean | null>(null);
 
-  // Auto-refresh location on mount if location is invalid
+  // Check location permission and auto-refresh location on mount if location is invalid
   useEffect(() => {
-    const refreshIfNeeded = async () => {
+    const initLocation = async () => {
+      // Check permission first
+      const hasPermission = await checkLocationPermission();
+      setHasLocationPermission(hasPermission);
+
       // If location is default/unknown, try to get real location
       if (!selectedLocation || selectedLocation.name === 'Location Unknown' || 
           (selectedLocation.lat === 0 && selectedLocation.lng === 0)) {
-        setIsRefreshingLocation(true);
-        try {
-          const newLocation = await refreshLocation();
-          if (newLocation) {
-            setSelectedLocation(newLocation);
+        if (hasPermission) {
+          setIsRefreshingLocation(true);
+          try {
+            const newLocation = await refreshLocation();
+            if (newLocation) {
+              setSelectedLocation(newLocation);
+            }
+          } catch (error) {
+            console.error('Failed to refresh location:', error);
+          } finally {
+            setIsRefreshingLocation(false);
           }
-        } catch (error) {
-          console.error('Failed to refresh location:', error);
-        } finally {
-          setIsRefreshingLocation(false);
         }
       }
     };
 
-    refreshIfNeeded();
-  }, []);
+    initLocation();
+  }, [checkLocationPermission, refreshLocation, selectedLocation]);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -232,19 +240,26 @@ export function PostPreviewScreen() {
     }
 
     // Validate location
-    if (!selectedLocation) {
+    if (!selectedLocation || !selectedLocation.name || selectedLocation.name.trim() === '' || 
+        selectedLocation.lat === undefined || selectedLocation.lng === undefined ||
+        isNaN(selectedLocation.lat) || isNaN(selectedLocation.lng) ||
+        (selectedLocation.lat === 0 && selectedLocation.lng === 0)) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Location Required', 'Please select a location for your post.');
+      Alert.alert(
+        'Location Required',
+        'Please select a valid location for your post. You can search for a location or use your current location.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Select Location', 
+            onPress: handleSelectLocation
+          }
+        ]
+      );
       return;
     }
 
-    if (!selectedLocation.name || selectedLocation.name.trim() === '' || selectedLocation.name === 'Location Unknown') {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Location Required', 'Please select a valid location. Tap the location to search or use current location.');
-      return;
-    }
-
-    // Validate coordinates
+    // Validate coordinates (already checked above, but ensure they're valid numbers)
     const lat = typeof selectedLocation.lat === 'number' ? selectedLocation.lat : parseFloat(String(selectedLocation.lat));
     const lng = typeof selectedLocation.lng === 'number' ? selectedLocation.lng : parseFloat(String(selectedLocation.lng));
 
@@ -345,6 +360,56 @@ export function PostPreviewScreen() {
     );
   }, [navigation]);
 
+  const handleRequestLocationPermission = useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const granted = await requestLocationPermission();
+    
+    if (granted) {
+      setHasLocationPermission(true);
+      setIsRefreshingLocation(true);
+      try {
+        const newLocation = await refreshLocation();
+        if (newLocation) {
+          setSelectedLocation(newLocation);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+      } catch (error) {
+        console.error('Failed to get location after permission grant:', error);
+        Alert.alert('Error', 'Failed to get your location. Please try selecting a location manually.');
+      } finally {
+        setIsRefreshingLocation(false);
+      }
+    } else {
+      Alert.alert(
+        'Location Permission Required',
+        'To tag your posts with your location, please enable location access in Settings.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Open Settings', 
+            onPress: () => {
+              if (Platform.OS === 'ios') {
+                Linking.openURL('app-settings:');
+              } else {
+                Linking.openSettings();
+              }
+            }
+          }
+        ]
+      );
+    }
+  }, [requestLocationPermission, refreshLocation]);
+
+  const handleSelectLocation = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    navigation.navigate('LocationSearch', {
+      currentLocation: selectedLocation,
+      onLocationSelect: (loc: LocationData) => {
+        setSelectedLocation(loc);
+      },
+    });
+  }, [navigation, selectedLocation]);
+
   // Character count color
   const getCharacterCountColor = () => {
     const ratio = characterCount / config.MAX_CAPTION_LENGTH;
@@ -419,14 +484,7 @@ export function PostPreviewScreen() {
         <View style={styles.locationContainer}>
           <TouchableOpacity
             style={styles.locationContent}
-            onPress={() => {
-              navigation.navigate('LocationSearch', {
-                currentLocation: selectedLocation,
-                onLocationSelect: (loc) => {
-                  setSelectedLocation(loc);
-                },
-              });
-            }}
+            onPress={handleSelectLocation}
             activeOpacity={0.7}
           >
             <View style={styles.locationIconContainer}>
@@ -454,28 +512,69 @@ export function PostPreviewScreen() {
             <Text style={styles.editLocationText}>Change</Text>
           </TouchableOpacity>
           
-          {/* Refresh location button */}
+          {/* Refresh location button or request permission button */}
           {!isRefreshingLocation && (
             <TouchableOpacity
               style={styles.refreshLocationButton}
               onPress={async () => {
+                // Check permission first
+                if (hasLocationPermission === false) {
+                  await handleRequestLocationPermission();
+                  return;
+                }
+                
+                // If permission status unknown, check it
+                if (hasLocationPermission === null) {
+                  const hasPermission = await checkLocationPermission();
+                  setHasLocationPermission(hasPermission);
+                  if (!hasPermission) {
+                    await handleRequestLocationPermission();
+                    return;
+                  }
+                }
+                
                 setIsRefreshingLocation(true);
                 try {
                   const newLocation = await refreshLocation();
                   if (newLocation) {
                     setSelectedLocation(newLocation);
                     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                  } else {
+                    // If location fetch failed, offer to search manually
+                    Alert.alert(
+                      'Location Not Available',
+                      'Unable to get your current location. Would you like to search for a location?',
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        { 
+                          text: 'Search', 
+                          onPress: handleSelectLocation
+                        }
+                      ]
+                    );
                   }
                 } catch (error) {
                   Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-                  Alert.alert('Error', 'Failed to refresh location. Please try again.');
+                  Alert.alert(
+                    'Error',
+                    'Failed to refresh location. Would you like to search for a location?',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      { 
+                        text: 'Search', 
+                        onPress: handleSelectLocation
+                      }
+                    ]
+                  );
                 } finally {
                   setIsRefreshingLocation(false);
                 }
               }}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Text style={styles.refreshIcon}>🔄</Text>
+              <Text style={styles.refreshIcon}>
+                {hasLocationPermission === false ? '🔒' : '🔄'}
+              </Text>
             </TouchableOpacity>
           )}
         </View>
