@@ -144,7 +144,9 @@ export function CameraScreen() {
         useNativeDriver: true,
       }),
     ]).start(() => {
-      navigation.goBack();
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+      }
     });
   }, [navigation, translateY, opacity]);
 
