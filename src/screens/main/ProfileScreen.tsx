@@ -564,7 +564,7 @@ export function ProfileScreen() {
                 <Avatar
                   uri={displayUser?.avatar_url}
                   name={displayUser?.username}
-                  size="xlarge"
+                  size="xxl"
                 />
                 {isOwnProfile && (
                   <View style={styles.changeAvatarBadge}>

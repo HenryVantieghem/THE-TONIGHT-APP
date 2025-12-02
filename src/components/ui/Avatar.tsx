@@ -7,12 +7,11 @@ import {
   ViewStyle,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { colors } from '../../constants/colors';
-import { textStyles } from '../../constants/typography';
-import { borderRadius } from '../../constants/config';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, shadows } from '../../constants/colors';
 
 // Avatar sizes per spec
-type AvatarSize = 'small' | 'default' | 'medium' | 'large' | 'xlarge';
+type AvatarSize = 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
 
 interface AvatarProps {
   uri?: string | null;
@@ -21,34 +20,46 @@ interface AvatarProps {
   onPress?: () => void;
   style?: ViewStyle;
   showEditBadge?: boolean;
+  showBorder?: boolean; // 2px white border when on images
 }
 
+// Per spec sizes
 const sizeMap: Record<AvatarSize, number> = {
-  small: 32,      // Friend list compact
-  default: 40,    // Post cards
-  medium: 56,     // Friend cards
-  large: 80,      // Profile header
-  xlarge: 120,    // Own profile
+  sm: 32,     // Friend list compact
+  md: 40,     // Post cards (default)
+  lg: 56,     // Friend cards
+  xl: 80,     // Profile header
+  xxl: 120,   // Own profile
 };
 
 const fontSizeMap: Record<AvatarSize, number> = {
-  small: 12,
-  default: 14,
-  medium: 18,
-  large: 24,
-  xlarge: 32,
+  sm: 12,
+  md: 14,
+  lg: 20,
+  xl: 28,
+  xxl: 40,
+};
+
+const editBadgeSizeMap: Record<AvatarSize, { size: number; iconSize: number }> = {
+  sm: { size: 16, iconSize: 10 },
+  md: { size: 20, iconSize: 12 },
+  lg: { size: 24, iconSize: 14 },
+  xl: { size: 28, iconSize: 16 },
+  xxl: { size: 32, iconSize: 18 },
 };
 
 export function Avatar({
   uri,
   name,
-  size = 'default',
+  size = 'md',
   onPress,
   style,
   showEditBadge = false,
+  showBorder = false,
 }: AvatarProps) {
   const dimension = sizeMap[size];
   const fontSize = fontSizeMap[size];
+  const badgeConfig = editBadgeSizeMap[size];
 
   // Get initials from name
   const getInitials = () => {
@@ -67,8 +78,9 @@ export function Avatar({
       height: dimension,
       borderRadius: dimension / 2,
     },
+    showBorder ? styles.withBorder : undefined,
     style,
-  ];
+  ].filter(Boolean) as ViewStyle[];
 
   const avatarContent = uri ? (
     <Image
@@ -104,9 +116,33 @@ export function Avatar({
     <>
       {avatarContent}
       {showEditBadge && (
-        <View style={[styles.editBadge, { bottom: size === 'xlarge' ? 4 : 0, right: size === 'xlarge' ? 4 : 0 }]}>
-          <View style={styles.editBadgeInner}>
-            <Text style={styles.editIcon}>📷</Text>
+        <View
+          style={[
+            styles.editBadge,
+            {
+              width: badgeConfig.size,
+              height: badgeConfig.size,
+              borderRadius: badgeConfig.size / 2,
+              bottom: 0,
+              right: 0,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.editBadgeInner,
+              {
+                width: badgeConfig.size - 4,
+                height: badgeConfig.size - 4,
+                borderRadius: (badgeConfig.size - 4) / 2,
+              },
+            ]}
+          >
+            <Ionicons
+              name="camera"
+              size={badgeConfig.iconSize}
+              color={colors.textInverse}
+            />
           </View>
         </View>
       )}
@@ -130,8 +166,13 @@ export function Avatar({
 
 const styles = StyleSheet.create({
   container: {
-    overflow: 'hidden',
+    overflow: 'visible',
     position: 'relative',
+  },
+  withBorder: {
+    borderWidth: 2,
+    borderColor: colors.white,
+    ...shadows.level1,
   },
   image: {
     backgroundColor: colors.backgroundSecondary,
@@ -146,31 +187,16 @@ const styles = StyleSheet.create({
   },
   editBadge: {
     position: 'absolute',
-    width: 24,
-    height: 24,
-    borderRadius: 12,
     backgroundColor: colors.backgroundPrimary,
     borderWidth: 2,
     borderColor: colors.backgroundPrimary,
     justifyContent: 'center',
     alignItems: 'center',
-    ...colors.shadowColor ? {
-      shadowColor: colors.shadowColor,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 2,
-    } : {},
+    ...shadows.level2,
   },
   editBadgeInner: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
     backgroundColor: colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  editIcon: {
-    fontSize: 10,
   },
 });

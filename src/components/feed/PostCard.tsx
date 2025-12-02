@@ -136,7 +136,7 @@ export function PostCard({
         <Avatar
           uri={post.user?.avatar_url}
           name={post.user?.username}
-          size="default" // 40px per spec
+          size="md" // 40px per spec
         />
         <View style={styles.headerText}>
           <Text style={[textStyles.headline, styles.username]}>

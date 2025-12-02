@@ -54,14 +54,14 @@ function SkeletonBox({
           width,
           height,
           borderRadius: radius,
-          backgroundColor: colors.surface,
+          backgroundColor: colors.backgroundTertiary,
           overflow: 'hidden',
         },
         style,
       ]}
     >
       <AnimatedLinearGradient
-        colors={[colors.surface, colors.surfaceSecondary, colors.surface]}
+        colors={[colors.backgroundTertiary, colors.backgroundSecondary, colors.backgroundTertiary]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={[StyleSheet.absoluteFill, { width: SCREEN_WIDTH * 2 }, animatedStyle]}
@@ -229,10 +229,10 @@ export function ShimmerPlaceholder({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.backgroundSecondary,
     marginBottom: spacing.md,
-    borderRadius: borderRadius.md,
-    ...shadows.md,
+    borderRadius: borderRadius.lg,
+    ...shadows.level2,
     overflow: 'hidden',
   },
   header: {

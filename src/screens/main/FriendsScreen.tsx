@@ -147,7 +147,7 @@ export function FriendsScreen() {
           <Avatar
             uri={friend?.avatar_url}
             name={friend?.username}
-            size="medium"
+            size="lg"
           />
           <Text style={styles.username}>@{friend?.username}</Text>
         </TouchableOpacity>
@@ -175,7 +175,7 @@ export function FriendsScreen() {
           <Avatar
             uri={requester?.avatar_url}
             name={requester?.username}
-            size="medium"
+            size="lg"
           />
           <Text style={styles.username}>@{requester?.username}</Text>
         </TouchableOpacity>
@@ -211,7 +211,7 @@ export function FriendsScreen() {
           <Avatar
             uri={item.avatar_url}
             name={item.username}
-            size="medium"
+            size="lg"
           />
           <Text style={styles.username}>@{item.username}</Text>
         </TouchableOpacity>

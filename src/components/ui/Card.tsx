@@ -91,15 +91,15 @@ export function Card({
     transform: [{ scale: pressScale.value }],
   }));
 
-  const cardStyles: ViewStyle[] = [
+  const cardStyles = [
     styles.card,
     {
       backgroundColor: variantBackgrounds[variant],
       padding: paddingMap[padding],
     },
-    shadowMap[shadow],
+    shadow !== 'none' ? shadowMap[shadow] : undefined,
     style,
-  ];
+  ].filter(Boolean) as ViewStyle[];
 
   if (onPress || onLongPress) {
     return (

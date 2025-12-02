@@ -93,9 +93,9 @@ export function Skeleton({
     >
       <AnimatedLinearGradient
         colors={[
-          colors.surface,
-          colors.surfaceSecondary,
-          colors.surface,
+          colors.backgroundTertiary,
+          colors.backgroundSecondary,
+          colors.backgroundTertiary,
         ]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
@@ -165,7 +165,7 @@ export function SkeletonRow({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.backgroundTertiary,
     overflow: 'hidden',
   },
   shimmer: {
