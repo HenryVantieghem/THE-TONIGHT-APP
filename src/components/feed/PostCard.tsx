@@ -1,48 +1,34 @@
-import React, { useCallback, useState, useRef, useEffect } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   Dimensions,
-  Alert,
   Pressable,
-  Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { VideoView, useVideoPlayer } from 'expo-video';
-import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  withTiming,
   withSequence,
-  runOnJS,
+  withTiming,
   Easing,
-  interpolate,
-  Extrapolation,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../ui/Avatar';
 import { TimerBar } from '../ui/TimerBar';
 import { EmojiReactions } from './EmojiReactions';
-import { colors } from '../../constants/colors';
-import { typography } from '../../constants/typography';
+import { colors, shadows } from '../../constants/colors';
+import { textStyles } from '../../constants/typography';
 import { spacing, borderRadius } from '../../constants/config';
-import {
-  liquidGlass,
-  glassShadows,
-  glassMotion,
-  glassColors,
-} from '../../constants/liquidGlass';
 import type { Post, ReactionEmoji } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MEDIA_HEIGHT = SCREEN_WIDTH * 0.75;
 const DOUBLE_TAP_DELAY = 300;
-const CARD_BORDER_RADIUS = 24;
 
 interface PostCardProps {
   post: Post;
@@ -61,66 +47,27 @@ export function PostCard({
   onUserPress,
   onMediaPress,
 }: PostCardProps) {
-  // Double tap detection
-  const lastTapRef = useRef<number>(0);
   const [showExpandedCaption, setShowExpandedCaption] = useState(false);
-
-  // Heart animation values
+  const lastTapRef = React.useRef<number>(0);
+  
+  // Heart animation for double tap
   const heartScale = useSharedValue(0);
   const heartOpacity = useSharedValue(0);
-  const pressProgress = useSharedValue(0);
+  const cardScale = useSharedValue(1);
 
-  // Video player for video posts
-  const videoPlayer = useVideoPlayer(post.media_type === 'video' ? post.media_url : '');
-  
-  // Configure video player when it's created
-  useEffect(() => {
-    if (post.media_type === 'video' && videoPlayer) {
-      try {
-        videoPlayer.loop = true;
-        videoPlayer.muted = true;
-        videoPlayer.play();
-      } catch (error) {
-        console.warn('Error configuring video player:', error);
-      }
+  const handleUserPress = useCallback(() => {
+    if (post.user) {
+      onUserPress(post.user.id);
     }
-    
-    // Cleanup: pause video when component unmounts or post changes
-    return () => {
-      if (videoPlayer && post.media_type === 'video') {
-        try {
-          // Check if player is still valid before calling pause
-          if (videoPlayer.currentTime !== undefined) {
-            videoPlayer.pause();
-          }
-        } catch (error) {
-          // Silently ignore cleanup errors - player may already be destroyed
-          console.warn('Error pausing video player during cleanup:', error);
-        }
-      }
-    };
-  }, [post.media_type, post.media_url, videoPlayer]);
+  }, [post.user, onUserPress]);
 
-  const handleReact = useCallback(
-    (emoji: ReactionEmoji) => {
-      onReact(post.id, emoji);
-    },
-    [post.id, onReact]
-  );
-
-  // Trigger heart animation and add reaction
   const triggerHeartAnimation = useCallback(() => {
-    'worklet';
     heartScale.value = 0;
     heartOpacity.value = 1;
-
-    // Scale up with spring
-    heartScale.value = withSpring(1.2, {
-      damping: 8,
-      stiffness: 200,
-    });
-
-    // After animation, fade out
+    heartScale.value = withSequence(
+      withSpring(1.3, { damping: 8, stiffness: 200 }),
+      withTiming(1, { duration: 200 })
+    );
     heartOpacity.value = withSequence(
       withTiming(1, { duration: 100 }),
       withTiming(1, { duration: 400 }),
@@ -129,246 +76,142 @@ export function PostCard({
   }, [heartScale, heartOpacity]);
 
   const handleDoubleTap = useCallback(async () => {
-    // Trigger haptic
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-    // Add heart reaction
     onReact(post.id, '❤️');
-
-    // Trigger animation (on JS thread, animation runs on UI thread)
     triggerHeartAnimation();
   }, [post.id, onReact, triggerHeartAnimation]);
-
-  const singleTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Cleanup timer on unmount
-  useEffect(() => {
-    return () => {
-      if (singleTapTimerRef.current) {
-        clearTimeout(singleTapTimerRef.current);
-      }
-    };
-  }, []);
 
   const handleMediaPress = useCallback(() => {
     const now = Date.now();
     const timeSinceLastTap = now - lastTapRef.current;
 
-    // Clear any pending single tap timer
-    if (singleTapTimerRef.current) {
-      clearTimeout(singleTapTimerRef.current);
-      singleTapTimerRef.current = null;
-    }
-
     if (timeSinceLastTap < DOUBLE_TAP_DELAY) {
-      // Double tap detected
       handleDoubleTap();
     } else {
-      // Single tap - open fullscreen after delay if no double tap
       lastTapRef.current = now;
-      singleTapTimerRef.current = setTimeout(() => {
+      setTimeout(() => {
         if (Date.now() - lastTapRef.current >= DOUBLE_TAP_DELAY) {
           onMediaPress(post);
         }
-        singleTapTimerRef.current = null;
       }, DOUBLE_TAP_DELAY);
     }
   }, [handleDoubleTap, onMediaPress, post]);
 
-  const handleLongPress = useCallback(async () => {
-    if (!isOwner) return;
+  const handlePressIn = useCallback(() => {
+    cardScale.value = withSpring(0.98, { damping: 15, stiffness: 150 });
+  }, [cardScale]);
 
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  const handlePressOut = useCallback(() => {
+    cardScale.value = withSpring(1, { damping: 15, stiffness: 150 });
+  }, [cardScale]);
 
-    Alert.alert(
-      'Delete Post',
-      'Are you sure you want to delete this post?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => onDelete(post.id),
-        },
-      ]
-    );
-  }, [isOwner, post.id, onDelete]);
-
-  const handleUserPress = useCallback(() => {
-    if (post.user) {
-      onUserPress(post.user.id);
-    }
-  }, [post.user, onUserPress]);
-
-  // Press animation handlers
-  const handlePressIn = () => {
-    pressProgress.value = withSpring(1, glassMotion.spring.snappy);
-  };
-
-  const handlePressOut = () => {
-    pressProgress.value = withSpring(0, glassMotion.spring.smooth);
-  };
-
-  // Heart animation styles
+  // Heart animation style
   const heartAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: heartScale.value }],
     opacity: heartOpacity.value,
   }));
 
   // Card press animation
-  const cardAnimatedStyle = useAnimatedStyle(() => {
-    const scale = interpolate(
-      pressProgress.value,
-      [0, 1],
-      [1, 0.98],
-      Extrapolation.CLAMP
-    );
-    return { transform: [{ scale }] };
-  });
+  const cardAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: cardScale.value }],
+  }));
 
-  const locationDisplay = post.location_city
-    ? `${post.location_name}\n${post.location_city}${post.location_state ? `, ${post.location_state}` : ''}`
-    : post.location_name;
+  // Location display
+  const locationDisplay = post.location_name || null;
 
-  // Caption truncation
-  const shouldTruncateCaption = post.caption && post.caption.length > 100;
+  // Caption truncation (2 lines max per spec)
+  const maxCaptionLength = 100;
+  const shouldTruncateCaption = post.caption && post.caption.length > maxCaptionLength;
   const displayCaption = shouldTruncateCaption && !showExpandedCaption
-    ? `${post.caption!.slice(0, 100)}...`
+    ? `${post.caption!.slice(0, maxCaptionLength)}...`
     : post.caption;
+
+  // Get image URL
+  const imageUrl = post.media_type === 'image' ? post.media_url : post.thumbnail_url;
 
   return (
     <Animated.View style={[styles.container, cardAnimatedStyle]}>
-      {/* Glass Background */}
-      <View style={styles.glassBackground}>
-        {Platform.OS === 'ios' ? (
-          <BlurView
-            intensity={liquidGlass.blur.regular}
-            tint="light"
-            style={StyleSheet.absoluteFill}
-          />
-        ) : null}
-        <View style={styles.glassColorLayer} />
-        {/* Top highlight */}
-        <LinearGradient
-          colors={['rgba(255, 255, 255, 0.4)', 'transparent']}
-          style={styles.glassHighlight}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 0.3 }}
-        />
-      </View>
-
-      {/* Glass Border */}
-      <View style={styles.glassBorder} />
-
-      {/* Header */}
+      {/* Header: Avatar + Username + Location */}
       <TouchableOpacity style={styles.header} onPress={handleUserPress}>
-        <View style={styles.avatarRing}>
-          <Avatar
-            uri={post.user?.avatar_url}
-            name={post.user?.username}
-            size="medium"
-          />
-        </View>
+        <Avatar
+          uri={post.user?.avatar_url}
+          name={post.user?.username}
+          size="default" // 40px per spec
+        />
         <View style={styles.headerText}>
-          <Text style={styles.username}>
+          <Text style={[textStyles.headline, styles.username]}>
             @{post.user?.username || 'unknown'}
           </Text>
-          <View style={styles.locationRow}>
-            <Text style={styles.locationIcon}>📍</Text>
-            <Text style={styles.locationText} numberOfLines={2}>
-              {locationDisplay}
-            </Text>
-          </View>
+          {locationDisplay && (
+            <View style={styles.locationRow}>
+              <Ionicons name="location" size={14} color={colors.textSecondary} />
+              <Text style={[textStyles.subheadline, styles.locationText]} numberOfLines={1}>
+                {locationDisplay}
+              </Text>
+            </View>
+          )}
         </View>
       </TouchableOpacity>
 
-      {/* Media with double-tap detection */}
+      {/* Media */}
       <Pressable
         style={styles.mediaContainer}
         onPress={handleMediaPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        onLongPress={handleLongPress}
-        delayLongPress={500}
       >
-        {post.media_type === 'video' && videoPlayer ? (
-          <VideoView
-            player={videoPlayer}
-            style={styles.media}
-            contentFit="cover"
-            nativeControls={false}
-          />
-        ) : (
+        {imageUrl && (
           <Image
-            source={{ uri: post.media_url }}
+            source={{ uri: imageUrl }}
             style={styles.media}
             contentFit="cover"
             transition={200}
           />
         )}
-
-        {/* Video indicator - Glass Pill Style */}
-        {post.media_type === 'video' && (
-          <View style={styles.videoIndicator}>
-            {Platform.OS === 'ios' && (
-              <BlurView
-                intensity={liquidGlass.blur.light}
-                tint="dark"
-                style={StyleSheet.absoluteFill}
-              />
-            )}
-            <View style={styles.videoIndicatorBg} />
-            <Text style={styles.videoIcon}>▶️</Text>
-          </View>
-        )}
-
-        {/* Large heart animation overlay */}
-        <Animated.View style={[styles.heartContainer, heartAnimatedStyle]}>
-          <Text style={styles.heartEmoji}>❤️</Text>
+        
+        {/* Double-tap heart animation */}
+        <Animated.View style={[styles.heartOverlay, heartAnimatedStyle]}>
+          <Ionicons name="heart" size={64} color={colors.error} />
         </Animated.View>
       </Pressable>
 
-      {/* Caption with "see more" */}
-      {post.caption && (
-        <TouchableOpacity
-          style={styles.captionContainer}
-          onPress={() => shouldTruncateCaption && setShowExpandedCaption(!showExpandedCaption)}
-          activeOpacity={shouldTruncateCaption ? 0.7 : 1}
-        >
-          <Text style={styles.caption}>
+      {/* Caption */}
+      {displayCaption && (
+        <View style={styles.captionContainer}>
+          <Text
+            style={[textStyles.body, styles.caption]}
+            numberOfLines={showExpandedCaption ? undefined : 2}
+          >
             {displayCaption}
-            {shouldTruncateCaption && !showExpandedCaption && (
-              <Text style={styles.seeMore}> see more</Text>
-            )}
           </Text>
-        </TouchableOpacity>
+          {shouldTruncateCaption && (
+            <TouchableOpacity
+              onPress={() => setShowExpandedCaption(!showExpandedCaption)}
+            >
+              <Text style={[textStyles.callout, styles.expandText]}>
+                {showExpandedCaption ? 'Show less' : 'Show more'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
       )}
 
-      {/* Timer Bar - Glass Style */}
+      {/* Timer Bar */}
       <View style={styles.timerContainer}>
-        <View style={styles.timerGlass}>
-          {Platform.OS === 'ios' && (
-            <BlurView
-              intensity={liquidGlass.blur.subtle}
-              tint="light"
-              style={StyleSheet.absoluteFill}
-            />
-          )}
-          <View style={styles.timerGlassBg} />
-          <TimerBar
-            createdAt={post.created_at}
-            expiresAt={post.expires_at}
-            showTimeLeft
-          />
-        </View>
+        <TimerBar
+          createdAt={post.created_at}
+          expiresAt={post.expires_at}
+          showLabel={false}
+          showTimeLeft={true}
+        />
       </View>
 
-      {/* Reactions - Glass Pill Style */}
+      {/* Reactions */}
       <View style={styles.reactionsContainer}>
         <EmojiReactions
           reactions={post.reactions || []}
           myReaction={post.my_reaction}
-          onReact={handleReact}
+          onReact={(emoji) => onReact(post.id, emoji)}
         />
       </View>
     </Animated.View>
@@ -377,144 +220,66 @@ export function PostCard({
 
 const styles = StyleSheet.create({
   container: {
+    backgroundColor: colors.backgroundSecondary, // #F9FAFB per spec
+    borderRadius: borderRadius.lg, // 16px per spec
+    padding: spacing.md, // 16px per spec
     marginBottom: spacing.md,
-    borderRadius: CARD_BORDER_RADIUS,
-    overflow: 'hidden',
-    ...glassShadows.key,
-  },
-  glassBackground: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: CARD_BORDER_RADIUS,
-    overflow: 'hidden',
-  },
-  glassColorLayer: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: liquidGlass.material.elevated.backgroundColor,
-  },
-  glassHighlight: {
-    ...StyleSheet.absoluteFillObject,
-    height: '30%',
-  },
-  glassBorder: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: CARD_BORDER_RADIUS,
-    borderWidth: liquidGlass.border.width,
-    borderColor: liquidGlass.border.colorStrong,
-    pointerEvents: 'none',
+    ...shadows.level2, // Level 2 shadow per spec
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.md,
-    paddingBottom: spacing.sm,
-  },
-  avatarRing: {
-    borderRadius: 24,
-    padding: 2,
-    borderWidth: 2,
-    borderColor: liquidGlass.border.color,
+    marginBottom: spacing.md,
   },
   headerText: {
     marginLeft: spacing.sm,
     flex: 1,
   },
   username: {
-    fontSize: typography.sizes.md,
-    fontWeight: '600',
-    color: glassColors.text.primary,
+    color: colors.textPrimary,
+    marginBottom: spacing['2xs'],
   },
   locationRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginTop: 2,
-  },
-  locationIcon: {
-    fontSize: 12,
-    marginRight: 4,
+    alignItems: 'center',
+    gap: spacing['2xs'],
   },
   locationText: {
-    fontSize: typography.sizes.sm,
-    color: glassColors.text.secondary,
+    color: colors.textSecondary,
     flex: 1,
   },
   mediaContainer: {
     width: '100%',
     height: MEDIA_HEIGHT,
-    backgroundColor: colors.surface,
-    position: 'relative',
+    borderRadius: borderRadius.md, // 12px per spec
+    overflow: 'hidden',
+    marginBottom: spacing.md,
+    backgroundColor: colors.backgroundTertiary,
   },
   media: {
     width: '100%',
     height: '100%',
   },
-  videoIndicator: {
-    position: 'absolute',
-    top: spacing.sm,
-    right: spacing.sm,
-    borderRadius: 12,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    overflow: 'hidden',
-    minWidth: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  videoIndicatorBg: {
+  heartOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: liquidGlass.material.dark.backgroundColor,
-    borderRadius: 12,
-  },
-  videoIcon: {
-    fontSize: 12,
-    zIndex: 1,
-  },
-  heartContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
     pointerEvents: 'none',
   },
-  heartEmoji: {
-    fontSize: 100,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 4 },
-    textShadowRadius: 12,
-  },
   captionContainer: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
+    marginBottom: spacing.sm,
   },
   caption: {
-    fontSize: typography.sizes.md,
-    color: glassColors.text.primary,
-    lineHeight: 22,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
   },
-  seeMore: {
-    color: glassColors.text.secondary,
-    fontWeight: '500',
+  expandText: {
+    color: colors.accent,
   },
   timerContainer: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
-  },
-  timerGlass: {
-    borderRadius: 12,
-    padding: spacing.sm,
-    overflow: 'hidden',
-  },
-  timerGlassBg: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: liquidGlass.material.subtle.backgroundColor,
-    borderRadius: 12,
-    borderWidth: liquidGlass.border.width,
-    borderColor: liquidGlass.border.color,
+    marginBottom: spacing.sm,
   },
   reactionsContainer: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    marginTop: spacing.xs,
   },
 });

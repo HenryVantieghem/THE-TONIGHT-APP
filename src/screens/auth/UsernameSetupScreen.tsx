@@ -2,39 +2,25 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
-  TextInput,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../hooks/useAuth';
 import { validateUsername } from '../../utils/validation';
 import { config } from '../../constants/config';
-import { typography } from '../../constants/typography';
+import { colors } from '../../constants/colors';
+import { textStyles } from '../../constants/typography';
+import { spacing } from '../../constants/config';
 import type { AuthStackParamList } from '../../types';
-
-// iOS auth color palette
-const authColors = {
-  background: '#FFFFFF',
-  textPrimary: '#000000',
-  textSecondary: '#8E8E93',
-  textPlaceholder: '#C7C7CC',
-  primary: '#007AFF',
-  inputBackground: '#F2F2F7',
-  inputBorder: '#E5E5EA',
-  inputBorderFocused: '#007AFF',
-  error: '#FF3B30',
-  success: '#34C759',
-  backButtonBg: '#F2F2F7',
-};
 
 type UsernameSetupNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'UsernameSetup'>;
 
@@ -47,7 +33,6 @@ export function UsernameSetupScreen() {
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -64,11 +49,10 @@ export function UsernameSetupScreen() {
     async (usernameToCheck: string) => {
       setIsChecking(true);
       setIsAvailable(null);
+      setError(undefined);
 
       try {
-        const { data, error: checkError } = await checkUsernameAvailable(
-          usernameToCheck
-        );
+        const { data, error: checkError } = await checkUsernameAvailable(usernameToCheck);
 
         if (checkError) {
           setError(checkError.message);
@@ -79,10 +63,11 @@ export function UsernameSetupScreen() {
         setIsAvailable(data ?? null);
 
         if (data === false) {
-          setError('Username taken');
+          setError('Username already taken');
         }
       } catch (err) {
         console.error('Username check error:', err);
+        setError('Failed to check username');
       } finally {
         setIsChecking(false);
       }
@@ -100,7 +85,7 @@ export function UsernameSetupScreen() {
       // Validate format
       const validation = validateUsername(sanitized);
       if (!validation.isValid && sanitized.length > 0) {
-        setError(validation.error);
+        setError(validation.error || 'Must start with a letter');
         return;
       }
 
@@ -109,7 +94,7 @@ export function UsernameSetupScreen() {
         clearTimeout(debounceRef.current);
       }
 
-      if (validation.isValid) {
+      if (validation.isValid && sanitized.length >= config.USERNAME.MIN_LENGTH) {
         debounceRef.current = setTimeout(() => {
           checkAvailability(sanitized);
         }, config.DEBOUNCE.USERNAME_CHECK);
@@ -122,7 +107,7 @@ export function UsernameSetupScreen() {
     // Final validation
     const validation = validateUsername(username);
     if (!validation.isValid) {
-      setError(validation.error);
+      setError(validation.error || 'Must start with a letter');
       return;
     }
 
@@ -137,7 +122,7 @@ export function UsernameSetupScreen() {
       const { data, error: updateError } = await updateUsername(username);
 
       if (updateError) {
-        Alert.alert('Error', updateError.message);
+        setError(updateError.message);
         return;
       }
 
@@ -145,7 +130,7 @@ export function UsernameSetupScreen() {
         navigation.replace('Permissions');
       }
     } catch (err) {
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -165,13 +150,15 @@ export function UsernameSetupScreen() {
     isAvailable === true &&
     validateUsername(username).isValid;
 
-  // Status indicator
+  // Status indicator per spec
   const renderStatusIndicator = () => {
     if (isChecking) {
       return (
         <View style={styles.statusContainer}>
-          <ActivityIndicator size="small" color={authColors.textSecondary} />
-          <Text style={styles.statusText}>Checking availability...</Text>
+          <ActivityIndicator size="small" color={colors.textSecondary} />
+          <Text style={[textStyles.caption1, styles.statusText]}>
+            Checking availability...
+          </Text>
         </View>
       );
     }
@@ -179,8 +166,10 @@ export function UsernameSetupScreen() {
     if (error) {
       return (
         <View style={styles.statusContainer}>
-          <Text style={styles.statusIcon}>✗</Text>
-          <Text style={[styles.statusText, styles.statusError]}>{error}</Text>
+          <Ionicons name="close-circle" size={16} color={colors.error} />
+          <Text style={[textStyles.caption1, styles.statusText, styles.statusError]}>
+            {error}
+          </Text>
         </View>
       );
     }
@@ -188,8 +177,10 @@ export function UsernameSetupScreen() {
     if (isAvailable === true) {
       return (
         <View style={styles.statusContainer}>
-          <Text style={styles.statusIconSuccess}>✓</Text>
-          <Text style={[styles.statusText, styles.statusSuccess]}>Available</Text>
+          <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+          <Text style={[textStyles.caption1, styles.statusText, styles.statusSuccess]}>
+            Available
+          </Text>
         </View>
       );
     }
@@ -208,75 +199,36 @@ export function UsernameSetupScreen() {
           <TouchableOpacity
             onPress={handleGoBack}
             style={styles.backButton}
-            activeOpacity={0.7}
+            hitSlop={spacing.sm}
           >
-            <Ionicons name="arrow-back" size={24} color={authColors.textPrimary} />
+            <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
 
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>Choose Your Username</Text>
-            <Text style={styles.subtitle}>
+            <Text style={[textStyles.title1, styles.title]}>Choose Your Username</Text>
+            <Text style={[textStyles.body, styles.subtitle]}>
               This is how friends will find you
             </Text>
           </View>
 
-          {/* Username Input */}
+          {/* Username Input with @ prefix */}
           <View style={styles.form}>
-            <Text style={styles.label}>Username</Text>
-            <View style={[
-              styles.inputContainer,
-              isFocused && styles.inputContainerFocused,
-              error && styles.inputContainerError,
-              isAvailable === true && styles.inputContainerSuccess,
-            ]}>
-              <Text style={[
-                styles.atSymbol,
-                isFocused && styles.atSymbolFocused,
-                error && styles.atSymbolError,
-                isAvailable === true && styles.atSymbolSuccess,
-              ]}>@</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="_"
-                placeholderTextColor={authColors.textPlaceholder}
-                value={username}
-                onChangeText={handleUsernameChange}
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
-                autoCapitalize="none"
-                autoCorrect={false}
-                autoComplete="username"
-                maxLength={config.USERNAME.MAX_LENGTH}
-              />
-              {/* Right side status icon */}
-              {isChecking && (
-                <ActivityIndicator size="small" color={authColors.textSecondary} />
-              )}
-              {!isChecking && isAvailable === true && (
-                <Ionicons name="checkmark-circle" size={20} color={authColors.success} />
-              )}
-              {!isChecking && error && (
-                <Ionicons name="close-circle" size={20} color={authColors.error} />
-              )}
-            </View>
+            <Input
+              label="Username"
+              value={username}
+              onChangeText={handleUsernameChange}
+              placeholder="username"
+              autoCapitalize="none"
+              autoCorrect={false}
+              maxLength={config.USERNAME.MAX_LENGTH}
+              leftIcon="at"
+              error={error && !isChecking ? error : undefined}
+              success={isAvailable === true}
+            />
 
-            {/* Status Text */}
+            {/* Status Indicator */}
             {renderStatusIndicator()}
-
-            {/* Rules hint */}
-            {!error && !isAvailable && !isChecking && (
-              <Text style={styles.hint}>
-                3-20 characters, letters and numbers only
-              </Text>
-            )}
-
-            {/* Character count */}
-            <View style={styles.characterCountContainer}>
-              <Text style={styles.characterCount}>
-                {username.length}/{config.USERNAME.MAX_LENGTH}
-              </Text>
-            </View>
           </View>
 
           {/* Continue Button */}
@@ -299,131 +251,48 @@ export function UsernameSetupScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: authColors.background,
+    backgroundColor: colors.backgroundPrimary,
   },
   keyboardView: {
     flex: 1,
   },
   content: {
     flex: 1,
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing['2xl'],
+    paddingTop: spacing['2xl'],
   },
   backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: authColors.backButtonBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 8,
+    marginBottom: spacing.xl,
   },
   header: {
-    marginTop: 32,
-    marginBottom: 32,
+    marginBottom: spacing['2xl'],
   },
   title: {
-    fontSize: typography.sizes.xxxl,
-    fontWeight: typography.weights.bold,
-    color: authColors.textPrimary,
-    marginBottom: 8,
-    letterSpacing: -0.5,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   subtitle: {
-    fontSize: 16,
-    color: authColors.textSecondary,
-    lineHeight: 24,
+    color: colors.textSecondary,
   },
   form: {
     flex: 1,
   },
-  label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: authColors.textSecondary,
-    marginBottom: 8,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: authColors.inputBackground,
-    borderWidth: 1.5,
-    borderColor: authColors.inputBorder,
-    borderRadius: 12,
-    height: 52,
-    paddingHorizontal: 16,
-  },
-  inputContainerFocused: {
-    borderColor: authColors.inputBorderFocused,
-    backgroundColor: authColors.background,
-  },
-  inputContainerError: {
-    borderColor: authColors.error,
-  },
-  inputContainerSuccess: {
-    borderColor: authColors.success,
-  },
-  atSymbol: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: authColors.textSecondary,
-    marginRight: 2,
-  },
-  atSymbolFocused: {
-    color: authColors.primary,
-  },
-  atSymbolError: {
-    color: authColors.error,
-  },
-  atSymbolSuccess: {
-    color: authColors.success,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    color: authColors.textPrimary,
-    height: '100%',
-    paddingVertical: 0,
-  },
   statusContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
-    gap: 6,
-  },
-  statusIcon: {
-    fontSize: 14,
-    color: authColors.error,
-    marginRight: 4,
-  },
-  statusIconSuccess: {
-    fontSize: 14,
-    color: authColors.success,
-    marginRight: 4,
+    marginTop: spacing.xs,
+    gap: spacing.xs,
   },
   statusText: {
-    fontSize: 13,
-    color: authColors.textSecondary,
+    color: colors.textSecondary,
   },
   statusError: {
-    color: authColors.error,
+    color: colors.error,
   },
   statusSuccess: {
-    color: authColors.success,
-  },
-  hint: {
-    fontSize: 13,
-    color: authColors.textPlaceholder,
-    marginTop: 8,
-  },
-  characterCountContainer: {
-    alignItems: 'flex-end',
-    marginTop: 8,
-  },
-  characterCount: {
-    fontSize: 12,
-    color: authColors.textPlaceholder,
+    color: colors.success,
   },
   buttonContainer: {
-    paddingVertical: 24,
+    paddingVertical: spacing.xl,
   },
 });

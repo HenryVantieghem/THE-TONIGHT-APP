@@ -3,59 +3,83 @@ import { View, Text, StyleSheet, Animated } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../../constants/colors';
-import { typography } from '../../constants/typography';
+import { textStyles } from '../../constants/typography';
 import type { AuthStackParamList } from '../../types';
 
 type SplashNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Splash'>;
 
 export function SplashScreen() {
   const navigation = useNavigation<SplashNavigationProp>();
-  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+  const logoScale = React.useRef(new Animated.Value(0.8)).current;
+  const logoOpacity = React.useRef(new Animated.Value(0)).current;
+  const wordmarkOpacity = React.useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Check auth state during splash
-    // Animate logo appearance
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
+    // Animated pulse: scale 0.8 → 1.0, opacity 0 → 1 (per spec)
+    Animated.parallel([
+      Animated.spring(logoScale, {
+        toValue: 1.0,
+        friction: 4,
+        tension: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(logoOpacity, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      // Wordmark fade in after logo (per spec)
+      Animated.timing(wordmarkOpacity, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    });
 
-    // Check session and navigate accordingly after 1 second
+    // Check auth state and navigate after 1-1.5 seconds (per spec)
     const timer = setTimeout(async () => {
-      // Navigation will be handled by RootNavigator based on auth state
-      // If no session, go to onboarding; otherwise RootNavigator will route to Main
       const { supabase } = await import('../../services/supabase');
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session) {
-        // User is authenticated, RootNavigator will handle navigation to Main
-        // No need to navigate here as RootNavigator will switch stacks
+        // User is authenticated, RootNavigator will handle navigation
         return;
       } else {
-        // No session, go to onboarding
         navigation.replace('Onboarding');
       }
-    }, 1000);
+    }, 1500);
 
     return () => clearTimeout(timer);
-  }, [fadeAnim, navigation]);
+  }, [logoScale, logoOpacity, wordmarkOpacity, navigation]);
 
   return (
     <View style={styles.container}>
       <Animated.View
         style={[
-          styles.content,
+          styles.logoContainer,
           {
-            opacity: fadeAnim,
+            transform: [{ scale: logoScale }],
+            opacity: logoOpacity,
           },
         ]}
       >
-        <View style={styles.logoContainer}>
-          <Text style={styles.logoEmoji}>✨</Text>
+        {/* Logo: Abstract pulse/heartbeat line forming camera aperture */}
+        <View style={styles.logo}>
+          <View style={styles.pulseLine} />
+          <View style={styles.cameraAperture} />
         </View>
-        <Text style={styles.title}>Experiences</Text>
       </Animated.View>
+      
+      <Animated.Text
+        style={[
+          textStyles.largeTitle,
+          styles.wordmark,
+          { opacity: wordmarkOpacity },
+        ]}
+      >
+        Experiences
+      </Animated.Text>
     </View>
   );
 }
@@ -63,11 +87,8 @@ export function SplashScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.backgroundPrimary, // #FFFFFF per spec
     justifyContent: 'center',
-    alignItems: 'center',
-  },
-  content: {
     alignItems: 'center',
   },
   logoContainer: {
@@ -77,13 +98,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logoEmoji: {
-    fontSize: 80,
+  logo: {
+    width: 80,
+    height: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
   },
-  title: {
-    fontSize: 34,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
-    letterSpacing: -0.5,
+  pulseLine: {
+    width: 60,
+    height: 4,
+    backgroundColor: colors.accent,
+    borderRadius: 2,
+    position: 'absolute',
+    top: 20,
+  },
+  cameraAperture: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 4,
+    borderColor: colors.accent,
+    position: 'absolute',
+    top: 15,
+  },
+  wordmark: {
+    color: colors.textPrimary,
+    fontWeight: '700',
   },
 });

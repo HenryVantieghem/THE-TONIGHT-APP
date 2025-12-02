@@ -35,7 +35,10 @@ export function useFriends() {
 
       if (data) {
         setFriends(data);
-        setFriendIds(data.map((f) => f.friend_id));
+        // Extract friend IDs (the other user in each friendship)
+        setFriendIds(data.map((f) => 
+          f.requester_id === user.id ? f.addressee_id : f.requester_id
+        ));
       }
     } catch (err) {
       console.error('Load friends error:', err);
@@ -169,7 +172,9 @@ export function useFriends() {
         const result = await friendsService.removeFriend(user.id, friendId);
 
         if (!result.error) {
-          setFriends((prev) => prev.filter((f) => f.friend_id !== friendId));
+          setFriends((prev) => prev.filter((f) => 
+            !(f.requester_id === friendId || f.addressee_id === friendId)
+          ));
           removeFriendId(friendId);
         }
 
@@ -194,11 +199,13 @@ export function useFriends() {
 
         if (!result.error) {
           // Remove from friends if was friend
-          setFriends((prev) => prev.filter((f) => f.friend_id !== blockedUserId));
+          setFriends((prev) => prev.filter((f) => 
+            f.requester_id !== blockedUserId && f.addressee_id !== blockedUserId
+          ));
           removeFriendId(blockedUserId);
           // Remove from pending if exists
           setPendingRequests((prev) =>
-            prev.filter((r) => r.user_id !== blockedUserId)
+            prev.filter((r) => r.requester_id !== blockedUserId)
           );
         }
 
@@ -311,13 +318,15 @@ export function useFriends() {
         loadFriends();
         // Remove from pending
         setPendingRequests((prev) =>
-          prev.filter((r) => r.user_id !== friendId && r.friend_id !== friendId)
+          prev.filter((r) => r.requester_id !== friendId && r.addressee_id !== friendId)
         );
       },
       (friendId) => {
         // Friend removed
         removeFriendId(friendId);
-        setFriends((prev) => prev.filter((f) => f.friend_id !== friendId));
+        setFriends((prev) => prev.filter((f) => 
+          f.requester_id !== friendId && f.addressee_id !== friendId
+        ));
       }
     );
 

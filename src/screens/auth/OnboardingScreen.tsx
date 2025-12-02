@@ -6,58 +6,46 @@ import {
   FlatList,
   Dimensions,
   Animated,
+  TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components/ui/Button';
-import { typography } from '../../constants/typography';
+import { colors, shadows } from '../../constants/colors';
+import { textStyles } from '../../constants/typography';
+import { spacing, borderRadius } from '../../constants/config';
 import type { AuthStackParamList } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-// iOS auth color palette
-const authColors = {
-  background: '#FFFFFF',
-  textPrimary: '#000000',
-  textSecondary: '#8E8E93',
-  primary: '#007AFF',
-  primaryGradient: ['#007AFF', '#5AC8FA'] as const,
-  dotActive: '#007AFF',
-  dotInactive: '#E5E5EA',
-};
 
 type OnboardingNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Onboarding'>;
 
 interface OnboardingSlide {
   id: string;
   icon: keyof typeof Ionicons.glyphMap;
-  iconColor: string;
   title: string;
   subtitle: string;
 }
 
+// 3 screens per spec
 const slides: OnboardingSlide[] = [
   {
     id: '1',
     icon: 'camera',
-    iconColor: '#007AFF',
-    title: 'Share What You\'re Doing Now',
+    title: "Share What You're Doing Now",
     subtitle: 'Post a photo with your location',
   },
   {
     id: '2',
     icon: 'people',
-    iconColor: '#007AFF',
     title: 'See Where Your Friends Are',
     subtitle: 'Discover what your friends are up to right now',
   },
   {
     id: '3',
     icon: 'time',
-    iconColor: '#007AFF',
     title: 'Posts Vanish After 1 Hour',
     subtitle: 'Live in the now. No pressure, just authentic moments.',
   },
@@ -81,96 +69,115 @@ export function OnboardingScreen() {
     setCurrentIndex(index);
   };
 
-  const handleComplete = () => {
+  const handleGetStarted = () => {
     navigation.replace('SignUp');
   };
 
-  const handleNext = () => {
-    if (currentIndex < slides.length - 1) {
-      flatListRef.current?.scrollToIndex({ index: currentIndex + 1 });
-    } else {
-      handleComplete();
-    }
+  const renderSlide = ({ item, index }: { item: OnboardingSlide; index: number }) => {
+    const inputRange = [
+      (index - 1) * SCREEN_WIDTH,
+      index * SCREEN_WIDTH,
+      (index + 1) * SCREEN_WIDTH,
+    ];
+
+    const opacity = scrollX.interpolate({
+      inputRange,
+      outputRange: [0.3, 1, 0.3],
+      extrapolate: 'clamp',
+    });
+
+    const scale = scrollX.interpolate({
+      inputRange,
+      outputRange: [0.8, 1, 0.8],
+      extrapolate: 'clamp',
+    });
+
+    return (
+      <View style={styles.slide}>
+        <Animated.View
+          style={[
+            styles.iconContainer,
+            {
+              opacity,
+              transform: [{ scale }],
+            },
+          ]}
+        >
+          <View style={styles.iconCircle}>
+            <Ionicons name={item.icon} size={48} color={colors.accent} />
+          </View>
+        </Animated.View>
+
+        <Animated.View
+          style={[
+            styles.textContainer,
+            { opacity },
+          ]}
+        >
+          <Text style={[textStyles.title1, styles.title]}>{item.title}</Text>
+          <Text style={[textStyles.body, styles.subtitle]}>{item.subtitle}</Text>
+        </Animated.View>
+      </View>
+    );
   };
 
-  const renderSlide = ({ item }: { item: OnboardingSlide }) => (
-    <View style={styles.slide}>
-      {/* Icon Container with gradient background */}
-      <View style={styles.iconWrapper}>
-        <LinearGradient
-          colors={[`${item.iconColor}20`, `${item.iconColor}10`]}
-          style={styles.iconGradient}
-        >
-          <View style={[styles.iconCircle, { backgroundColor: `${item.iconColor}15` }]}>
-            <Ionicons name={item.icon} size={48} color={item.iconColor} />
-          </View>
-        </LinearGradient>
+  const renderDots = () => {
+    return (
+      <View style={styles.dotsContainer}>
+        {slides.map((_, index) => {
+          const isActive = index === currentIndex;
+          return (
+            <View
+              key={index}
+              style={[
+                styles.dot,
+                isActive && styles.dotActive,
+              ]}
+            />
+          );
+        })}
       </View>
-
-      <Text style={styles.slideTitle}>{item.title}</Text>
-      <Text style={styles.slideSubtitle}>{item.subtitle}</Text>
-    </View>
-  );
-
-  const renderPagination = () => (
-    <View style={styles.pagination}>
-      {slides.map((_, index) => {
-        const isActive = index === currentIndex;
-        return (
-          <View
-            key={index}
-            style={[
-              styles.dot,
-              isActive && styles.dotActive,
-            ]}
-          />
-        );
-      })}
-    </View>
-  );
-
-  const isLastSlide = currentIndex === slides.length - 1;
+    );
+  };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      {/* Slides */}
-      <View style={styles.slideContainer}>
-        <FlatList
-          ref={flatListRef}
-          data={slides}
-          renderItem={renderSlide}
-          keyExtractor={(item) => item.id}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          onScroll={handleScroll}
-          onMomentumScrollEnd={handleMomentumScrollEnd}
-          scrollEventThrottle={16}
-          bounces={false}
-          contentContainerStyle={styles.flatListContent}
-        />
-      </View>
+    <SafeAreaView style={styles.container}>
+      <FlatList
+        ref={flatListRef}
+        data={slides}
+        renderItem={renderSlide}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onScroll={handleScroll}
+        onMomentumScrollEnd={handleMomentumScrollEnd}
+        scrollEventThrottle={16}
+        keyExtractor={(item) => item.id}
+      />
 
-      {/* Pagination Dots */}
-      {renderPagination()}
-
-      {/* Buttons */}
-      <View style={styles.buttonContainer}>
-        <Button
-          title={isLastSlide ? 'Get Started' : 'Next'}
-          onPress={handleNext}
-          variant="primary"
-          size="lg"
-          fullWidth
-        />
-
-        {!isLastSlide && (
+      <View style={styles.footer}>
+        {renderDots()}
+        {currentIndex === slides.length - 1 ? (
           <Button
-            title="Skip"
-            onPress={handleComplete}
-            variant="ghost"
-            size="md"
-            style={styles.skipButton}
+            title="Get Started"
+            onPress={handleGetStarted}
+            variant="primary"
+            size="lg"
+            fullWidth
+            style={styles.button}
+          />
+        ) : (
+          <Button
+            title="Next"
+            onPress={() => {
+              if (currentIndex < slides.length - 1) {
+                flatListRef.current?.scrollToIndex({ index: currentIndex + 1 });
+              }
+            }}
+            variant="primary"
+            size="lg"
+            fullWidth
+            style={styles.button}
           />
         )}
       </View>
@@ -181,79 +188,59 @@ export function OnboardingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: authColors.background,
-  },
-  slideContainer: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  flatListContent: {
-    alignItems: 'center',
+    backgroundColor: colors.backgroundPrimary,
   },
   slide: {
     width: SCREEN_WIDTH,
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 32,
-    paddingVertical: 24,
+    paddingHorizontal: spacing['2xl'],
   },
-  iconWrapper: {
-    marginBottom: 32,
-  },
-  iconGradient: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    alignItems: 'center',
-    justifyContent: 'center',
+  iconContainer: {
+    marginBottom: spacing['3xl'],
   },
   iconCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: `${colors.accent}1A`, // 10% opacity
     alignItems: 'center',
     justifyContent: 'center',
   },
-  slideTitle: {
-    fontSize: typography.sizes.xxxl,
-    fontWeight: typography.weights.bold,
-    color: authColors.textPrimary,
-    textAlign: 'center',
-    marginBottom: 12,
-    letterSpacing: -0.5,
-    paddingHorizontal: 16,
+  textContainer: {
+    alignItems: 'center',
   },
-  slideSubtitle: {
-    fontSize: typography.sizes.md,
-    color: authColors.textSecondary,
+  title: {
+    color: colors.textPrimary,
     textAlign: 'center',
-    lineHeight: 22,
-    paddingHorizontal: 24,
+    marginBottom: spacing.md,
   },
-  pagination: {
+  subtitle: {
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  footer: {
+    paddingHorizontal: spacing['2xl'],
+    paddingBottom: spacing['2xl'],
+    gap: spacing.lg,
+  },
+  dotsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 24,
+    gap: spacing.sm,
   },
   dot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: authColors.dotInactive,
-    marginHorizontal: 4,
+    backgroundColor: colors.backgroundTertiary,
   },
   dotActive: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: authColors.dotActive,
+    backgroundColor: colors.accent,
+    width: 24,
   },
-  buttonContainer: {
-    paddingHorizontal: 24,
-    paddingBottom: 16,
-  },
-  skipButton: {
-    marginTop: 8,
+  button: {
+    marginTop: spacing.md,
   },
 });

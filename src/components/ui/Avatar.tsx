@@ -5,19 +5,14 @@ import {
   StyleSheet,
   TouchableOpacity,
   ViewStyle,
-  Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../../constants/colors';
-import { typography } from '../../constants/typography';
-import {
-  liquidGlass,
-  glassShadows,
-} from '../../constants/liquidGlass';
+import { textStyles } from '../../constants/typography';
+import { borderRadius } from '../../constants/config';
 
-type AvatarSize = 'small' | 'medium' | 'large' | 'xlarge';
+// Avatar sizes per spec
+type AvatarSize = 'small' | 'default' | 'medium' | 'large' | 'xlarge';
 
 interface AvatarProps {
   uri?: string | null;
@@ -25,46 +20,35 @@ interface AvatarProps {
   size?: AvatarSize;
   onPress?: () => void;
   style?: ViewStyle;
-  // Liquid Glass options
-  withGlassRing?: boolean;
-  ringColor?: 'gradient' | 'glass' | 'none';
+  showEditBadge?: boolean;
 }
 
 const sizeMap: Record<AvatarSize, number> = {
-  small: 32,
-  medium: 40,
-  large: 56,
-  xlarge: 80,
+  small: 32,      // Friend list compact
+  default: 40,    // Post cards
+  medium: 56,     // Friend cards
+  large: 80,      // Profile header
+  xlarge: 120,    // Own profile
 };
 
 const fontSizeMap: Record<AvatarSize, number> = {
   small: 12,
-  medium: 14,
-  large: 20,
-  xlarge: 28,
-};
-
-const ringWidthMap: Record<AvatarSize, number> = {
-  small: 2,
-  medium: 2,
-  large: 3,
-  xlarge: 4,
+  default: 14,
+  medium: 18,
+  large: 24,
+  xlarge: 32,
 };
 
 export function Avatar({
   uri,
   name,
-  size = 'medium',
+  size = 'default',
   onPress,
   style,
-  withGlassRing = false,
-  ringColor = 'none',
+  showEditBadge = false,
 }: AvatarProps) {
   const dimension = sizeMap[size];
   const fontSize = fontSizeMap[size];
-  const ringWidth = ringWidthMap[size];
-  const ringPadding = withGlassRing || ringColor !== 'none' ? ringWidth + 2 : 0;
-  const totalDimension = dimension + ringPadding * 2;
 
   // Get initials from name
   const getInitials = () => {
@@ -79,50 +63,12 @@ export function Avatar({
   const containerStyles = [
     styles.container,
     {
-      width: totalDimension,
-      height: totalDimension,
-      borderRadius: totalDimension / 2,
+      width: dimension,
+      height: dimension,
+      borderRadius: dimension / 2,
     },
     style,
   ];
-
-  const renderRing = () => {
-    if (ringColor === 'gradient') {
-      return (
-        <View style={[styles.ringContainer, { borderRadius: totalDimension / 2 }]}>
-          <LinearGradient
-            colors={colors.primaryGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-        </View>
-      );
-    }
-    
-    if (ringColor === 'glass' || withGlassRing) {
-      return (
-        <View style={[styles.ringContainer, { borderRadius: totalDimension / 2 }]}>
-          {Platform.OS === 'ios' && (
-            <BlurView
-              intensity={liquidGlass.blur.light}
-              tint="light"
-              style={StyleSheet.absoluteFill}
-            />
-          )}
-          <View style={styles.glassRingBg} />
-          <LinearGradient
-            colors={['rgba(255, 255, 255, 0.4)', 'rgba(255, 255, 255, 0.1)']}
-            style={StyleSheet.absoluteFill}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          />
-        </View>
-      );
-    }
-
-    return null;
-  };
 
   const avatarContent = uri ? (
     <Image
@@ -146,44 +92,24 @@ export function Avatar({
           width: dimension,
           height: dimension,
           borderRadius: dimension / 2,
+          backgroundColor: colors.accent,
         },
       ]}
     >
-      {/* Gradient background for placeholder */}
-      <LinearGradient
-        colors={colors.primaryGradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
-      {/* Glass highlight */}
-      <LinearGradient
-        colors={['rgba(255, 255, 255, 0.3)', 'transparent']}
-        style={styles.placeholderHighlight}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 0.6 }}
-      />
       <Text style={[styles.initials, { fontSize }]}>{getInitials()}</Text>
     </View>
   );
 
   const content = (
     <>
-      {renderRing()}
-      <View
-        style={[
-          styles.avatarWrapper,
-          {
-            width: dimension,
-            height: dimension,
-            borderRadius: dimension / 2,
-            top: ringPadding,
-            left: ringPadding,
-          },
-        ]}
-      >
-        {avatarContent}
-      </View>
+      {avatarContent}
+      {showEditBadge && (
+        <View style={[styles.editBadge, { bottom: size === 'xlarge' ? 4 : 0, right: size === 'xlarge' ? 4 : 0 }]}>
+          <View style={styles.editBadgeInner}>
+            <Text style={styles.editIcon}>📷</Text>
+          </View>
+        </View>
+      )}
     </>
   );
 
@@ -202,50 +128,49 @@ export function Avatar({
   return <View style={containerStyles}>{content}</View>;
 }
 
-// Avatar with glass ring convenience component
-export function GlassAvatar(props: Omit<AvatarProps, 'ringColor'>) {
-  return <Avatar {...props} ringColor="glass" />;
-}
-
-// Avatar with gradient ring convenience component
-export function GradientAvatar(props: Omit<AvatarProps, 'ringColor'>) {
-  return <Avatar {...props} ringColor="gradient" />;
-}
-
 const styles = StyleSheet.create({
   container: {
     overflow: 'hidden',
     position: 'relative',
   },
-  ringContainer: {
-    ...StyleSheet.absoluteFillObject,
-    overflow: 'hidden',
-  },
-  glassRingBg: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: liquidGlass.material.subtle.backgroundColor,
-    borderWidth: liquidGlass.border.width,
-    borderColor: liquidGlass.border.colorStrong,
-  },
-  avatarWrapper: {
-    position: 'absolute',
-    overflow: 'hidden',
-  },
   image: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.backgroundSecondary,
   },
   placeholder: {
     justifyContent: 'center',
     alignItems: 'center',
-    overflow: 'hidden',
-  },
-  placeholderHighlight: {
-    ...StyleSheet.absoluteFillObject,
-    height: '60%',
   },
   initials: {
-    color: colors.white,
-    fontWeight: typography.weights.semibold,
-    zIndex: 1,
+    color: colors.textInverse,
+    fontWeight: '600',
+  },
+  editBadge: {
+    position: 'absolute',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.backgroundPrimary,
+    borderWidth: 2,
+    borderColor: colors.backgroundPrimary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...colors.shadowColor ? {
+      shadowColor: colors.shadowColor,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 2,
+    } : {},
+  },
+  editBadgeInner: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.accent,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  editIcon: {
+    fontSize: 10,
   },
 });

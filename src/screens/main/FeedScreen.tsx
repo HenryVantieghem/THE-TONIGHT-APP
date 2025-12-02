@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useState, useRef } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -6,22 +6,15 @@ import {
   FlatList,
   RefreshControl,
   TouchableOpacity,
-  Platform,
-  Dimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  useAnimatedScrollHandler,
   withSpring,
   withTiming,
-  interpolate,
-  Extrapolation,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
@@ -32,24 +25,14 @@ import { FloatingCameraButton } from '../../components/ui/FloatingCameraButton';
 import { usePosts } from '../../hooks/usePosts';
 import { useAuth } from '../../hooks/useAuth';
 import { useFriends } from '../../hooks/useFriends';
-import { colors } from '../../constants/colors';
-import { typography } from '../../constants/typography';
-import { spacing, borderRadius } from '../../constants/config';
-import {
-  liquidGlass,
-  glassShadows,
-  glassMotion,
-  glassColors,
-  glassTabBar,
-} from '../../constants/liquidGlass';
+import { colors, shadows } from '../../constants/colors';
+import { textStyles } from '../../constants/typography';
+import { spacing } from '../../constants/config';
 import type { Post, ReactionEmoji, MainStackParamList } from '../../types';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const AnimatedFlatList = Animated.createAnimatedComponent(FlatList<Post>);
 
 type FeedNavigationProp = NativeStackNavigationProp<MainStackParamList, 'Feed'>;
 
-// Animated post card wrapper for entry animations
+// Animated post card wrapper for entry animations (per spec)
 function AnimatedPostCard({
   post,
   isOwner,
@@ -66,20 +49,16 @@ function AnimatedPostCard({
   index: number;
 }) {
   const opacity = useSharedValue(0);
-  const translateY = useSharedValue(30);
+  const translateY = useSharedValue(20);
 
   useEffect(() => {
-    const delay = Math.min(index * 80, 240);
+    const delay = Math.min(index * 50, 300); // Stagger 50ms per spec
     
-    opacity.value = withTiming(1, {
-      duration: glassMotion.duration.smooth,
-    });
-    
-    // Apply delay by starting from offset and animating after delay
-    translateY.value = 30;
     setTimeout(() => {
+      opacity.value = withTiming(1, { duration: 300 });
       translateY.value = withSpring(0, {
-        ...glassMotion.spring.smooth,
+        damping: 15,
+        stiffness: 150,
       });
     }, delay);
   }, [index, opacity, translateY]);
@@ -108,20 +87,10 @@ export function FeedScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { activePosts, loadPosts, toggleReaction, deletePost } = usePosts();
-  const { friendIds, loadFriends, pendingRequests } = useFriends();
+  const { friendIds, loadFriends } = useFriends();
 
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
-  // Scroll tracking for Liquid Glass header animation
-  const scrollY = useSharedValue(0);
-  const headerHeight = 56 + insets.top;
-
-  const scrollHandler = useAnimatedScrollHandler({
-    onScroll: (event) => {
-      scrollY.value = event.contentOffset.y;
-    },
-  });
 
   // Initial load
   useEffect(() => {
@@ -177,12 +146,13 @@ export function FeedScreen() {
     navigation.navigate('Camera');
   }, [navigation]);
 
-  const handleProfilePress = useCallback(() => {
-    navigation.navigate('Profile', {});
+  const handleMenuPress = useCallback(() => {
+    // Menu action (could open settings or drawer)
+    navigation.navigate('Settings');
   }, [navigation]);
 
-  const handleFriendsPress = useCallback(() => {
-    navigation.navigate('Friends');
+  const handleProfilePress = useCallback(() => {
+    navigation.navigate('Profile', {});
   }, [navigation]);
 
   const renderPost = useCallback(
@@ -199,102 +169,26 @@ export function FeedScreen() {
     [user?.id, handleReact, handleDelete, handleUserPress]
   );
 
-  // Liquid Glass Header Animation
-  const headerBackgroundStyle = useAnimatedStyle(() => {
-    const opacity = interpolate(
-      scrollY.value,
-      [0, 50, 100],
-      [0.6, 0.85, 1],
-      Extrapolation.CLAMP
-    );
-    return { opacity };
-  });
-
-  const headerShadowStyle = useAnimatedStyle(() => {
-    const opacity = interpolate(
-      scrollY.value,
-      [0, 60],
-      [0, 1],
-      Extrapolation.CLAMP
-    );
-    return { opacity };
-  });
-
-  const renderHeader = () => {
-    return (
-      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-        {/* Liquid Glass Background */}
-        <Animated.View style={[StyleSheet.absoluteFill, headerBackgroundStyle]}>
-          {Platform.OS === 'ios' ? (
-            <BlurView
-              intensity={liquidGlass.blur.regular}
-              tint="light"
-              style={StyleSheet.absoluteFill}
-            />
-          ) : (
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.background }]} />
-          )}
-          {/* Glass material color layer */}
-          <View
-            style={[
-              StyleSheet.absoluteFill,
-              { backgroundColor: liquidGlass.material.primary.backgroundColor },
-            ]}
-          />
-          {/* Top highlight gradient */}
-          <LinearGradient
-            colors={['rgba(255, 255, 255, 0.4)', 'transparent']}
-            style={[StyleSheet.absoluteFill, { height: '60%' }]}
-            start={{ x: 0.5, y: 0 }}
-            end={{ x: 0.5, y: 1 }}
-          />
-        </Animated.View>
-
-        {/* Header Content */}
-        <View style={styles.headerContent}>
-          {/* Hamburger Menu Button */}
-          <TouchableOpacity
-            onPress={handleFriendsPress}
-            style={styles.headerButton}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="menu" size={24} color={glassColors.text.primary} />
-            {pendingRequests.length > 0 && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>
-                  {pendingRequests.length > 9 ? '9+' : pendingRequests.length}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-
-          {/* Title */}
-          <View style={styles.titleContainer}>
-            <Text style={styles.title}>Experiences</Text>
-          </View>
-
-          {/* Profile Button */}
-          <TouchableOpacity
-            onPress={handleProfilePress}
-            style={styles.headerButton}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="person-circle-outline" size={26} color={glassColors.text.primary} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Bottom divider with shadow */}
-        <Animated.View style={[styles.headerDivider, headerShadowStyle]} />
-      </View>
-    );
-  };
+  const renderHeader = () => (
+    <View style={[styles.header, { paddingTop: insets.top }]}>
+      <TouchableOpacity onPress={handleMenuPress} hitSlop={spacing.sm}>
+        <Ionicons name="menu" size={24} color={colors.textPrimary} />
+      </TouchableOpacity>
+      
+      <Text style={[textStyles.title2, styles.title]}>Experiences</Text>
+      
+      <TouchableOpacity onPress={handleProfilePress} hitSlop={spacing.sm}>
+        <Ionicons name="person-circle" size={24} color={colors.textPrimary} />
+      </TouchableOpacity>
+    </View>
+  );
 
   const renderEmptyState = () => {
     if (friendIds.length === 0) {
       return (
         <EmptyState
           type="no-friends"
-          onAction={handleFriendsPress}
+          onAction={() => navigation.navigate('Friends')}
           actionLabel="Add Friends"
         />
       );
@@ -309,68 +203,41 @@ export function FeedScreen() {
     );
   };
 
-  const renderLoadingState = () => (
-    <View style={styles.loadingContainer}>
-      {[1, 2, 3].map((_, index) => (
-        <PostCardSkeleton key={index} />
-      ))}
-    </View>
-  );
-
-  if (isLoading) {
-    return (
-      <View style={styles.container}>
-        {renderHeader()}
-        <View style={{ paddingTop: headerHeight }}>
-          {renderLoadingState()}
-        </View>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
-      {/* Liquid Glass Header */}
       {renderHeader()}
+      
+      {isLoading ? (
+        <View style={styles.content}>
+          {[1, 2, 3].map((i) => (
+            <PostCardSkeleton key={i} />
+          ))}
+        </View>
+      ) : (
+        <FlatList
+          data={activePosts}
+          renderItem={renderPost}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={[
+            styles.content,
+            activePosts.length === 0 && styles.emptyContent,
+          ]}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.accent}
+            />
+          }
+          ListEmptyComponent={renderEmptyState}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
 
-      {/* Feed List */}
-      <AnimatedFlatList
-        data={activePosts}
-        renderItem={renderPost}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingTop: headerHeight + spacing.md },
-          activePosts.length === 0 && styles.emptyListContent,
-        ]}
-        showsVerticalScrollIndicator={false}
-        onScroll={scrollHandler}
-        scrollEventThrottle={16}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={handleRefresh}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
-            progressBackgroundColor={colors.background}
-            progressViewOffset={headerHeight}
-          />
-        }
-        ListEmptyComponent={renderEmptyState}
-        // Performance optimizations
-        removeClippedSubviews={true}
-        maxToRenderPerBatch={5}
-        windowSize={5}
-        initialNumToRender={3}
-        getItemLayout={(data, index) => ({
-          length: 450,
-          offset: 450 * index,
-          index,
-        })}
-      />
-
-      {/* Floating Camera Button - Liquid Glass Style */}
-      <FloatingCameraButton onPress={handleCameraPress} variant="gradient" />
+      {/* FAB: Camera button center bottom, 24px above safe area (per spec) */}
+      <View style={[styles.fabContainer, { bottom: insets.bottom + spacing.lg }]}>
+        <FloatingCameraButton onPress={handleCameraPress} />
+      </View>
     </View>
   );
 }
@@ -378,76 +245,30 @@ export function FeedScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.backgroundPrimary,
   },
   header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 100,
-    overflow: 'hidden',
-  },
-  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
-    paddingBottom: spacing.md,
-  },
-  headerButton: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  badge: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    backgroundColor: colors.error,
-    borderRadius: 10,
-    minWidth: 18,
-    height: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 4,
-    borderWidth: 2,
-    borderColor: colors.white,
-    ...glassShadows.ambient,
-  },
-  badgeText: {
-    color: colors.white,
-    fontSize: 10,
-    fontWeight: typography.weights.bold,
-  },
-  titleContainer: {
-    flex: 1,
-    alignItems: 'center',
+    paddingBottom: spacing.sm,
+    backgroundColor: colors.backgroundPrimary,
+    ...shadows.level1,
   },
   title: {
-    fontSize: typography.sizes.xxl,
-    fontWeight: typography.weights.bold,
-    color: glassColors.text.primary,
-    letterSpacing: -0.5,
+    color: colors.textPrimary,
   },
-  headerDivider: {
+  content: {
+    padding: spacing.md,
+    paddingBottom: 100, // Space for FAB
+  },
+  emptyContent: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  fabContainer: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: liquidGlass.border.color,
-  },
-  listContent: {
-    padding: spacing.md,
-    paddingBottom: 120,
-  },
-  emptyListContent: {
-    flexGrow: 1,
-  },
-  loadingContainer: {
-    padding: spacing.md,
+    alignSelf: 'center',
   },
 });

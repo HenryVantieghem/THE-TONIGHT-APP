@@ -55,7 +55,7 @@ export async function createPost(
 
       // Read file as base64
       const base64Data = await FileSystem.readAsStringAsync(mediaUri, {
-        encoding: FileSystem.EncodingType.Base64,
+        encoding: 'base64',
       });
 
       if (!base64Data || base64Data.length === 0) {
@@ -213,8 +213,8 @@ export async function getFriendsPosts(
     // First get list of friend IDs
     const { data: friendships, error: friendsError } = await supabase
       .from(TABLES.FRIENDSHIPS)
-      .select('friend_id')
-      .eq('user_id', userId)
+      .select('requester_id, addressee_id')
+      .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`)
       .eq('status', 'accepted');
 
     if (friendsError) {
@@ -225,7 +225,10 @@ export async function getFriendsPosts(
       };
     }
 
-    const friendIds = friendships.map((f) => f.friend_id);
+    // Extract friend IDs (the other user in each friendship)
+    const friendIds = (friendships || []).map((f: any) => 
+      f.requester_id === userId ? f.addressee_id : f.requester_id
+    );
 
     // Also include own posts
     friendIds.push(userId);

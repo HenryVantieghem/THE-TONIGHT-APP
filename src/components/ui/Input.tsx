@@ -7,50 +7,43 @@ import {
   StyleSheet,
   TextInputProps,
   ViewStyle,
-  Platform,
 } from 'react-native';
-import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
   withTiming,
-  interpolate,
-  Extrapolation,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import {
-  liquidGlass,
-  glassMotion,
-  glassColors,
-} from '../../constants/liquidGlass';
-import { colors } from '../../constants/colors';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, shadows } from '../../constants/colors';
+import { textStyles } from '../../constants/typography';
+import { borderRadius, spacing, animations } from '../../constants/config';
 
 interface InputProps extends Omit<TextInputProps, 'style'> {
-  label: string;
+  label?: string;
   error?: string;
   hint?: string;
-  isPassword?: boolean;
-  containerStyle?: ViewStyle;
-  leftIcon?: React.ReactNode;
-  rightIcon?: React.ReactNode;
   success?: boolean;
-  // Liquid Glass options
-  variant?: 'default' | 'glass' | 'glassDark';
+  isPassword?: boolean;
+  isSearch?: boolean;
+  containerStyle?: ViewStyle;
+  leftIcon?: keyof typeof Ionicons.glyphMap;
+  showClearButton?: boolean;
+  onClear?: () => void;
 }
 
 export function Input({
   label,
   error,
   hint,
+  success = false,
   isPassword = false,
+  isSearch = false,
   containerStyle,
   leftIcon,
-  rightIcon,
-  success = false,
-  variant = 'glass',
+  showClearButton = false,
+  onClear,
   value,
   onFocus,
   onBlur,
@@ -59,20 +52,24 @@ export function Input({
   const [isFocused, setIsFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   
-  // Animation values
   const focusProgress = useSharedValue(0);
-  const labelScale = useSharedValue(1);
 
   const handleFocus = (e: any) => {
     setIsFocused(true);
-    focusProgress.value = withSpring(1, glassMotion.spring.snappy);
+    focusProgress.value = withSpring(1, {
+      damping: 15,
+      stiffness: 150,
+    });
     Haptics.selectionAsync();
     onFocus?.(e);
   };
 
   const handleBlur = (e: any) => {
     setIsFocused(false);
-    focusProgress.value = withSpring(0, glassMotion.spring.smooth);
+    focusProgress.value = withSpring(0, {
+      damping: 15,
+      stiffness: 150,
+    });
     onBlur?.(e);
   };
 
@@ -82,241 +79,188 @@ export function Input({
   };
 
   const hasError = !!error;
-  const hasSuccess = success && !hasError;
+  const displayLeftIcon = leftIcon || (isSearch ? 'search' : undefined);
 
   // Animated border style
   const animatedBorderStyle = useAnimatedStyle(() => {
-    const borderOpacity = interpolate(
-      focusProgress.value,
-      [0, 1],
-      [0.25, 0.6],
-      Extrapolation.CLAMP
-    );
+    const borderWidth = focusProgress.value > 0 || hasError ? 2 : 0;
+    const borderColor = hasError
+      ? colors.error
+      : focusProgress.value > 0
+      ? colors.accent
+      : 'transparent';
 
     return {
-      borderColor: hasError
-        ? colors.error
-        : hasSuccess
-        ? colors.success
-        : isFocused
-        ? colors.primary
-        : `rgba(255, 255, 255, ${borderOpacity})`,
-      borderWidth: isFocused || hasError || hasSuccess ? 1.5 : liquidGlass.border.width,
+      borderWidth: withTiming(borderWidth, { duration: animations.fast }),
+      borderColor: withTiming(borderColor, { duration: animations.fast }),
     };
   });
 
-  // Glass background color based on state
-  const getGlassBackground = () => {
-    if (variant === 'glassDark') {
-      return liquidGlass.material.dark.backgroundColor;
-    }
-    if (hasError) return 'rgba(239, 68, 68, 0.08)';
-    if (isFocused) return liquidGlass.material.elevated.backgroundColor;
-    return liquidGlass.material.primary.backgroundColor;
+  // Background color based on state
+  const getBackgroundColor = () => {
+    if (hasError) return `${colors.error}0D`; // 5% opacity
+    if (isFocused) return colors.backgroundTertiary;
+    return colors.backgroundTertiary;
   };
 
   return (
     <View style={[styles.container, containerStyle]}>
       {/* Label */}
-      <Text style={[
-        styles.label,
-        hasError && styles.labelError,
-        hasSuccess && styles.labelSuccess,
-        isFocused && styles.labelFocused,
-      ]}>
-        {label}
-      </Text>
+      {label && (
+        <Text style={[
+          textStyles.footnote,
+          styles.label,
+          hasError && styles.labelError,
+          isFocused && !hasError && styles.labelFocused,
+        ]}>
+          {label}
+        </Text>
+      )}
 
-      {/* Input Container with Glass Effect */}
-      <Animated.View style={[styles.inputWrapper, animatedBorderStyle]}>
-        {/* Glass Background */}
-        <View style={styles.glassBackground}>
-          {Platform.OS === 'ios' && (
-            <BlurView
-              intensity={isFocused ? liquidGlass.blur.regular : liquidGlass.blur.light}
-              tint={variant === 'glassDark' ? 'dark' : 'light'}
-              style={StyleSheet.absoluteFill}
+      {/* Input Container */}
+      <Animated.View
+        style={[
+          styles.inputWrapper,
+          {
+            backgroundColor: getBackgroundColor(),
+          },
+          animatedBorderStyle,
+        ]}
+      >
+        {/* Left Icon */}
+        {displayLeftIcon && (
+          <View style={styles.leftIconContainer}>
+            <Ionicons
+              name={displayLeftIcon}
+              size={20}
+              color={hasError ? colors.error : colors.textSecondary}
             />
-          )}
-          <View
-            style={[
-              styles.glassBg,
-              { backgroundColor: getGlassBackground() },
-            ]}
-          />
-          {/* Top highlight */}
-          <LinearGradient
-            colors={['rgba(255, 255, 255, 0.3)', 'transparent']}
-            style={styles.glassHighlight}
-            start={{ x: 0.5, y: 0 }}
-            end={{ x: 0.5, y: 0.5 }}
-          />
-        </View>
+          </View>
+        )}
 
-        <View style={styles.inputContainer}>
-          {/* Left Icon */}
-          {leftIcon && (
-            <View style={styles.leftIconContainer}>
-              {leftIcon}
-            </View>
-          )}
+        {/* Text Input */}
+        <TextInput
+          style={[
+            styles.input,
+            displayLeftIcon && styles.inputWithLeftIcon,
+            (isPassword || showClearButton) && styles.inputWithRightIcon,
+          ]}
+          placeholderTextColor={colors.textTertiary}
+          secureTextEntry={isPassword && !showPassword}
+          value={value}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          autoCapitalize="none"
+          autoCorrect={false}
+          {...props}
+        />
 
-          {/* Text Input */}
-          <TextInput
-            style={[
-              styles.input,
-              variant === 'glassDark' && styles.inputDark,
-              leftIcon ? styles.inputWithLeftIcon : null,
-              (isPassword || rightIcon) ? styles.inputWithRightIcon : null,
-            ]}
-            placeholderTextColor={
-              variant === 'glassDark'
-                ? glassColors.text.inverseSecondary
-                : glassColors.text.tertiary
-            }
-            secureTextEntry={isPassword && !showPassword}
-            value={value}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
-            autoCapitalize="none"
-            autoCorrect={false}
-            {...props}
-          />
+        {/* Clear Button */}
+        {showClearButton && value && value.length > 0 && (
+          <TouchableOpacity
+            onPress={onClear}
+            style={styles.rightIconContainer}
+            hitSlop={spacing.xs}
+          >
+            <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+        )}
 
-          {/* Password Toggle */}
-          {isPassword && (
-            <TouchableOpacity
-              onPress={togglePassword}
-              style={styles.eyeButton}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            >
-              <Ionicons
-                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                size={20}
-                color={
-                  variant === 'glassDark'
-                    ? glassColors.text.inverseSecondary
-                    : glassColors.text.secondary
-                }
-              />
-            </TouchableOpacity>
-          )}
-
-          {/* Right Icon */}
-          {rightIcon && !isPassword && (
-            <View style={styles.rightIconContainer}>
-              {rightIcon}
-            </View>
-          )}
-
-          {/* Success Checkmark */}
-          {hasSuccess && !isPassword && !rightIcon && (
-            <View style={styles.rightIconContainer}>
-              <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-            </View>
-          )}
-        </View>
+        {/* Password Toggle */}
+        {isPassword && (
+          <TouchableOpacity
+            onPress={togglePassword}
+            style={styles.rightIconContainer}
+            hitSlop={spacing.xs}
+          >
+            <Ionicons
+              name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+              size={20}
+              color={colors.textSecondary}
+            />
+          </TouchableOpacity>
+        )}
       </Animated.View>
 
       {/* Hint Text */}
       {hint && !hasError && (
-        <Text style={styles.hint}>{hint}</Text>
+        <Text style={[textStyles.caption1, styles.hint]}>{hint}</Text>
       )}
 
       {/* Error Text */}
       {hasError && (
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle" size={14} color={colors.error} />
-          <Text style={styles.error}>{error}</Text>
+          <Text style={[textStyles.caption1, styles.error]}>{error}</Text>
         </View>
       )}
     </View>
   );
 }
 
+// Search Input convenience component
+export function SearchInput(props: Omit<InputProps, 'isSearch'>) {
+  return <Input {...props} isSearch={true} />;
+}
+
+// Password Input convenience component
+export function PasswordInput(props: Omit<InputProps, 'isPassword'>) {
+  return <Input {...props} isPassword={true} />;
+}
+
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: glassColors.text.secondary,
-    marginBottom: 8,
+    marginBottom: spacing.xs,
+    color: colors.textSecondary,
   },
   labelError: {
     color: colors.error,
   },
-  labelSuccess: {
-    color: colors.success,
-  },
   labelFocused: {
-    color: colors.primary,
+    color: colors.accent,
   },
   inputWrapper: {
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  glassBackground: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  glassBg: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  glassHighlight: {
-    ...StyleSheet.absoluteFillObject,
-    height: '50%',
-  },
-  inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 52,
-    paddingHorizontal: 16,
+    height: 56,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.md,
+  },
+  leftIconContainer: {
+    marginRight: spacing.sm,
   },
   input: {
     flex: 1,
-    fontSize: 16,
-    color: glassColors.text.primary,
+    ...textStyles.body,
+    color: colors.textPrimary,
     height: '100%',
     paddingVertical: 0,
   },
-  inputDark: {
-    color: glassColors.text.inverse,
-  },
   inputWithLeftIcon: {
-    marginLeft: 8,
+    marginLeft: 0,
   },
   inputWithRightIcon: {
-    paddingRight: 8,
-  },
-  leftIconContainer: {
-    marginRight: 4,
+    paddingRight: spacing.xs,
   },
   rightIconContainer: {
-    marginLeft: 8,
-  },
-  eyeButton: {
-    padding: 4,
-    marginLeft: 8,
+    marginLeft: spacing.sm,
+    padding: spacing['2xs'],
   },
   hint: {
-    fontSize: 12,
-    color: glassColors.text.tertiary,
-    marginTop: 6,
-    lineHeight: 16,
+    marginTop: spacing.xs,
+    color: colors.textTertiary,
   },
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 6,
-    gap: 4,
+    marginTop: spacing.xs,
+    gap: spacing.xs,
   },
   error: {
-    fontSize: 12,
     color: colors.error,
-    lineHeight: 16,
     flex: 1,
   },
 });

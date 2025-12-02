@@ -13,6 +13,7 @@ export const config = {
 
   // Timer update interval (ms)
   TIMER_UPDATE_INTERVAL: 30000, // 30 seconds
+  TIMER_PULSE_THRESHOLD: 5, // minutes - start pulsing when <5m left
 
   // Reactions
   REACTIONS: ['😊', '❤️', '🔥', '💯'] as readonly ReactionEmoji[],
@@ -21,7 +22,7 @@ export const config = {
   USERNAME: {
     MIN_LENGTH: 3,
     MAX_LENGTH: 20,
-    PATTERN: /^[a-z][a-z0-9_]*$/,
+    PATTERN: /^[a-zA-Z][a-zA-Z0-9_]{2,19}$/,
     RULES: 'Must be 3-20 characters, lowercase letters, numbers, and underscores. Must start with a letter.',
   },
 
@@ -51,6 +52,7 @@ export const config = {
   // Storage bucket names
   STORAGE: {
     POST_MEDIA: 'post-media',
+    POST_IMAGES: 'post-images',
     AVATARS: 'avatars',
   },
 
@@ -62,61 +64,51 @@ export const config = {
   },
 } as const;
 
-// Spacing constants
+// Spacing constants (4px base unit per spec)
 export const spacing = {
-  xs: 4,
-  sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
-  xxl: 48,
+  '2xs': 2,    // 0.5 base - Tight icon spacing
+  xs: 4,       // 1 base - Inline elements
+  sm: 8,       // 2 base - Related elements
+  md: 16,      // 4 base - Standard padding
+  lg: 24,      // 6 base - Section spacing
+  xl: 32,      // 8 base - Major sections
+  xxl: 48,     // 12 base - Screen padding top (legacy alias)
+  '2xl': 48,   // 12 base - Screen padding top
+  '3xl': 64,   // 16 base - Hero spacing
 } as const;
 
-// Border radius
+// Border radius (per spec)
 export const borderRadius = {
+  none: 0,
+  sm: 6,       // Small buttons, badges
+  md: 12,      // Inputs, small cards
+  lg: 16,      // Cards, images
+  xl: 24,      // Large cards, modals
+  full: 9999,  // Pills, avatars, FAB
+  
+  // Legacy aliases
   xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
   round: 9999,
 } as const;
 
-// Shadow styles (iOS)
-export const shadows = {
-  small: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  medium: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  large: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-} as const;
+// Shadow styles (per spec - using from colors.ts)
+export { shadows } from './colors';
 
-// Animation durations
+// Animation durations (per spec)
 export const animations = {
-  fast: 150,
-  normal: 250,
-  slow: 400,
+  fast: 100,      // Button press
+  normal: 300,    // Card appearance
+  slow: 500,      // Timer transitions
+  spring: {
+    response: 0.3,
+    dampingFraction: 0.7,
+  },
 } as const;
 
-// Hit slop for touch targets
+// Hit slop for touch targets (44x44pt minimum per spec)
 export const hitSlop = {
   small: { top: 8, bottom: 8, left: 8, right: 8 },
   medium: { top: 12, bottom: 12, left: 12, right: 12 },
   large: { top: 16, bottom: 16, left: 16, right: 16 },
+  icon: { top: 10, bottom: 10, left: 10, right: 10 }, // 44pt minimum
 } as const;

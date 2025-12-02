@@ -7,91 +7,42 @@ import {
   Platform,
   ScrollView,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { Input } from '../../components/ui/Input';
+import { Input, PasswordInput } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../hooks/useAuth';
-import { validateSignUpForm, validateUsername } from '../../utils/validation';
-import { config } from '../../constants/config';
-import { typography } from '../../constants/typography';
+import { validateSignUpForm } from '../../utils/validation';
+import { colors } from '../../constants/colors';
+import { textStyles } from '../../constants/typography';
+import { spacing } from '../../constants/config';
 import type { AuthStackParamList } from '../../types';
-
-// iOS auth color palette
-const authColors = {
-  background: '#FFFFFF',
-  textPrimary: '#000000',
-  textSecondary: '#8E8E93',
-  primary: '#007AFF',
-  backButtonBg: '#F2F2F7',
-};
 
 type SignUpNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'SignUp'>;
 
 export function SignUpScreen() {
   const navigation = useNavigation<SignUpNavigationProp>();
-  const { signUp, checkUsernameAvailable } = useAuth();
+  const { signUp } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [username, setUsername] = useState('');
-  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
-  const [isUsernameAvailable, setIsUsernameAvailable] = useState<boolean | null>(null);
   const [errors, setErrors] = useState<{
     email?: string;
     password?: string;
     confirmPassword?: string;
-    username?: string;
   }>({});
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleUsernameChange = async (text: string) => {
-    const sanitized = text.toLowerCase().replace(/[^a-z0-9_]/g, '');
-    setUsername(sanitized);
-    setIsUsernameAvailable(null);
-    setErrors((prev) => ({ ...prev, username: undefined }));
-
-    // Validate format
-    const validation = validateUsername(sanitized);
-    if (!validation.isValid && sanitized.length > 0) {
-      setErrors((prev) => ({ ...prev, username: validation.error }));
-      return;
-    }
-
-    // Check availability if valid
-    if (validation.isValid && sanitized.length >= config.USERNAME.MIN_LENGTH) {
-      setIsCheckingUsername(true);
-      try {
-        const { data } = await checkUsernameAvailable(sanitized);
-        setIsUsernameAvailable(data ?? false);
-        if (data === false) {
-          setErrors((prev) => ({ ...prev, username: 'Username taken' }));
-        }
-      } catch (err) {
-        console.error('Username check error:', err);
-      } finally {
-        setIsCheckingUsername(false);
-      }
-    }
-  };
-
   const handleSignUp = async () => {
     // Validate form
-    const validation = validateSignUpForm(email, password, confirmPassword, username);
+    const validation = validateSignUpForm(email, password, confirmPassword);
 
     if (!validation.isValid) {
-      setErrors(validation.errors);
-      return;
-    }
-
-    // Check username availability if provided
-    if (username && isUsernameAvailable !== true) {
-      setErrors((prev) => ({ ...prev, username: 'Please choose an available username' }));
+      setErrors(validation.errors || {});
       return;
     }
 
@@ -99,30 +50,21 @@ export function SignUpScreen() {
     setIsLoading(true);
 
     try {
-      const { data, error } = await signUp(email, password, username || undefined);
+      const { data, error } = await signUp(email, password);
 
       if (error) {
-        Alert.alert('Sign Up Failed', error.message);
+        setErrors({ email: error.message });
         return;
       }
 
       if (data) {
-        // If username was provided, skip username setup and go to permissions
-        if (username) {
-          navigation.replace('Permissions');
-        } else {
-          navigation.replace('UsernameSetup');
-        }
+        navigation.replace('UsernameSetup');
       }
     } catch (err) {
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      setErrors({ email: 'An unexpected error occurred. Please try again.' });
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleLogin = () => {
-    navigation.navigate('Login');
   };
 
   const handleGoBack = () => {
@@ -143,76 +85,70 @@ export function SignUpScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          bounces={false}
         >
-          {/* Back Button */}
+          {/* Header: ← Back */}
           <TouchableOpacity
             onPress={handleGoBack}
             style={styles.backButton}
-            activeOpacity={0.7}
+            hitSlop={spacing.sm}
           >
-            <Ionicons name="arrow-back" size={24} color={authColors.textPrimary} />
+            <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
 
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>
-              Share experiences with friends
-            </Text>
-          </View>
+          {/* Title */}
+          <Text style={[textStyles.title1, styles.title]}>Create Account</Text>
+          <Text style={[textStyles.body, styles.subtitle]}>
+            Join Experiences and share moments with friends
+          </Text>
 
           {/* Form */}
           <View style={styles.form}>
             <Input
               label="Email"
-              placeholder="your@email.com"
               value={email}
               onChangeText={setEmail}
-              error={errors.email}
+              placeholder="Enter your email"
               keyboardType="email-address"
               autoCapitalize="none"
-              autoComplete="email"
-              leftIcon={<Text style={styles.icon}>✉️</Text>}
+              autoCorrect={false}
+              leftIcon="mail"
+              error={errors.email}
             />
 
-            <Input
+            <PasswordInput
               label="Password"
-              placeholder="••••••••"
               value={password}
               onChangeText={setPassword}
+              placeholder="Create a password"
               error={errors.password}
-              isPassword
-              autoComplete="new-password"
             />
 
-            <Input
+            <PasswordInput
               label="Confirm Password"
-              placeholder="••••••••"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
+              placeholder="Confirm your password"
               error={errors.confirmPassword}
-              isPassword
-              autoComplete="new-password"
             />
-
 
             <Button
               title="Create Account"
               onPress={handleSignUp}
-              loading={isLoading}
-              disabled={isLoading}
-              fullWidth
+              variant="primary"
               size="lg"
+              loading={isLoading}
+              fullWidth
               style={styles.button}
             />
           </View>
 
           {/* Footer */}
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Already have an account?</Text>
-            <TouchableOpacity onPress={handleLogin} activeOpacity={0.7}>
-              <Text style={styles.footerLink}> Log In</Text>
+            <Text style={[textStyles.body, styles.footerText]}>
+              Already have an account?{' '}
+            </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+              <Text style={[textStyles.body, styles.footerLink]}>Log In</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -224,62 +160,45 @@ export function SignUpScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: authColors.background,
+    backgroundColor: colors.backgroundPrimary,
   },
   keyboardView: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing['2xl'],
+    paddingTop: spacing['2xl'],
   },
   backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: authColors.backButtonBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 8,
-  },
-  header: {
-    marginTop: 32,
-    marginBottom: 32,
+    marginBottom: spacing.xl,
   },
   title: {
-    fontSize: typography.sizes.xxxl,
-    fontWeight: typography.weights.bold,
-    color: authColors.textPrimary,
-    marginBottom: 8,
-    letterSpacing: -0.5,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   subtitle: {
-    fontSize: 16,
-    color: authColors.textSecondary,
-    lineHeight: 24,
+    color: colors.textSecondary,
+    marginBottom: spacing['2xl'],
   },
   form: {
-    flex: 1,
+    marginBottom: spacing.xl,
   },
   button: {
-    marginTop: 8,
+    marginTop: spacing.md,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 24,
+    marginTop: spacing.xl,
+    marginBottom: spacing['2xl'],
   },
   footerText: {
-    fontSize: 14,
-    color: authColors.textSecondary,
+    color: colors.textSecondary,
   },
   footerLink: {
-    fontSize: 14,
+    color: colors.accent,
     fontWeight: '600',
-    color: authColors.primary,
-  },
-  icon: {
-    fontSize: 20,
   },
 });

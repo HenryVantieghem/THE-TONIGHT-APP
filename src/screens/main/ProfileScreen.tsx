@@ -382,14 +382,12 @@ export function ProfileScreen() {
       case 'accepted':
         return {
           title: 'Friends',
-          variant: 'glass' as const,
-          icon: <Ionicons name="checkmark-circle" size={18} color={colors.primary} />,
+          variant: 'secondary' as const,
         };
       case 'pending_sent':
         return {
           title: 'Request Sent',
-          variant: 'glass' as const,
-          icon: <Ionicons name="time-outline" size={18} color={colors.textSecondary} />,
+          variant: 'secondary' as const,
         };
       case 'pending_received':
         return {
@@ -603,15 +601,14 @@ export function ProfileScreen() {
               />
             </View>
 
-            {/* Action buttons with glass styling */}
+            {/* Action buttons */}
             {isOwnProfile ? (
               <View style={styles.actionButtons}>
                 <Button
                   title="Friends"
-                  variant="glass"
+                  variant="secondary"
                   onPress={handleFriendsPress}
                   style={styles.actionButton}
-                  icon={<Ionicons name="people" size={18} color={colors.primary} />}
                 />
                 <Button
                   title="Log Out"

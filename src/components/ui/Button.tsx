@@ -6,38 +6,32 @@ import {
   ActivityIndicator,
   ViewStyle,
   View,
-  Platform,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  interpolate,
-  Extrapolation,
+  withTiming,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import {
-  liquidGlass,
-  glassShadows,
-  glassMotion,
-  glassColors,
-} from '../../constants/liquidGlass';
-import { colors } from '../../constants/colors';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, shadows } from '../../constants/colors';
+import { textStyles } from '../../constants/typography';
+import { borderRadius, spacing, hitSlop, animations } from '../../constants/config';
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
 interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'ghost' | 'glass' | 'glassDark';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'destructive';
   loading?: boolean;
   disabled?: boolean;
   style?: ViewStyle;
   fullWidth?: boolean;
   size?: 'sm' | 'md' | 'lg';
-  icon?: React.ReactNode;
+  icon?: keyof typeof Ionicons.glyphMap;
+  iconPosition?: 'left' | 'right';
 }
 
 export function Button({
@@ -50,250 +44,100 @@ export function Button({
   fullWidth = false,
   size = 'md',
   icon,
+  iconPosition = 'left',
 }: ButtonProps) {
-  const pressProgress = useSharedValue(0);
+  const pressScale = useSharedValue(1);
+  const opacity = useSharedValue(1);
 
   const handlePress = () => {
     if (!disabled && !loading) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       onPress();
     }
   };
 
   const handlePressIn = () => {
     if (!disabled && !loading) {
-      pressProgress.value = withSpring(1, glassMotion.spring.snappy);
+      pressScale.value = withSpring(0.97, {
+        damping: 15,
+        stiffness: 150,
+      });
+      opacity.value = withTiming(0.9, { duration: animations.fast });
     }
   };
 
   const handlePressOut = () => {
-    pressProgress.value = withSpring(0, glassMotion.spring.smooth);
+    pressScale.value = withSpring(1, {
+      damping: 15,
+      stiffness: 150,
+    });
+    opacity.value = withTiming(1, { duration: animations.fast });
   };
 
   const isDisabled = disabled || loading;
 
-  // Size configurations with pill-shaped design
-  const sizeStyles = {
-    sm: { height: 44, fontSize: 14, borderRadius: 22, paddingHorizontal: 18 },
-    md: { height: 52, fontSize: 16, borderRadius: 26, paddingHorizontal: 24 },
-    lg: { height: 58, fontSize: 16, borderRadius: 29, paddingHorizontal: 28 },
+  // Size configurations per spec
+  const sizeConfig = {
+    sm: { height: 40, paddingHorizontal: 24, fontSize: textStyles.callout.fontSize },
+    md: { height: 48, paddingHorizontal: 32, fontSize: textStyles.headline.fontSize },
+    lg: { height: 56, paddingHorizontal: 32, fontSize: textStyles.headline.fontSize },
   };
 
-  const { height, fontSize, borderRadius: pillRadius, paddingHorizontal } = sizeStyles[size];
+  const config = sizeConfig[size];
 
-  // Animated scale effect
-  const animatedStyle = useAnimatedStyle(() => {
-    const scale = interpolate(
-      pressProgress.value,
-      [0, 1],
-      [1, glassMotion.pressScale.moderate],
-      Extrapolation.CLAMP
-    );
-    return { transform: [{ scale }] };
-  });
+  // Animated styles
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+    opacity: opacity.value,
+  }));
 
-  // Glass variant - frosted glass effect
-  if (variant === 'glass' || variant === 'glassDark') {
-    const isDark = variant === 'glassDark';
-    
-    return (
-      <AnimatedTouchable
-        onPress={handlePress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        disabled={isDisabled}
-        activeOpacity={1}
-        style={[
-          styles.glassButton,
-          {
-            height,
-            borderRadius: pillRadius,
-            paddingHorizontal,
-          },
-          isDark ? glassShadows.ambient : glassShadows.key,
-          fullWidth && styles.fullWidth,
-          isDisabled && styles.disabledOpacity,
-          animatedStyle,
-          style,
-        ]}
-      >
-        {/* Glass Background */}
-        <View style={[StyleSheet.absoluteFill, { borderRadius: pillRadius, overflow: 'hidden' }]}>
-          {Platform.OS === 'ios' ? (
-            <BlurView
-              intensity={liquidGlass.blur.regular}
-              tint={isDark ? 'dark' : 'light'}
-              style={StyleSheet.absoluteFill}
-            />
-          ) : null}
-          <View
-            style={[
-              StyleSheet.absoluteFill,
-              {
-                backgroundColor: isDark
-                  ? liquidGlass.material.dark.backgroundColor
-                  : liquidGlass.material.primary.backgroundColor,
-              },
-            ]}
-          />
-          {/* Top highlight */}
-          <LinearGradient
-            colors={['rgba(255, 255, 255, 0.35)', 'transparent']}
-            style={[StyleSheet.absoluteFill, { height: '50%' }]}
-            start={{ x: 0.5, y: 0 }}
-            end={{ x: 0.5, y: 1 }}
-          />
-        </View>
+  // Variant styles
+  const getVariantStyles = () => {
+    switch (variant) {
+      case 'primary':
+        return {
+          backgroundColor: isDisabled ? colors.textTertiary : colors.accent,
+          shadow: isDisabled ? undefined : shadows.accentGlow,
+        };
+      case 'secondary':
+        return {
+          backgroundColor: `${colors.accent}1A`, // 10% opacity
+          shadow: undefined,
+        };
+      case 'ghost':
+        return {
+          backgroundColor: 'transparent',
+          shadow: undefined,
+        };
+      case 'destructive':
+        return {
+          backgroundColor: isDisabled ? colors.textTertiary : colors.error,
+          shadow: undefined,
+        };
+      default:
+        return {
+          backgroundColor: colors.accent,
+          shadow: shadows.accentGlow,
+        };
+    }
+  };
 
-        {/* Border */}
-        <View
-          style={[
-            styles.glassBorder,
-            {
-              borderRadius: pillRadius,
-              borderColor: isDark
-                ? liquidGlass.border.colorDark
-                : liquidGlass.border.color,
-            },
-          ]}
-        />
+  const getTextColor = () => {
+    switch (variant) {
+      case 'primary':
+      case 'destructive':
+        return colors.textInverse;
+      case 'secondary':
+        return colors.accent;
+      case 'ghost':
+        return colors.textSecondary;
+      default:
+        return colors.textInverse;
+    }
+  };
 
-        {/* Content */}
-        {loading ? (
-          <ActivityIndicator
-            color={isDark ? '#FFFFFF' : glassColors.text.primary}
-            size="small"
-          />
-        ) : (
-          <View style={styles.buttonContent}>
-            {icon && <View style={styles.iconContainer}>{icon}</View>}
-            <Text
-              style={[
-                styles.glassText,
-                {
-                  fontSize,
-                  color: isDark ? '#FFFFFF' : glassColors.text.primary,
-                },
-              ]}
-            >
-              {title}
-            </Text>
-          </View>
-        )}
-      </AnimatedTouchable>
-    );
-  }
+  const variantStyles = getVariantStyles();
 
-  // Primary button with gradient and glass overlay
-  if (variant === 'primary') {
-    return (
-      <AnimatedTouchable
-        onPress={handlePress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        disabled={isDisabled}
-        activeOpacity={1}
-        style={[
-          fullWidth && styles.fullWidth,
-          animatedStyle,
-          style,
-        ]}
-      >
-        <LinearGradient
-          colors={isDisabled ? ['#CBD5E1', '#94A3B8'] : colors.primaryGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={[
-            styles.primaryButton,
-            {
-              height,
-              borderRadius: pillRadius,
-              paddingHorizontal,
-            },
-            !isDisabled && glassShadows.glow(colors.primary, 0.35),
-          ]}
-        >
-          {/* Glass highlight overlay */}
-          <LinearGradient
-            colors={['rgba(255, 255, 255, 0.3)', 'transparent']}
-            style={[styles.glassHighlight, { borderRadius: pillRadius }]}
-            start={{ x: 0.5, y: 0 }}
-            end={{ x: 0.5, y: 0.6 }}
-          />
-
-          {loading ? (
-            <ActivityIndicator color="#FFFFFF" size="small" />
-          ) : (
-            <View style={styles.buttonContent}>
-              {icon && <View style={styles.iconContainer}>{icon}</View>}
-              <Text style={[styles.primaryText, { fontSize }]}>{title}</Text>
-            </View>
-          )}
-        </LinearGradient>
-      </AnimatedTouchable>
-    );
-  }
-
-  // Secondary button with glass border
-  if (variant === 'secondary') {
-    return (
-      <AnimatedTouchable
-        onPress={handlePress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        disabled={isDisabled}
-        activeOpacity={1}
-        style={[
-          styles.secondaryButton,
-          {
-            height,
-            borderRadius: pillRadius,
-            paddingHorizontal,
-          },
-          fullWidth && styles.fullWidth,
-          isDisabled && styles.disabledOpacity,
-          animatedStyle,
-          style,
-        ]}
-      >
-        {/* Glass background */}
-        <View style={[StyleSheet.absoluteFill, { borderRadius: pillRadius, overflow: 'hidden' }]}>
-          {Platform.OS === 'ios' ? (
-            <BlurView
-              intensity={liquidGlass.blur.light}
-              tint="light"
-              style={StyleSheet.absoluteFill}
-            />
-          ) : null}
-          <View
-            style={[
-              StyleSheet.absoluteFill,
-              { backgroundColor: `${colors.primary}10` },
-            ]}
-          />
-        </View>
-
-        {/* Accent border */}
-        <View
-          style={[
-            styles.secondaryBorder,
-            { borderRadius: pillRadius },
-          ]}
-        />
-
-        {loading ? (
-          <ActivityIndicator color={colors.primary} size="small" />
-        ) : (
-          <View style={styles.buttonContent}>
-            {icon && <View style={styles.iconContainer}>{icon}</View>}
-            <Text style={[styles.secondaryText, { fontSize }]}>{title}</Text>
-          </View>
-        )}
-      </AnimatedTouchable>
-    );
-  }
-
-  // Ghost button (text only with subtle hover)
   return (
     <AnimatedTouchable
       onPress={handlePress}
@@ -301,98 +145,153 @@ export function Button({
       onPressOut={handlePressOut}
       disabled={isDisabled}
       activeOpacity={1}
+      hitSlop={hitSlop.medium}
       style={[
-        styles.ghostButton,
+        styles.button,
         {
-          height: height - 8,
-          borderRadius: pillRadius,
-          paddingHorizontal: paddingHorizontal - 8,
+          height: config.height,
+          paddingHorizontal: config.paddingHorizontal,
+          borderRadius: borderRadius.full,
+          backgroundColor: variantStyles.backgroundColor,
+          ...variantStyles.shadow,
         },
         fullWidth && styles.fullWidth,
-        isDisabled && styles.disabledOpacity,
         animatedStyle,
         style,
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={colors.primary} size="small" />
+        <ActivityIndicator
+          color={variant === 'primary' || variant === 'destructive' ? colors.textInverse : colors.accent}
+          size="small"
+        />
       ) : (
-        <View style={styles.buttonContent}>
-          {icon && <View style={styles.iconContainer}>{icon}</View>}
-          <Text style={[styles.ghostText, { fontSize: fontSize - 2 }]}>{title}</Text>
+        <View style={styles.content}>
+          {icon && iconPosition === 'left' && (
+            <Ionicons
+              name={icon}
+              size={20}
+              color={getTextColor()}
+              style={styles.iconLeft}
+            />
+          )}
+          <Text
+            style={[
+              textStyles.headline,
+              {
+                fontSize: config.fontSize,
+                color: getTextColor(),
+              },
+            ]}
+          >
+            {title}
+          </Text>
+          {icon && iconPosition === 'right' && (
+            <Ionicons
+              name={icon}
+              size={20}
+              color={getTextColor()}
+              style={styles.iconRight}
+            />
+          )}
         </View>
       )}
     </AnimatedTouchable>
   );
 }
 
+// Icon Button component (44x44pt minimum per spec)
+interface IconButtonProps {
+  icon: keyof typeof Ionicons.glyphMap;
+  onPress: () => void;
+  size?: number;
+  color?: string;
+  disabled?: boolean;
+  style?: ViewStyle;
+}
+
+export function IconButton({
+  icon,
+  onPress,
+  size = 24,
+  color = colors.textPrimary,
+  disabled = false,
+  style,
+}: IconButtonProps) {
+  const pressScale = useSharedValue(1);
+
+  const handlePressIn = () => {
+    if (!disabled) {
+      pressScale.value = withSpring(0.9, {
+        damping: 15,
+        stiffness: 150,
+      });
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  };
+
+  const handlePressOut = () => {
+    pressScale.value = withSpring(1, {
+      damping: 15,
+      stiffness: 150,
+    });
+  };
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+  }));
+
+  // Ensure minimum 44pt tap target
+  const minSize = Math.max(44, size + 20);
+
+  return (
+    <AnimatedTouchable
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      disabled={disabled}
+      activeOpacity={1}
+      hitSlop={hitSlop.icon}
+      style={[
+        styles.iconButton,
+        {
+          width: minSize,
+          height: minSize,
+          borderRadius: minSize / 2,
+          opacity: disabled ? 0.5 : 1,
+        },
+        animatedStyle,
+        style,
+      ]}
+    >
+      <Ionicons name={icon} size={size} color={color} />
+    </AnimatedTouchable>
+  );
+}
+
 const styles = StyleSheet.create({
-  primaryButton: {
+  button: {
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-  },
-  glassHighlight: {
-    ...StyleSheet.absoluteFillObject,
-    height: '60%',
-  },
-  primaryText: {
-    fontWeight: '600',
-    color: '#FFFFFF',
-    letterSpacing: 0.3,
-  },
-  glassButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  glassBorder: {
-    ...StyleSheet.absoluteFillObject,
-    borderWidth: liquidGlass.border.width,
-    pointerEvents: 'none',
-  },
-  glassText: {
-    fontWeight: '600',
-    letterSpacing: 0.3,
-  },
-  secondaryButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  secondaryBorder: {
-    ...StyleSheet.absoluteFillObject,
-    borderWidth: 1.5,
-    borderColor: colors.primary,
-    pointerEvents: 'none',
-  },
-  secondaryText: {
-    fontWeight: '600',
-    color: colors.primary,
-    letterSpacing: 0.3,
-  },
-  ghostButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ghostText: {
-    fontWeight: '500',
-    color: colors.primary,
   },
   fullWidth: {
     width: '100%',
   },
-  disabledOpacity: {
-    opacity: 0.5,
-  },
-  buttonContent: {
+  content: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    zIndex: 1,
   },
-  iconContainer: {
-    marginRight: -4,
+  iconLeft: {
+    marginRight: spacing.xs,
+  },
+  iconRight: {
+    marginLeft: spacing.xs,
+  },
+  iconButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
   },
 });

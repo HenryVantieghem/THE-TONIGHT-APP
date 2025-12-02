@@ -7,27 +7,19 @@ import {
   Platform,
   ScrollView,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { Input } from '../../components/ui/Input';
+import { Input, PasswordInput } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../hooks/useAuth';
 import { validateLoginForm } from '../../utils/validation';
-import { typography } from '../../constants/typography';
+import { colors } from '../../constants/colors';
+import { textStyles } from '../../constants/typography';
+import { spacing } from '../../constants/config';
 import type { AuthStackParamList } from '../../types';
-
-// iOS auth color palette
-const authColors = {
-  background: '#FFFFFF',
-  textPrimary: '#000000',
-  textSecondary: '#8E8E93',
-  primary: '#007AFF',
-  backButtonBg: '#F2F2F7',
-};
 
 type LoginNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
 
@@ -48,7 +40,7 @@ export function LoginScreen() {
     const validation = validateLoginForm(email, password);
 
     if (!validation.isValid) {
-      setErrors(validation.errors);
+      setErrors(validation.errors || {});
       return;
     }
 
@@ -59,7 +51,7 @@ export function LoginScreen() {
       const { data, error } = await signIn(email, password);
 
       if (error) {
-        Alert.alert('Login Failed', error.message);
+        setErrors({ email: error.message });
         return;
       }
 
@@ -67,7 +59,7 @@ export function LoginScreen() {
         // Navigation will be handled by RootNavigator when user state changes
       }
     } catch (err) {
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      setErrors({ email: 'An unexpected error occurred. Please try again.' });
     } finally {
       setIsLoading(false);
     }
@@ -86,11 +78,8 @@ export function LoginScreen() {
   };
 
   const handleForgotPassword = () => {
-    Alert.alert(
-      'Reset Password',
-      'Password reset functionality coming soon!',
-      [{ text: 'OK' }]
-    );
+    // TODO: Implement password reset
+    // For now, show alert
   };
 
   return (
@@ -103,74 +92,72 @@ export function LoginScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          bounces={false}
         >
-          {/* Back Button */}
+          {/* Header: ← Back */}
           <TouchableOpacity
             onPress={handleGoBack}
             style={styles.backButton}
-            activeOpacity={0.7}
+            hitSlop={spacing.sm}
           >
-            <Ionicons name="arrow-back" size={24} color={authColors.textPrimary} />
+            <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
 
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>
-              Log in to see what your friends are up to
-            </Text>
-          </View>
+          {/* Title */}
+          <Text style={[textStyles.title1, styles.title]}>Welcome Back</Text>
+          <Text style={[textStyles.body, styles.subtitle]}>
+            Sign in to continue sharing moments
+          </Text>
 
           {/* Form */}
           <View style={styles.form}>
             <Input
               label="Email"
-              placeholder="your@email.com"
               value={email}
               onChangeText={setEmail}
-              error={errors.email}
+              placeholder="Enter your email"
               keyboardType="email-address"
               autoCapitalize="none"
-              autoComplete="email"
-              leftIcon={<Text style={styles.icon}>✉️</Text>}
+              autoCorrect={false}
+              leftIcon="mail"
+              error={errors.email}
             />
 
-            <Input
+            <PasswordInput
               label="Password"
-              placeholder="••••••••"
               value={password}
               onChangeText={setPassword}
+              placeholder="Enter your password"
               error={errors.password}
-              isPassword
-              autoComplete="current-password"
             />
 
-            {/* Forgot Password Link */}
+            {/* Forgot Password */}
             <TouchableOpacity
               onPress={handleForgotPassword}
               style={styles.forgotPassword}
-              activeOpacity={0.7}
             >
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              <Text style={[textStyles.callout, styles.forgotPasswordText]}>
+                Forgot Password?
+              </Text>
             </TouchableOpacity>
 
             <Button
               title="Log In"
               onPress={handleLogin}
-              loading={isLoading}
-              disabled={isLoading}
-              fullWidth
+              variant="primary"
               size="lg"
+              loading={isLoading}
+              fullWidth
               style={styles.button}
             />
           </View>
 
           {/* Footer */}
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Don't have an account?</Text>
-            <TouchableOpacity onPress={handleSignUp} activeOpacity={0.7}>
-              <Text style={styles.footerLink}> Sign Up</Text>
+            <Text style={[textStyles.body, styles.footerText]}>
+              Don't have an account?{' '}
+            </Text>
+            <TouchableOpacity onPress={handleSignUp}>
+              <Text style={[textStyles.body, styles.footerLink]}>Sign Up</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -182,73 +169,53 @@ export function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: authColors.background,
+    backgroundColor: colors.backgroundPrimary,
   },
   keyboardView: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing['2xl'],
+    paddingTop: spacing['2xl'],
   },
   backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: authColors.backButtonBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 8,
-  },
-  header: {
-    marginTop: 32,
-    marginBottom: 32,
+    marginBottom: spacing.xl,
   },
   title: {
-    fontSize: typography.sizes.xxxl,
-    fontWeight: typography.weights.bold,
-    color: authColors.textPrimary,
-    marginBottom: 8,
-    letterSpacing: -0.5,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   subtitle: {
-    fontSize: 16,
-    color: authColors.textSecondary,
-    lineHeight: 24,
+    color: colors.textSecondary,
+    marginBottom: spacing['2xl'],
   },
   form: {
-    flex: 1,
+    marginBottom: spacing.xl,
   },
   forgotPassword: {
     alignSelf: 'flex-end',
-    marginBottom: 24,
-    marginTop: -8,
-    paddingVertical: 4,
+    marginTop: spacing.xs,
+    marginBottom: spacing.md,
   },
   forgotPasswordText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: authColors.primary,
+    color: colors.accent,
   },
   button: {
-    marginTop: 0,
+    marginTop: spacing.md,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 24,
+    marginTop: spacing.xl,
+    marginBottom: spacing['2xl'],
   },
   footerText: {
-    fontSize: 14,
-    color: authColors.textSecondary,
+    color: colors.textSecondary,
   },
   footerLink: {
-    fontSize: 14,
+    color: colors.accent,
     fontWeight: '600',
-    color: authColors.primary,
-  },
-  icon: {
-    fontSize: 20,
   },
 });

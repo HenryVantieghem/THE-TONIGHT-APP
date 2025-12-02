@@ -16,6 +16,7 @@ import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { EmptyState } from '../../components/feed/EmptyState';
 import { useFriends } from '../../hooks/useFriends';
+import { useStore, selectUser } from '../../stores/useStore';
 import { colors } from '../../constants/colors';
 import { typography } from '../../constants/typography';
 import { spacing, borderRadius, config } from '../../constants/config';
@@ -29,6 +30,7 @@ type Tab = 'friends' | 'requests' | 'search';
 export function FriendsScreen() {
   const navigation = useNavigation<FriendsNavigationProp>();
   const insets = useSafeAreaInsets();
+  const currentUser = useStore(selectUser);
   const {
     friends,
     pendingRequests,
@@ -129,60 +131,76 @@ export function FriendsScreen() {
     }
   };
 
-  const renderFriend = ({ item }: { item: Friendship }) => (
-    <Card style={styles.userCard}>
-      <TouchableOpacity
-        style={styles.userInfo}
-        onPress={() => handleUserPress(item.friend_id)}
-      >
-        <Avatar
-          uri={item.friend?.avatar_url}
-          name={item.friend?.username}
-          size="medium"
-        />
-        <Text style={styles.username}>@{item.friend?.username}</Text>
-      </TouchableOpacity>
-      <Button
-        title="Remove"
-        variant="ghost"
-        size="sm"
-        onPress={() => handleRemoveFriend(item.friend_id, item.friend?.username || '')}
-      />
-    </Card>
-  );
-
-  const renderRequest = ({ item }: { item: Friendship }) => (
-    <Card style={styles.userCard}>
-      <TouchableOpacity
-        style={styles.userInfo}
-        onPress={() => handleUserPress(item.user_id)}
-      >
-        <Avatar
-          uri={item.user?.avatar_url}
-          name={item.user?.username}
-          size="medium"
-        />
-        <Text style={styles.username}>@{item.user?.username}</Text>
-      </TouchableOpacity>
-      <View style={styles.requestActions}>
+  const renderFriend = ({ item }: { item: Friendship }) => {
+    // Get the friend ID (the other user in the friendship)
+    const friendId = currentUser?.id === item.requester_id 
+      ? item.addressee_id 
+      : item.requester_id;
+    const friend = item.friend || item.user;
+    
+    return (
+      <Card style={styles.userCard}>
+        <TouchableOpacity
+          style={styles.userInfo}
+          onPress={() => handleUserPress(friendId)}
+        >
+          <Avatar
+            uri={friend?.avatar_url}
+            name={friend?.username}
+            size="medium"
+          />
+          <Text style={styles.username}>@{friend?.username}</Text>
+        </TouchableOpacity>
         <Button
-          title="Accept"
-          variant="primary"
-          size="sm"
-          onPress={() => handleAcceptRequest(item.id, item.user_id)}
-        />
-        <Button
-          title="Decline"
+          title="Remove"
           variant="ghost"
           size="sm"
-          onPress={() => handleDeclineRequest(item.id)}
+          onPress={() => handleRemoveFriend(friendId, friend?.username || '')}
         />
-      </View>
-    </Card>
-  );
+      </Card>
+    );
+  };
+
+  const renderRequest = ({ item }: { item: Friendship }) => {
+    // For pending requests, requester_id is the user who sent the request
+    const requesterId = item.requester_id;
+    const requester = item.user;
+    
+    return (
+      <Card style={styles.userCard}>
+        <TouchableOpacity
+          style={styles.userInfo}
+          onPress={() => handleUserPress(requesterId)}
+        >
+          <Avatar
+            uri={requester?.avatar_url}
+            name={requester?.username}
+            size="medium"
+          />
+          <Text style={styles.username}>@{requester?.username}</Text>
+        </TouchableOpacity>
+        <View style={styles.requestActions}>
+          <Button
+            title="Accept"
+            variant="primary"
+            size="sm"
+            onPress={() => handleAcceptRequest(item.id, requesterId)}
+          />
+          <Button
+            title="Decline"
+            variant="ghost"
+            size="sm"
+            onPress={() => handleDeclineRequest(item.id)}
+          />
+        </View>
+      </Card>
+    );
+  };
 
   const renderSearchResult = ({ item }: { item: User }) => {
-    const isFriend = friends.some((f) => f.friend_id === item.id);
+    const isFriend = friends.some((f) => 
+      f.requester_id === item.id || f.addressee_id === item.id
+    );
 
     return (
       <Card style={styles.userCard}>

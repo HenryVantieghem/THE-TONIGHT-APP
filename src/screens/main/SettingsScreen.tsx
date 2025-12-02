@@ -17,7 +17,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../../components/ui/Card';
-import { DiscoBallLogo } from '../../components/ui/DiscoBallLogo';
 import { useAuth } from '../../hooks/useAuth';
 import { useLocation } from '../../hooks/useLocation';
 import { colors } from '../../constants/colors';
@@ -408,7 +407,7 @@ export function SettingsScreen() {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <DiscoBallLogo size={32} animated={true} />
+          <Ionicons name="aperture" size={32} color={colors.primary} />
           <Text style={styles.footerText}>Experiences</Text>
           <Text style={styles.footerSubtext}>
             Share moments that matter, right now.

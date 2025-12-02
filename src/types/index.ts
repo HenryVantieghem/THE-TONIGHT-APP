@@ -31,10 +31,11 @@ export interface Post {
 // Friendship relationship
 export interface Friendship {
   id: string;
-  user_id: string;
-  friend_id: string;
-  status: 'pending' | 'accepted' | 'blocked';
+  requester_id: string;
+  addressee_id: string;
+  status: 'pending' | 'accepted' | 'declined' | 'blocked';
   created_at: string;
+  updated_at?: string;
   friend?: User;
   user?: User;
 }

@@ -6,13 +6,15 @@ export async function getFriends(
   userId: string
 ): Promise<ApiResponse<Friendship[]>> {
   try {
+    // Get friendships where user is either requester or addressee
     const { data, error } = await supabase
       .from(TABLES.FRIENDSHIPS)
       .select(`
         *,
-        friend:profiles!friendships_friend_id_fkey(*)
+        friend:profiles!friendships_addressee_id_fkey(*),
+        user:profiles!friendships_requester_id_fkey(*)
       `)
-      .eq('user_id', userId)
+      .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`)
       .eq('status', 'accepted')
       .order('created_at', { ascending: false });
 
@@ -24,7 +26,13 @@ export async function getFriends(
       };
     }
 
-    return { data: data as Friendship[], error: null };
+    // Transform to include friend profile
+    const friendships = (data || []).map((f: any) => ({
+      ...f,
+      friend: f.requester_id === userId ? f.user : f.friend,
+    })) as Friendship[];
+
+    return { data: friendships, error: null };
   } catch (err) {
     console.error('Get friends error:', err);
     return {
@@ -39,8 +47,8 @@ export async function getFriendIds(userId: string): Promise<string[]> {
   try {
     const { data, error } = await supabase
       .from(TABLES.FRIENDSHIPS)
-      .select('friend_id')
-      .eq('user_id', userId)
+      .select('requester_id, addressee_id')
+      .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`)
       .eq('status', 'accepted');
 
     if (error) {
@@ -48,7 +56,10 @@ export async function getFriendIds(userId: string): Promise<string[]> {
       return [];
     }
 
-    return data.map((f) => f.friend_id);
+    // Extract the other user's ID (the friend)
+    return (data || []).map((f: any) => 
+      f.requester_id === userId ? f.addressee_id : f.requester_id
+    );
   } catch (err) {
     console.error('Get friend IDs error:', err);
     return [];
@@ -64,9 +75,9 @@ export async function getPendingRequests(
       .from(TABLES.FRIENDSHIPS)
       .select(`
         *,
-        user:profiles!friendships_user_id_fkey(*)
+        user:profiles!friendships_requester_id_fkey(*)
       `)
-      .eq('friend_id', userId)
+      .eq('addressee_id', userId)
       .eq('status', 'pending')
       .order('created_at', { ascending: false });
 
@@ -97,9 +108,9 @@ export async function getSentRequests(
       .from(TABLES.FRIENDSHIPS)
       .select(`
         *,
-        friend:profiles!friendships_friend_id_fkey(*)
+        friend:profiles!friendships_addressee_id_fkey(*)
       `)
-      .eq('user_id', userId)
+      .eq('requester_id', userId)
       .eq('status', 'pending')
       .order('created_at', { ascending: false });
 
@@ -132,7 +143,7 @@ export async function sendFriendRequest(
       .from(TABLES.FRIENDSHIPS)
       .select('*')
       .or(
-        `and(user_id.eq.${userId},friend_id.eq.${friendId}),and(user_id.eq.${friendId},friend_id.eq.${userId})`
+        `and(requester_id.eq.${userId},addressee_id.eq.${friendId}),and(requester_id.eq.${friendId},addressee_id.eq.${userId})`
       )
       .maybeSingle();
 
@@ -148,7 +159,7 @@ export async function sendFriendRequest(
       .from(TABLES.BLOCKED_USERS)
       .select('id')
       .or(
-        `and(user_id.eq.${userId},blocked_user_id.eq.${friendId}),and(user_id.eq.${friendId},blocked_user_id.eq.${userId})`
+        `and(blocker_id.eq.${userId},blocked_id.eq.${friendId}),and(blocker_id.eq.${friendId},blocked_id.eq.${userId})`
       )
       .maybeSingle();
 
@@ -163,13 +174,13 @@ export async function sendFriendRequest(
     const { data, error } = await supabase
       .from(TABLES.FRIENDSHIPS)
       .insert({
-        user_id: userId,
-        friend_id: friendId,
+        requester_id: userId,
+        addressee_id: friendId,
         status: 'pending',
       })
       .select(`
         *,
-        friend:profiles!friendships_friend_id_fkey(*)
+        friend:profiles!friendships_addressee_id_fkey(*)
       `)
       .single();
 
@@ -201,7 +212,7 @@ export async function acceptFriendRequest(
     // Update the pending request to accepted
     const { error: updateError } = await supabase
       .from(TABLES.FRIENDSHIPS)
-      .update({ status: 'accepted' })
+      .update({ status: 'accepted', updated_at: new Date().toISOString() })
       .eq('id', friendshipId);
 
     if (updateError) {
@@ -210,20 +221,6 @@ export async function acceptFriendRequest(
         data: null,
         error: { message: 'Failed to accept friend request.' },
       };
-    }
-
-    // Create the reverse friendship record
-    const { error: insertError } = await supabase
-      .from(TABLES.FRIENDSHIPS)
-      .insert({
-        user_id: userId,
-        friend_id: requesterId,
-        status: 'accepted',
-      });
-
-    if (insertError) {
-      console.error('Accept request insert error:', insertError);
-      // Continue anyway as the main friendship was created
     }
 
     // Update both users' friend counts
@@ -247,7 +244,7 @@ export async function declineFriendRequest(
   try {
     const { error } = await supabase
       .from(TABLES.FRIENDSHIPS)
-      .delete()
+      .update({ status: 'declined', updated_at: new Date().toISOString() })
       .eq('id', friendshipId);
 
     if (error) {
@@ -274,12 +271,12 @@ export async function removeFriend(
   friendId: string
 ): Promise<ApiResponse<null>> {
   try {
-    // Delete both direction records
+    // Delete friendship record (works in either direction)
     const { error } = await supabase
       .from(TABLES.FRIENDSHIPS)
       .delete()
       .or(
-        `and(user_id.eq.${userId},friend_id.eq.${friendId}),and(user_id.eq.${friendId},friend_id.eq.${userId})`
+        `and(requester_id.eq.${userId},addressee_id.eq.${friendId}),and(requester_id.eq.${friendId},addressee_id.eq.${userId})`
       );
 
     if (error) {
@@ -314,8 +311,8 @@ export async function blockUser(
     const { error: blockError } = await supabase
       .from(TABLES.BLOCKED_USERS)
       .insert({
-        user_id: userId,
-        blocked_user_id: blockedUserId,
+        blocker_id: userId,
+        blocked_id: blockedUserId,
       });
 
     if (blockError && blockError.code !== '23505') {
@@ -332,7 +329,7 @@ export async function blockUser(
       .from(TABLES.FRIENDSHIPS)
       .delete()
       .or(
-        `and(user_id.eq.${userId},friend_id.eq.${blockedUserId}),and(user_id.eq.${blockedUserId},friend_id.eq.${userId})`
+        `and(requester_id.eq.${userId},addressee_id.eq.${blockedUserId}),and(requester_id.eq.${blockedUserId},addressee_id.eq.${userId})`
       );
 
     return { data: null, error: null };
@@ -354,8 +351,8 @@ export async function unblockUser(
     const { error } = await supabase
       .from(TABLES.BLOCKED_USERS)
       .delete()
-      .eq('user_id', userId)
-      .eq('blocked_user_id', blockedUserId);
+      .eq('blocker_id', userId)
+      .eq('blocked_id', blockedUserId);
 
     if (error) {
       console.error('Unblock user error:', error);
@@ -383,9 +380,9 @@ export async function getBlockedUsers(
     const { data, error } = await supabase
       .from(TABLES.BLOCKED_USERS)
       .select(`
-        blocked_user:profiles!blocked_users_blocked_user_id_fkey(*)
+        blocked_user:profiles!blocked_users_blocked_id_fkey(*)
       `)
-      .eq('user_id', userId);
+      .eq('blocker_id', userId);
 
     if (error) {
       console.error('Get blocked users error:', error);
@@ -395,11 +392,10 @@ export async function getBlockedUsers(
       };
     }
 
-    // Extract the user objects - blocked_user is a single object from the foreign key relationship
-    const users = data
-      .map((d) => {
+    // Extract the user objects
+    const users = (data || [])
+      .map((d: any) => {
         const blockedUser = d.blocked_user;
-        // Handle both array and single object cases from Supabase
         if (Array.isArray(blockedUser)) {
           return blockedUser[0] as User | undefined;
         }
@@ -430,10 +426,10 @@ export async function searchUsers(
     // Get blocked user IDs
     const { data: blocked } = await supabase
       .from(TABLES.BLOCKED_USERS)
-      .select('blocked_user_id')
-      .eq('user_id', currentUserId);
+      .select('blocked_id')
+      .eq('blocker_id', currentUserId);
 
-    const blockedIds = blocked?.map((b) => b.blocked_user_id) || [];
+    const blockedIds = blocked?.map((b) => b.blocked_id) || [];
 
     // Search users
     const { data, error } = await supabase
@@ -476,7 +472,7 @@ export async function getFriendshipStatus(
       .from(TABLES.FRIENDSHIPS)
       .select('*')
       .or(
-        `and(user_id.eq.${userId},friend_id.eq.${targetUserId}),and(user_id.eq.${targetUserId},friend_id.eq.${userId})`
+        `and(requester_id.eq.${userId},addressee_id.eq.${targetUserId}),and(requester_id.eq.${targetUserId},addressee_id.eq.${userId})`
       )
       .maybeSingle();
 
@@ -484,7 +480,7 @@ export async function getFriendshipStatus(
 
     if (data.status === 'accepted') return 'accepted';
 
-    if (data.user_id === userId) return 'pending_sent';
+    if (data.requester_id === userId) return 'pending_sent';
 
     return 'pending_received';
   } catch (err) {
@@ -506,7 +502,7 @@ export function subscribeToFriendRequests(
         event: 'INSERT',
         schema: 'public',
         table: TABLES.FRIENDSHIPS,
-        filter: `friend_id=eq."${userId}"`,
+        filter: `addressee_id=eq."${userId}"`,
       },
       async (payload) => {
         try {
@@ -515,7 +511,7 @@ export function subscribeToFriendRequests(
             .from(TABLES.FRIENDSHIPS)
             .select(`
               *,
-              user:profiles!friendships_user_id_fkey(*)
+              user:profiles!friendships_requester_id_fkey(*)
             `)
             .eq('id', payload.new.id)
             .single();
@@ -555,12 +551,12 @@ export function subscribeToFriendshipChanges(
         event: 'UPDATE',
         schema: 'public',
         table: TABLES.FRIENDSHIPS,
-        filter: `user_id=eq."${userId}"`,
+        filter: `requester_id=eq."${userId}"`,
       },
       (payload) => {
         try {
           if (payload.new.status === 'accepted') {
-            onAccepted(payload.new.friend_id as string);
+            onAccepted(payload.new.addressee_id as string);
           }
         } catch (err) {
           console.error('Error processing friendship update:', err);
@@ -573,12 +569,12 @@ export function subscribeToFriendshipChanges(
         event: 'UPDATE',
         schema: 'public',
         table: TABLES.FRIENDSHIPS,
-        filter: `friend_id=eq."${userId}"`,
+        filter: `addressee_id=eq."${userId}"`,
       },
       (payload) => {
         try {
           if (payload.new.status === 'accepted') {
-            onAccepted(payload.new.user_id as string);
+            onAccepted(payload.new.requester_id as string);
           }
         } catch (err) {
           console.error('Error processing friendship update:', err);
@@ -597,12 +593,12 @@ export function subscribeToFriendshipChanges(
           // Check if this deletion affects the current user
           if (
             payload.old &&
-            (payload.old.user_id === userId || payload.old.friend_id === userId)
+            (payload.old.requester_id === userId || payload.old.addressee_id === userId)
           ) {
             const removedId =
-              payload.old.user_id === userId
-                ? payload.old.friend_id
-                : payload.old.user_id;
+              payload.old.requester_id === userId
+                ? payload.old.addressee_id
+                : payload.old.requester_id;
             onRemoved(removedId as string);
           }
         } catch (err) {
@@ -629,7 +625,7 @@ export async function getFriendCount(
     const { count, error } = await supabase
       .from(TABLES.FRIENDSHIPS)
       .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId)
+      .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`)
       .eq('status', 'accepted');
 
     if (error) {
@@ -652,7 +648,7 @@ export async function getPendingRequestCount(
     const { count, error } = await supabase
       .from(TABLES.FRIENDSHIPS)
       .select('id', { count: 'exact', head: true })
-      .eq('friend_id', userId)
+      .eq('addressee_id', userId)
       .eq('status', 'pending');
 
     if (error) {
@@ -677,7 +673,7 @@ export async function isUserBlocked(
       .from(TABLES.BLOCKED_USERS)
       .select('id')
       .or(
-        `and(user_id.eq.${userId},blocked_user_id.eq.${targetUserId}),and(user_id.eq.${targetUserId},blocked_user_id.eq.${userId})`
+        `and(blocker_id.eq.${userId},blocked_id.eq.${targetUserId}),and(blocker_id.eq.${targetUserId},blocked_id.eq.${userId})`
       )
       .maybeSingle();
 

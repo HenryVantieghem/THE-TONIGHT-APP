@@ -410,6 +410,8 @@ export function PostPreviewScreen() {
 
       if (data) {
         console.log('Post created successfully:', data.id);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setIsPosting(false);
         setShowSuccess(true);
       } else {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -422,7 +424,7 @@ export function PostPreviewScreen() {
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
       setIsPosting(false);
     }
-  }, [isOverLimit, isLocationValid, mediaUri, mediaType, caption, selectedLocation, createPost, handleSelectLocation]);
+  }, [isOverLimit, isLocationValid, mediaUri, mediaType, caption, selectedLocation, createPost]);
 
   const handleSuccessComplete = useCallback(() => {
     setIsPosting(false);
