@@ -2,11 +2,9 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import {
   SplashScreen,
-  OnboardingScreen,
   LoginScreen,
   SignUpScreen,
   UsernameSetupScreen,
-  PermissionsScreen,
 } from '../screens/auth';
 import type { AuthStackParamList } from '../types';
 
@@ -21,11 +19,9 @@ export function AuthNavigator() {
       }}
     >
       <Stack.Screen name="Splash" component={SplashScreen} />
-      <Stack.Screen name="Onboarding" component={OnboardingScreen} />
       <Stack.Screen name="SignUp" component={SignUpScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="UsernameSetup" component={UsernameSetupScreen} />
-      <Stack.Screen name="Permissions" component={PermissionsScreen} />
     </Stack.Navigator>
   );
 }

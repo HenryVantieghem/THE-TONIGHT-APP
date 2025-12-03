@@ -11,7 +11,7 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#000000"
+      "backgroundColor": "#4CAF50"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -33,7 +33,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#FFFC00"
+        "backgroundColor": "#4CAF50"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.henryvantieghem.tonight",
@@ -70,7 +70,8 @@
           "cameraPermission": "Tonight needs camera access to take photos."
         }
       ],
-      "expo-video"
+      "expo-video",
+      "expo-font"
     ],
     "extra": {
       "eas": {

@@ -71,7 +71,7 @@ export function SignUpScreen() {
     if (navigation.canGoBack()) {
       navigation.goBack();
     } else {
-      navigation.replace('Onboarding');
+      navigation.replace('Login');
     }
   };
 

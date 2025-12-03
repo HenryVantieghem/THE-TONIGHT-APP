@@ -37,9 +37,9 @@ export function SplashScreen() {
       }).start();
     });
 
-    // Navigate to Onboarding after animation (auth is handled by RootNavigator)
+    // Navigate to SignUp after animation (auth is handled by RootNavigator)
     const timer = setTimeout(() => {
-      navigation.replace('Onboarding');
+      navigation.replace('SignUp');
     }, 1500);
 
     return () => clearTimeout(timer);
@@ -70,7 +70,7 @@ export function SplashScreen() {
           { opacity: wordmarkOpacity },
         ]}
       >
-        Experiences
+        Tonight
       </Animated.Text>
     </View>
   );

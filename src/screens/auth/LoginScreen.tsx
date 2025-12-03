@@ -7,15 +7,18 @@ import {
   Platform,
   ScrollView,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { Input, PasswordInput } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../hooks/useAuth';
-import { validateLoginForm } from '../../utils/validation';
+import { supabase } from '../../services/supabase';
+import { validateLoginForm, validateEmail } from '../../utils/validation';
 import { colors } from '../../constants/colors';
 import { textStyles } from '../../constants/typography';
 import { spacing } from '../../constants/config';
@@ -73,13 +76,64 @@ export function LoginScreen() {
     if (navigation.canGoBack()) {
       navigation.goBack();
     } else {
-      navigation.replace('Onboarding');
+      navigation.replace('SignUp');
     }
   };
 
-  const handleForgotPassword = () => {
-    // TODO: Implement password reset
-    // For now, show alert
+  const handleForgotPassword = async () => {
+    // Prompt for email if not entered
+    const emailToReset = email.trim();
+
+    if (!emailToReset) {
+      Alert.alert(
+        'Enter Email',
+        'Please enter your email address first, then tap "Forgot Password?"'
+      );
+      return;
+    }
+
+    // Validate email format
+    const emailValidation = validateEmail(emailToReset);
+    if (!emailValidation.isValid) {
+      Alert.alert('Invalid Email', emailValidation.error || 'Please enter a valid email.');
+      return;
+    }
+
+    Alert.alert(
+      'Reset Password',
+      `Send password reset email to ${emailToReset}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Send',
+          onPress: async () => {
+            setIsLoading(true);
+            try {
+              const { error } = await supabase.auth.resetPasswordForEmail(emailToReset, {
+                redirectTo: 'tonight://reset-password',
+              });
+
+              if (error) {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                Alert.alert('Error', error.message);
+              } else {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                Alert.alert(
+                  'Check Your Email',
+                  'If an account exists with this email, you will receive a password reset link.',
+                  [{ text: 'OK' }]
+                );
+              }
+            } catch (err) {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+              Alert.alert('Error', 'Failed to send reset email. Please try again.');
+            } finally {
+              setIsLoading(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (

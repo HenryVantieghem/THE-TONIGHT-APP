@@ -37,17 +37,18 @@ export const supabase = createClient(
 );
 
 // Test connection on initialization
-supabase.from('profiles').select('count', { count: 'exact', head: true })
-  .then(({ error, count }) => {
+(async () => {
+  try {
+    const { error, count } = await supabase.from('profiles').select('count', { count: 'exact', head: true });
     if (error) {
       console.error('❌ Supabase connection test failed:', error.message);
     } else {
       console.log('✅ Supabase connected successfully. Profiles count:', count);
     }
-  })
-  .catch((err) => {
+  } catch (err: unknown) {
     console.error('❌ Supabase connection error:', err);
-  });
+  }
+})();
 
 // Database table names
 export const TABLES = {

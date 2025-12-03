@@ -114,11 +114,9 @@ export type RootStackParamList = {
 
 export type AuthStackParamList = {
   Splash: undefined;
-  Onboarding: undefined;
   Login: undefined;
   SignUp: undefined;
   UsernameSetup: undefined;
-  Permissions: undefined;
 };
 
 export type MainTabParamList = {
@@ -134,11 +132,6 @@ export type MainStackParamList = {
     mediaType: 'image' | 'video';
     location: LocationData | null;
     isLoadingLocation?: boolean;
-    selectedLocation?: LocationData; // For updates from LocationSearch
-  };
-  LocationSearch: {
-    currentLocation: LocationData | null;
-    locationKey?: string;
   };
   Profile: { userId?: string };
   Settings: undefined;

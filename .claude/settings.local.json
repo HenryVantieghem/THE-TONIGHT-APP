@@ -30,7 +30,9 @@
       "mcp__supabase__get_advisors",
       "mcp__supabase__execute_sql",
       "mcp__supabase__apply_migration",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "Bash(git checkout:*)",
+      "Bash(git -C /Users/henryvantieghem/THE-TONIGHT-APP log --oneline --all)"
     ],
     "deny": [],
     "ask": []

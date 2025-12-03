@@ -125,9 +125,7 @@ export function UsernameSetupScreen() {
         return;
       }
 
-      if (data) {
-        navigation.replace('Permissions');
-      }
+      // Navigation will be handled by RootNavigator when user state updates
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
     } finally {
@@ -138,8 +136,6 @@ export function UsernameSetupScreen() {
   const handleGoBack = () => {
     if (navigation.canGoBack()) {
       navigation.goBack();
-    } else {
-      navigation.replace('Permissions');
     }
   };
 

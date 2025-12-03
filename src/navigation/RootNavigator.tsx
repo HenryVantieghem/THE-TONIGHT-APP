@@ -5,7 +5,6 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthNavigator } from './AuthNavigator';
 import { MainNavigator } from './MainNavigator';
 import { useStore } from '../stores/useStore';
-import { useSessionTimeout } from '../hooks/useSessionTimeout';
 import { supabase } from '../services/supabase';
 import type { RootStackParamList } from '../types';
 
@@ -14,9 +13,6 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 export function RootNavigator() {
   const { isAuthenticated, setUser, setIsAuthenticated, reset } = useStore();
   const [isLoading, setIsLoading] = useState(true);
-
-  // Session timeout management
-  useSessionTimeout();
 
   useEffect(() => {
     // Check current session
@@ -80,7 +76,7 @@ export function RootNavigator() {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="#DC143C" />
       </View>
     );
   }
@@ -103,6 +99,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#000000',
   },
 });

@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Pressable,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -48,6 +49,9 @@ export function PostCard({
   onMediaPress,
 }: PostCardProps) {
   const [showExpandedCaption, setShowExpandedCaption] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const videoRef = useRef<Video>(null);
   const lastTapRef = React.useRef<number>(0);
   
   // Heart animation for double tap
@@ -105,6 +109,20 @@ export function PostCard({
     cardScale.value = withSpring(1, { damping: 15, stiffness: 150 });
   }, [cardScale]);
 
+  // Video playback handlers
+  const handleVideoTap = useCallback(async () => {
+    if (post.media_type === 'video') {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setIsMuted(!isMuted);
+    }
+  }, [isMuted, post.media_type]);
+
+  const handlePlaybackStatusUpdate = useCallback((status: AVPlaybackStatus) => {
+    if (status.isLoaded) {
+      setIsVideoPlaying(status.isPlaying);
+    }
+  }, []);
+
   // Heart animation style
   const heartAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: heartScale.value }],
@@ -156,19 +174,47 @@ export function PostCard({
       {/* Media */}
       <Pressable
         style={styles.mediaContainer}
-        onPress={handleMediaPress}
+        onPress={post.media_type === 'video' ? handleVideoTap : handleMediaPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
+        onLongPress={() => post.media_type !== 'video' && handleMediaPress()}
       >
-        {imageUrl && (
-          <Image
-            source={{ uri: imageUrl }}
-            style={styles.media}
-            contentFit="cover"
-            transition={200}
-          />
+        {post.media_type === 'video' ? (
+          <>
+            <Video
+              ref={videoRef}
+              source={{ uri: post.media_url }}
+              style={styles.media}
+              resizeMode={ResizeMode.COVER}
+              shouldPlay
+              isLooping
+              isMuted={isMuted}
+              onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+              posterSource={{ uri: post.thumbnail_url || undefined }}
+              usePoster={!!post.thumbnail_url}
+            />
+            {/* Mute/Unmute indicator */}
+            <View style={styles.videoControls}>
+              <View style={styles.muteButton}>
+                <Ionicons
+                  name={isMuted ? 'volume-mute' : 'volume-high'}
+                  size={20}
+                  color={colors.white}
+                />
+              </View>
+            </View>
+          </>
+        ) : (
+          imageUrl && (
+            <Image
+              source={{ uri: imageUrl }}
+              style={styles.media}
+              contentFit="cover"
+              transition={200}
+            />
+          )
         )}
-        
+
         {/* Double-tap heart animation */}
         <Animated.View style={[styles.heartOverlay, heartAnimatedStyle]}>
           <Ionicons name="heart" size={64} color={colors.error} />
@@ -267,6 +313,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     pointerEvents: 'none',
+  },
+  videoControls: {
+    position: 'absolute',
+    bottom: spacing.sm,
+    right: spacing.sm,
+  },
+  muteButton: {
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: borderRadius.full,
+    padding: spacing.xs,
   },
   captionContainer: {
     marginBottom: spacing.sm,

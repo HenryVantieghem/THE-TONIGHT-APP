@@ -4,7 +4,6 @@ import {
   FeedScreen,
   CameraScreen,
   PostPreviewScreen,
-  LocationSearchScreen,
   ProfileScreen,
   SettingsScreen,
   FriendsScreen,
@@ -20,22 +19,19 @@ export function MainNavigator() {
         headerShown: false,
         animation: 'fade',
       }}
-      initialRouteName="Camera"
+      initialRouteName="Feed"
     >
-      {/* Camera is the default/hub screen */}
+      <Stack.Screen
+        name="Feed"
+        component={FeedScreen}
+        options={{ animation: 'none' }}
+      />
       <Stack.Screen
         name="Camera"
         component={CameraScreen}
         options={{
-          animation: 'none',
-        }}
-      />
-      {/* Feed now accessible via swipe from Camera */}
-      <Stack.Screen
-        name="Feed"
-        component={FeedScreen}
-        options={{
-          animation: 'slide_from_right',
+          animation: 'slide_from_bottom',
+          presentation: 'modal',
         }}
       />
       <Stack.Screen
@@ -43,14 +39,6 @@ export function MainNavigator() {
         component={PostPreviewScreen}
         options={{
           presentation: 'fullScreenModal',
-          animation: 'slide_from_bottom',
-        }}
-      />
-      <Stack.Screen
-        name="LocationSearch"
-        component={LocationSearchScreen}
-        options={{
-          presentation: 'modal',
           animation: 'slide_from_bottom',
         }}
       />

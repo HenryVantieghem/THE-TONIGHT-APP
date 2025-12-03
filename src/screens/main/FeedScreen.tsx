@@ -12,12 +12,6 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { PostCard } from '../../components/feed/PostCard';
@@ -27,83 +21,32 @@ import { FloatingCameraButton } from '../../components/ui/FloatingCameraButton';
 import { usePosts } from '../../hooks/usePosts';
 import { useAuth } from '../../hooks/useAuth';
 import { useFriends } from '../../hooks/useFriends';
-import { colors, shadows } from '../../constants/colors';
+import { colors } from '../../constants/colors';
 import { textStyles } from '../../constants/typography';
 import { spacing } from '../../constants/config';
 import type { Post, ReactionEmoji, MainStackParamList } from '../../types';
 
 type FeedNavigationProp = NativeStackNavigationProp<MainStackParamList, 'Feed'>;
 
-// Animated post card wrapper for entry animations (per spec)
-function AnimatedPostCard({
-  post,
-  isOwner,
-  onReact,
-  onDelete,
-  onUserPress,
-  index,
-}: {
-  post: Post;
-  isOwner: boolean;
-  onReact: (postId: string, emoji: ReactionEmoji) => void;
-  onDelete: (postId: string) => void;
-  onUserPress: (userId: string) => void;
-  index: number;
-}) {
-  const opacity = useSharedValue(0);
-  const translateY = useSharedValue(20);
-
-  useEffect(() => {
-    const delay = Math.min(index * 50, 300); // Stagger 50ms per spec
-    
-    setTimeout(() => {
-      opacity.value = withTiming(1, { duration: 300 });
-      translateY.value = withSpring(0, {
-        damping: 15,
-        stiffness: 150,
-      });
-    }, delay);
-  }, [index, opacity, translateY]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [{ translateY: translateY.value }],
-  }));
-
-  return (
-    <Animated.View style={animatedStyle}>
-      <PostCard
-        post={post}
-        isOwner={isOwner}
-        onReact={onReact}
-        onDelete={onDelete}
-        onUserPress={onUserPress}
-        onMediaPress={() => {}}
-      />
-    </Animated.View>
-  );
-}
-
 export function FeedScreen() {
   const navigation = useNavigation<FeedNavigationProp>();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { activePosts, loadPosts, loadMorePosts, refreshPosts, toggleReaction, deletePost, isRefreshing } = usePosts();
+  const { activePosts, loadPosts, refreshPosts, toggleReaction, deletePost, isRefreshing } = usePosts();
   const { friendIds, loadFriends } = useFriends();
 
   const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   // Initial load
   useEffect(() => {
     const initialLoad = async () => {
       setIsLoading(true);
-      await Promise.all([loadPosts(true), loadFriends()]);
+      await Promise.all([loadPosts(), loadFriends()]);
       setIsLoading(false);
     };
 
     initialLoad();
-  }, [loadPosts, loadFriends]);
+  }, []);
 
   // Refresh posts when screen comes into focus
   useEffect(() => {
@@ -119,17 +62,6 @@ export function FeedScreen() {
     await refreshPosts();
   }, [refreshPosts]);
 
-  const handleLoadMore = useCallback(async () => {
-    if (isLoadingMore || isRefreshing) return;
-    
-    setIsLoadingMore(true);
-    try {
-      await loadMorePosts();
-    } finally {
-      setIsLoadingMore(false);
-    }
-  }, [isLoadingMore, isRefreshing, loadMorePosts]);
-
   const handleReact = useCallback(
     async (postId: string, emoji: ReactionEmoji) => {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -142,12 +74,9 @@ export function FeedScreen() {
     (postId: string) => {
       Alert.alert(
         'Delete Post',
-        'Are you sure you want to delete this post? This action cannot be undone.',
+        'Are you sure you want to delete this post?',
         [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
+          { text: 'Cancel', style: 'cancel' },
           {
             text: 'Delete',
             style: 'destructive',
@@ -156,8 +85,7 @@ export function FeedScreen() {
               await deletePost(postId);
             },
           },
-        ],
-        { cancelable: true }
+        ]
       );
     },
     [deletePost]
@@ -175,7 +103,6 @@ export function FeedScreen() {
   }, [navigation]);
 
   const handleMenuPress = useCallback(() => {
-    // Menu action (could open settings or drawer)
     navigation.navigate('Settings');
   }, [navigation]);
 
@@ -184,14 +111,14 @@ export function FeedScreen() {
   }, [navigation]);
 
   const renderPost = useCallback(
-    ({ item, index }: { item: Post; index: number }) => (
-      <AnimatedPostCard
+    ({ item }: { item: Post }) => (
+      <PostCard
         post={item}
         isOwner={item.user_id === user?.id}
         onReact={handleReact}
         onDelete={handleDelete}
         onUserPress={handleUserPress}
-        index={index}
+        onMediaPress={() => {}}
       />
     ),
     [user?.id, handleReact, handleDelete, handleUserPress]
@@ -202,9 +129,9 @@ export function FeedScreen() {
       <TouchableOpacity onPress={handleMenuPress} hitSlop={spacing.sm}>
         <Ionicons name="menu" size={24} color={colors.textPrimary} />
       </TouchableOpacity>
-      
-      <Text style={[textStyles.title2, styles.title]}>Experiences</Text>
-      
+
+      <Text style={[textStyles.title2, styles.title]}>Tonight</Text>
+
       <TouchableOpacity onPress={handleProfilePress} hitSlop={spacing.sm}>
         <Ionicons name="person-circle" size={24} color={colors.textPrimary} />
       </TouchableOpacity>
@@ -234,7 +161,7 @@ export function FeedScreen() {
   return (
     <View style={styles.container}>
       {renderHeader()}
-      
+
       {isLoading ? (
         <View style={styles.content}>
           {[1, 2, 3].map((i) => (
@@ -254,24 +181,14 @@ export function FeedScreen() {
             <RefreshControl
               refreshing={isRefreshing}
               onRefresh={handleRefresh}
-              tintColor={colors.accent}
+              tintColor={colors.primary}
             />
           }
           ListEmptyComponent={renderEmptyState}
           showsVerticalScrollIndicator={false}
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.5}
-          ListFooterComponent={
-            isLoadingMore ? (
-              <View style={styles.loadingMore}>
-                <ActivityIndicator size="small" color={colors.accent} />
-              </View>
-            ) : null
-          }
         />
       )}
 
-      {/* FAB: Camera button center bottom, 24px above safe area (per spec) */}
       <View style={[styles.fabContainer, { bottom: insets.bottom + spacing.lg }]}>
         <FloatingCameraButton onPress={handleCameraPress} />
       </View>
@@ -299,7 +216,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.md,
-    paddingBottom: 100, // Space for FAB
+    paddingBottom: 100,
   },
   emptyContent: {
     flex: 1,
@@ -308,9 +225,5 @@ const styles = StyleSheet.create({
   fabContainer: {
     position: 'absolute',
     alignSelf: 'center',
-  },
-  loadingMore: {
-    paddingVertical: spacing.md,
-    alignItems: 'center',
   },
 });

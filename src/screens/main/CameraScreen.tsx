@@ -1,12 +1,9 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   StyleSheet,
   Text,
   ActivityIndicator,
-  Animated,
-  PanResponder,
-  Dimensions,
   Linking,
   Platform,
   AppState,
@@ -24,13 +21,9 @@ import * as locationService from '../../services/location';
 import { colors } from '../../constants/colors';
 import { typography } from '../../constants/typography';
 import { spacing } from '../../constants/config';
-import type { LocationData, MainStackParamList } from '../../types';
+import type { MainStackParamList } from '../../types';
 
 type CameraNavigationProp = NativeStackNavigationProp<MainStackParamList, 'Camera'>;
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const SWIPE_THRESHOLD = 100;
-const SWIPE_VELOCITY_THRESHOLD = 0.5;
 
 export function CameraScreen() {
   const navigation = useNavigation<CameraNavigationProp>();
@@ -40,104 +33,31 @@ export function CameraScreen() {
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [isLoadingLocation, setIsLoadingLocation] = useState(true);
 
-  // Swipe-to-close animation
-  const translateY = useRef(new Animated.Value(0)).current;
-  const opacity = useRef(new Animated.Value(1)).current;
-
-  // Pan responder for swipe-to-close
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        // Only respond to downward swipes from the top portion of the screen
-        return gestureState.dy > 10 && Math.abs(gestureState.dx) < Math.abs(gestureState.dy);
-      },
-      onPanResponderGrant: () => {
-        Haptics.selectionAsync();
-      },
-      onPanResponderMove: (_, gestureState) => {
-        // Only allow downward movement
-        if (gestureState.dy > 0) {
-          translateY.setValue(gestureState.dy);
-          opacity.setValue(1 - gestureState.dy / SCREEN_HEIGHT);
-        }
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        if (
-          gestureState.dy > SWIPE_THRESHOLD ||
-          gestureState.vy > SWIPE_VELOCITY_THRESHOLD
-        ) {
-          // Close the camera
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          Animated.parallel([
-            Animated.timing(translateY, {
-              toValue: SCREEN_HEIGHT,
-              duration: 250,
-              useNativeDriver: true,
-            }),
-            Animated.timing(opacity, {
-              toValue: 0,
-              duration: 250,
-              useNativeDriver: true,
-            }),
-          ]).start(() => {
-            if (navigation.canGoBack()) {
-              navigation.goBack();
-            }
-          });
-        } else {
-          // Snap back
-          Animated.parallel([
-            Animated.spring(translateY, {
-              toValue: 0,
-              friction: 8,
-              tension: 80,
-              useNativeDriver: true,
-            }),
-            Animated.spring(opacity, {
-              toValue: 1,
-              friction: 8,
-              tension: 80,
-              useNativeDriver: true,
-            }),
-          ]).start();
-        }
-      },
-    })
-  ).current;
-
-  // Check camera permission on mount and when app becomes active
+  // Check camera permission
   const checkCameraPermission = useCallback(async () => {
     const { status } = await Camera.getCameraPermissionsAsync();
     const granted = status === 'granted';
     setHasPermission(granted);
-    
-    // Reset permission denied flag if permission is now granted
     if (granted && permissionDenied) {
       setPermissionDenied(false);
     }
-    
     return granted;
   }, [permissionDenied]);
 
-  // Check camera permission and get location on mount
+  // Initialize camera and location
   useEffect(() => {
     const init = async () => {
       await checkCameraPermission();
 
-      // Try to get location if permission is granted, but don't block
       setIsLoadingLocation(true);
       try {
         const hasLocationPermission = await locationService.hasLocationPermission();
-        
         if (hasLocationPermission) {
-          // Attempt to get current location (non-blocking)
           await getCurrentLocation();
         }
       } catch (error) {
         console.error('Location fetch error:', error);
       } finally {
-        // Always clear loading state after attempt
         setIsLoadingLocation(false);
       }
     };
@@ -145,53 +65,34 @@ export function CameraScreen() {
     init();
   }, [getCurrentLocation, checkCameraPermission]);
 
-  // Listen for app state changes to re-check permission when returning from Settings
+  // Re-check permission when app becomes active
   useEffect(() => {
     const subscription = AppState.addEventListener('change', async (nextAppState) => {
-      // When app comes to foreground, re-check camera permission
       if (nextAppState === 'active') {
         const granted = await checkCameraPermission();
         if (granted) {
-          console.log('Camera permission granted after returning from Settings');
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
       }
     });
 
-    return () => {
-      subscription.remove();
-    };
+    return () => subscription.remove();
   }, [checkCameraPermission]);
 
   const handleCapture = useCallback((uri: string, type: 'image' | 'video') => {
-    console.log('[CameraScreen] handleCapture called:', {
-      uri: uri ? `${uri.substring(0, 50)}...` : 'EMPTY',
-      type,
-      hasCurrentLocation: !!currentLocation,
-    });
-
     if (!uri) {
-      console.error('[CameraScreen] No URI provided to handleCapture');
       Alert.alert('Error', 'Failed to capture media. Please try again.');
       return;
     }
 
-    // Pass current location if valid, otherwise pass null
-    // PostPreviewScreen will handle getting location if needed
-    const isValidLocation = currentLocation && 
-      currentLocation.lat !== 0 && 
+    // Only pass location if valid
+    const isValidLocation = currentLocation &&
+      currentLocation.lat !== 0 &&
       currentLocation.lng !== 0 &&
       currentLocation.name &&
       currentLocation.name !== 'Location Unknown' &&
       currentLocation.name !== 'Current Location' &&
       currentLocation.name.trim() !== '';
-
-    console.log('[CameraScreen] Navigating to PostPreview with:', {
-      mediaUri: uri.substring(0, 50) + '...',
-      mediaType: type,
-      hasLocation: isValidLocation,
-      locationName: isValidLocation ? currentLocation?.name : null,
-    });
 
     navigation.replace('PostPreview', {
       mediaUri: uri,
@@ -203,25 +104,8 @@ export function CameraScreen() {
 
   const handleClose = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-    // Animate out
-    Animated.parallel([
-      Animated.timing(translateY, {
-        toValue: SCREEN_HEIGHT,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 0,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      if (navigation.canGoBack()) {
-        navigation.goBack();
-      }
-    });
-  }, [navigation, translateY, opacity]);
+    navigation.goBack();
+  }, [navigation]);
 
   const requestPermission = useCallback(async () => {
     const { status } = await Camera.requestCameraPermissionsAsync();
@@ -240,6 +124,7 @@ export function CameraScreen() {
     }
   }, []);
 
+  // Loading state
   if (hasPermission === null) {
     return (
       <View style={styles.permissionContainer}>
@@ -249,29 +134,18 @@ export function CameraScreen() {
     );
   }
 
+  // Permission denied state
   if (hasPermission === false) {
     return (
-      <Animated.View
-        style={[
-          styles.permissionContainer,
-          {
-            transform: [{ translateY }],
-            opacity,
-          },
-        ]}
-        {...panResponder.panHandlers}
-      >
-        {/* Swipe indicator */}
-        <View style={styles.swipeIndicator} />
-
+      <View style={styles.permissionContainer}>
         <View style={styles.permissionIconContainer}>
           <Ionicons name="camera" size={64} color={colors.white} />
         </View>
         <Text style={styles.permissionTitle}>Camera Access Required</Text>
         <Text style={styles.permissionText}>
           {permissionDenied
-            ? 'Camera access was denied. Please enable it in Settings to take photos and videos.'
-            : 'We need access to your camera to take photos and videos. Your moments won&apos;t be shared without your permission.'}
+            ? 'Camera access was denied. Please enable it in Settings.'
+            : 'We need access to your camera to take photos.'}
         </Text>
         {permissionDenied ? (
           <Button
@@ -289,35 +163,25 @@ export function CameraScreen() {
           />
         )}
         <Button
-          title="Maybe Later"
+          title="Go Back"
           onPress={handleClose}
           variant="ghost"
           style={styles.backButton}
         />
-
-        <Text style={styles.swipeHint}>Swipe down to close</Text>
-      </Animated.View>
+      </View>
     );
   }
 
+  // Camera view
   return (
-    <Animated.View
-      style={[
-        styles.container,
-        {
-          transform: [{ translateY }],
-          opacity,
-        },
-      ]}
-      {...panResponder.panHandlers}
-    >
+    <View style={styles.container}>
       <CameraViewComponent
         location={currentLocation}
         isLoadingLocation={isLoadingLocation}
         onCapture={handleCapture}
         onClose={handleClose}
       />
-    </Animated.View>
+    </View>
   );
 }
 
@@ -332,14 +196,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.xl,
-  },
-  swipeIndicator: {
-    position: 'absolute',
-    top: 12,
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
   },
   permissionIconContainer: {
     width: 120,
@@ -378,12 +234,5 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.md,
     color: colors.white,
     opacity: 0.8,
-  },
-  swipeHint: {
-    position: 'absolute',
-    bottom: 50,
-    fontSize: typography.sizes.sm,
-    color: colors.white,
-    opacity: 0.5,
   },
 });

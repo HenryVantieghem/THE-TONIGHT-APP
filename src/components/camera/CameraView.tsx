@@ -8,7 +8,6 @@ import {
   Platform,
   Alert,
   Linking,
-  useEffect,
 } from 'react-native';
 import { CameraView as ExpoCameraView, CameraType, FlashMode } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';

@@ -1,2 +1,0 @@
-export { MapScreen } from './MapScreen';
-

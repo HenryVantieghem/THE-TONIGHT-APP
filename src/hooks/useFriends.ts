@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect, useRef } from 'react';
+import { useCallback, useState } from 'react';
 import { useStore, selectUser, selectFriendIds } from '../stores/useStore';
 import * as friendsService from '../services/friends';
 import type { User, Friendship } from '../types';
@@ -13,10 +13,6 @@ export function useFriends() {
   const [sentRequests, setSentRequests] = useState<Friendship[]>([]);
   const [searchResults, setSearchResults] = useState<User[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-
-  // Subscription refs
-  const friendRequestsSubRef = useRef<{ unsubscribe: () => void } | null>(null);
-  const friendshipChangesSubRef = useRef<{ unsubscribe: () => void } | null>(null);
 
   // Load friends
   const loadFriends = useCallback(async () => {
@@ -35,8 +31,7 @@ export function useFriends() {
 
       if (data) {
         setFriends(data);
-        // Extract friend IDs (the other user in each friendship)
-        setFriendIds(data.map((f) => 
+        setFriendIds(data.map((f) =>
           f.requester_id === user.id ? f.addressee_id : f.requester_id
         ));
       }
@@ -54,7 +49,6 @@ export function useFriends() {
 
     try {
       const { data, error } = await friendsService.getPendingRequests(user.id);
-
       if (!error && data) {
         setPendingRequests(data);
       }
@@ -69,7 +63,6 @@ export function useFriends() {
 
     try {
       const { data, error } = await friendsService.getSentRequests(user.id);
-
       if (!error && data) {
         setSentRequests(data);
       }
@@ -86,17 +79,13 @@ export function useFriends() {
   // Send friend request
   const sendFriendRequest = useCallback(
     async (friendId: string) => {
-      if (!user) {
-        return { data: null, error: { message: 'Not authenticated' } };
-      }
+      if (!user) return { data: null, error: { message: 'Not authenticated' } };
 
       try {
         const result = await friendsService.sendFriendRequest(user.id, friendId);
-
         if (result.data) {
           setSentRequests((prev) => [...prev, result.data!]);
         }
-
         return result;
       } catch (err) {
         console.error('Send friend request error:', err);
@@ -109,25 +98,14 @@ export function useFriends() {
   // Accept friend request
   const acceptFriendRequest = useCallback(
     async (friendshipId: string, requesterId: string) => {
-      if (!user) {
-        return { data: null, error: { message: 'Not authenticated' } };
-      }
+      if (!user) return { data: null, error: { message: 'Not authenticated' } };
 
       try {
-        const result = await friendsService.acceptFriendRequest(
-          friendshipId,
-          user.id,
-          requesterId
-        );
+        const result = await friendsService.acceptFriendRequest(friendshipId, user.id, requesterId);
 
         if (!result.error) {
-          // Remove from pending
-          setPendingRequests((prev) =>
-            prev.filter((r) => r.id !== friendshipId)
-          );
-          // Add to friend IDs
+          setPendingRequests((prev) => prev.filter((r) => r.id !== friendshipId));
           addFriendId(requesterId);
-          // Refresh friends list
           loadFriends();
         }
 
@@ -141,38 +119,29 @@ export function useFriends() {
   );
 
   // Decline friend request
-  const declineFriendRequest = useCallback(
-    async (friendshipId: string) => {
-      try {
-        const result = await friendsService.declineFriendRequest(friendshipId);
-
-        if (!result.error) {
-          setPendingRequests((prev) =>
-            prev.filter((r) => r.id !== friendshipId)
-          );
-        }
-
-        return result;
-      } catch (err) {
-        console.error('Decline friend request error:', err);
-        return { data: null, error: { message: 'Failed to decline friend request' } };
+  const declineFriendRequest = useCallback(async (friendshipId: string) => {
+    try {
+      const result = await friendsService.declineFriendRequest(friendshipId);
+      if (!result.error) {
+        setPendingRequests((prev) => prev.filter((r) => r.id !== friendshipId));
       }
-    },
-    []
-  );
+      return result;
+    } catch (err) {
+      console.error('Decline friend request error:', err);
+      return { data: null, error: { message: 'Failed to decline friend request' } };
+    }
+  }, []);
 
   // Remove friend
   const removeFriend = useCallback(
     async (friendId: string) => {
-      if (!user) {
-        return { data: null, error: { message: 'Not authenticated' } };
-      }
+      if (!user) return { data: null, error: { message: 'Not authenticated' } };
 
       try {
         const result = await friendsService.removeFriend(user.id, friendId);
 
         if (!result.error) {
-          setFriends((prev) => prev.filter((f) => 
+          setFriends((prev) => prev.filter((f) =>
             !(f.requester_id === friendId || f.addressee_id === friendId)
           ));
           removeFriendId(friendId);
@@ -190,23 +159,17 @@ export function useFriends() {
   // Block user
   const blockUser = useCallback(
     async (blockedUserId: string) => {
-      if (!user) {
-        return { data: null, error: { message: 'Not authenticated' } };
-      }
+      if (!user) return { data: null, error: { message: 'Not authenticated' } };
 
       try {
         const result = await friendsService.blockUser(user.id, blockedUserId);
 
         if (!result.error) {
-          // Remove from friends if was friend
-          setFriends((prev) => prev.filter((f) => 
+          setFriends((prev) => prev.filter((f) =>
             f.requester_id !== blockedUserId && f.addressee_id !== blockedUserId
           ));
           removeFriendId(blockedUserId);
-          // Remove from pending if exists
-          setPendingRequests((prev) =>
-            prev.filter((r) => r.requester_id !== blockedUserId)
-          );
+          setPendingRequests((prev) => prev.filter((r) => r.requester_id !== blockedUserId));
         }
 
         return result;
@@ -221,9 +184,7 @@ export function useFriends() {
   // Search users
   const searchUsers = useCallback(
     async (query: string) => {
-      if (!user) {
-        return;
-      }
+      if (!user) return;
 
       if (!query.trim()) {
         setSearchResults([]);
@@ -234,7 +195,6 @@ export function useFriends() {
 
       try {
         const { data, error } = await friendsService.searchUsers(query, user.id);
-
         if (!error && data) {
           setSearchResults(data);
         }
@@ -268,74 +228,6 @@ export function useFriends() {
     },
     [friendIds]
   );
-
-  // Subscribe to friend requests
-  useEffect(() => {
-    if (!user) return;
-
-    // Unsubscribe from previous subscription
-    if (friendRequestsSubRef.current) {
-      friendRequestsSubRef.current.unsubscribe();
-    }
-
-    // Subscribe to new friend requests
-    friendRequestsSubRef.current = friendsService.subscribeToFriendRequests(
-      user.id,
-      (newRequest) => {
-        setPendingRequests((prev) => {
-          // Avoid duplicates
-          if (prev.find((r) => r.id === newRequest.id)) {
-            return prev;
-          }
-          return [newRequest, ...prev];
-        });
-      }
-    );
-
-    return () => {
-      if (friendRequestsSubRef.current) {
-        friendRequestsSubRef.current.unsubscribe();
-      }
-    };
-  }, [user]);
-
-  // Subscribe to friendship changes
-  useEffect(() => {
-    if (!user) return;
-
-    // Unsubscribe from previous subscription
-    if (friendshipChangesSubRef.current) {
-      friendshipChangesSubRef.current.unsubscribe();
-    }
-
-    // Subscribe to friendship status changes
-    friendshipChangesSubRef.current = friendsService.subscribeToFriendshipChanges(
-      user.id,
-      (friendId) => {
-        // Friend request accepted
-        addFriendId(friendId);
-        // Refresh friends list
-        loadFriends();
-        // Remove from pending
-        setPendingRequests((prev) =>
-          prev.filter((r) => r.requester_id !== friendId && r.addressee_id !== friendId)
-        );
-      },
-      (friendId) => {
-        // Friend removed
-        removeFriendId(friendId);
-        setFriends((prev) => prev.filter((f) => 
-          f.requester_id !== friendId && f.addressee_id !== friendId
-        ));
-      }
-    );
-
-    return () => {
-      if (friendshipChangesSubRef.current) {
-        friendshipChangesSubRef.current.unsubscribe();
-      }
-    };
-  }, [user, addFriendId, removeFriendId, loadFriends]);
 
   return {
     friends,

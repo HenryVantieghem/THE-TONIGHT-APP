@@ -57,11 +57,6 @@ export async function createPost(
 
       // Get file info after compression
       const fileInfo = await FileSystem.getInfoAsync(processedUri);
-      console.log('📊 [createPost] File info:', {
-        exists: fileInfo.exists,
-        size: fileInfo.size,
-        uri: processedUri.substring(0, 50),
-      });
 
       if (!fileInfo.exists) {
         console.error('❌ [createPost] File does not exist after preparation:', processedUri);
@@ -71,7 +66,15 @@ export async function createPost(
         };
       }
 
-      fileSize = fileInfo.size || preparedMedia.size || 0;
+      // After exists check, we can safely access size
+      const infoSize = fileInfo.size ?? 0;
+      console.log('📊 [createPost] File info:', {
+        exists: fileInfo.exists,
+        size: infoSize,
+        uri: processedUri.substring(0, 50),
+      });
+
+      fileSize = infoSize || preparedMedia.size || 0;
 
       // Check file size (max 10MB) - after compression
       if (isFileTooLarge(fileSize, config.MAX_MEDIA_SIZE_MB)) {
