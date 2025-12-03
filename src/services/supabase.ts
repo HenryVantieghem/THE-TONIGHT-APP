@@ -4,14 +4,27 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
+// Validate environment variables
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn(
-    'Missing Supabase environment variables. Please set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY in .env.local'
+  console.error(
+    '❌ CRITICAL: Missing Supabase environment variables!\n' +
+    'Please create a .env.local file in the project root with:\n' +
+    'EXPO_PUBLIC_SUPABASE_URL=https://fgoonvotrhuavidqrtdh.supabase.co\n' +
+    'EXPO_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here\n\n' +
+    'Current values:\n' +
+    `  URL: ${supabaseUrl || 'MISSING'}\n` +
+    `  Key: ${supabaseAnonKey ? 'SET (length: ' + supabaseAnonKey.length + ')' : 'MISSING'}`
   );
+} else {
+  console.log('✅ Supabase configuration loaded:', {
+    url: supabaseUrl,
+    keyLength: supabaseAnonKey.length,
+    keyPrefix: supabaseAnonKey.substring(0, 20) + '...'
+  });
 }
 
 export const supabase = createClient(
-  supabaseUrl || '',
+  supabaseUrl || 'https://fgoonvotrhuavidqrtdh.supabase.co',
   supabaseAnonKey || '',
   {
     auth: {
@@ -22,6 +35,19 @@ export const supabase = createClient(
     },
   }
 );
+
+// Test connection on initialization
+supabase.from('profiles').select('count', { count: 'exact', head: true })
+  .then(({ error, count }) => {
+    if (error) {
+      console.error('❌ Supabase connection test failed:', error.message);
+    } else {
+      console.log('✅ Supabase connected successfully. Profiles count:', count);
+    }
+  })
+  .catch((err) => {
+    console.error('❌ Supabase connection error:', err);
+  });
 
 // Database table names
 export const TABLES = {
