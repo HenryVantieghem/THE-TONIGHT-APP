@@ -9,6 +9,15 @@ import type { Post, Reaction, ReactionEmoji, CreatePostPayload, ApiResponse } fr
 export async function createPost(
   payload: CreatePostPayload
 ): Promise<ApiResponse<Post>> {
+  console.log('🚀 [createPost] Starting post creation:', {
+    userId: payload.userId,
+    mediaType: payload.mediaType,
+    hasCaption: !!payload.caption,
+    hasLocation: !!payload.location,
+    locationName: payload.location?.name,
+    mediaUri: payload.mediaUri?.substring(0, 50) + '...',
+  });
+
   try {
     const { userId, mediaUri, mediaType, caption, location } = payload;
 
@@ -17,30 +26,45 @@ export async function createPost(
     const fileName = `${userId}/${Date.now()}.${fileExtension}`;
     const contentType = mediaType === 'video' ? 'video/mp4' : 'image/jpeg';
 
+    console.log('🔐 [createPost] Getting session...');
     // Get session for authentication
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     if (sessionError || !session) {
+      console.error('❌ [createPost] Session error:', sessionError);
       return {
         data: null,
         error: { message: 'Not authenticated. Please log in again.' },
       };
     }
+    console.log('✅ [createPost] Session valid, user:', session.user.id);
 
     // Read file using expo-file-system (most reliable in React Native)
     let fileData: ArrayBuffer;
     let fileSize: number;
     let processedUri = mediaUri;
 
+    console.log('📁 [createPost] Processing media file...');
     try {
       // Compress/prepare media for upload (images get compressed, videos pass through)
+      console.log('🔄 [createPost] Preparing media for upload...');
       const preparedMedia = await prepareMediaForUpload(mediaUri, mediaType);
       processedUri = preparedMedia.uri;
+      console.log('✅ [createPost] Media prepared:', {
+        originalUri: mediaUri.substring(0, 50),
+        processedUri: processedUri.substring(0, 50),
+        size: preparedMedia.size,
+      });
 
       // Get file info after compression
       const fileInfo = await FileSystem.getInfoAsync(processedUri);
+      console.log('📊 [createPost] File info:', {
+        exists: fileInfo.exists,
+        size: fileInfo.size,
+        uri: processedUri.substring(0, 50),
+      });
 
       if (!fileInfo.exists) {
-        console.error('File does not exist after preparation:', processedUri);
+        console.error('❌ [createPost] File does not exist after preparation:', processedUri);
         return {
           data: null,
           error: { message: 'Media file not found after processing. Please try capturing again.' },
@@ -51,7 +75,7 @@ export async function createPost(
 
       // Check file size (max 10MB) - after compression
       if (isFileTooLarge(fileSize, config.MAX_MEDIA_SIZE_MB)) {
-        console.error(`File too large: ${fileSize} bytes (${(fileSize / 1024 / 1024).toFixed(1)}MB)`);
+        console.error(`❌ [createPost] File too large: ${fileSize} bytes (${(fileSize / 1024 / 1024).toFixed(1)}MB)`);
         return {
           data: null,
           error: {
@@ -60,23 +84,25 @@ export async function createPost(
         };
       }
 
+      console.log('📖 [createPost] Reading file as base64...');
       // Read file as base64
       const base64Data = await FileSystem.readAsStringAsync(processedUri, {
         encoding: 'base64',
       });
 
       if (!base64Data || base64Data.length === 0) {
-        console.error('File read resulted in empty data');
+        console.error('❌ [createPost] File read resulted in empty data');
         return {
           data: null,
           error: { message: 'Media file is empty or corrupted. Please try capturing again.' },
         };
       }
 
+      console.log('🔄 [createPost] Converting base64 to ArrayBuffer...');
       // Convert base64 to ArrayBuffer
       fileData = decode(base64Data);
 
-      console.log(`File prepared successfully: ${(fileSize / 1024).toFixed(1)}KB, type: ${mediaType}`);
+      console.log(`✅ [createPost] File prepared successfully: ${(fileSize / 1024).toFixed(1)}KB, type: ${mediaType}`);
     } catch (fileError: any) {
       console.error('File preparation error:', fileError);
       console.error('Original media URI:', mediaUri);
@@ -112,6 +138,12 @@ export async function createPost(
       };
     }
 
+    console.log('☁️ [createPost] Uploading to Supabase storage...', {
+      bucket: BUCKETS.POST_MEDIA,
+      fileName,
+      contentType,
+      fileSize: (fileSize / 1024).toFixed(1) + 'KB',
+    });
     // Upload to Supabase storage using ArrayBuffer
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(BUCKETS.POST_MEDIA)
@@ -122,11 +154,13 @@ export async function createPost(
       });
 
     if (uploadError) {
-      console.error('Storage upload error:', uploadError);
+      console.error('❌ [createPost] Storage upload error:', uploadError);
       console.error('Upload error details:', {
         message: uploadError.message,
         statusCode: (uploadError as any).statusCode,
         error: (uploadError as any).error,
+        bucket: BUCKETS.POST_MEDIA,
+        fileName,
       });
       
       let errorMessage = 'Failed to upload media. Please try again.';
@@ -153,17 +187,23 @@ export async function createPost(
       };
     }
 
+    console.log('✅ [createPost] Upload successful!', uploadData);
+
     // Get public URL
+    console.log('🔗 [createPost] Getting public URL...');
     const { data: urlData } = supabase.storage
       .from(BUCKETS.POST_MEDIA)
       .getPublicUrl(fileName);
 
     const mediaUrl = urlData.publicUrl;
+    console.log('✅ [createPost] Public URL:', mediaUrl);
 
     // Calculate expiry time (1 hour from now)
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + config.POST_EXPIRY_HOURS);
+    console.log('⏰ [createPost] Post will expire at:', expiresAt.toISOString());
 
+    console.log('📍 [createPost] Processing location data...');
     // Location is now OPTIONAL - validate only if provided
     let locationName: string | null = null;
     let lat: number | null = null;
@@ -172,6 +212,13 @@ export async function createPost(
     let locationState: string | null = null;
 
     if (location && location.name && location.name.trim() !== '') {
+      console.log('📍 [createPost] Location provided:', {
+        name: location.name,
+        lat: location.lat,
+        lng: location.lng,
+        city: location.city,
+        state: location.state,
+      });
       // Validate location coordinates are valid numbers
       const parsedLat = typeof location.lat === 'number' ? location.lat : parseFloat(String(location.lat));
       const parsedLng = typeof location.lng === 'number' ? location.lng : parseFloat(String(location.lng));
@@ -189,9 +236,15 @@ export async function createPost(
         lng = parsedLng;
         locationCity = location.city?.trim() || null;
         locationState = location.state?.trim() || null;
+        console.log('✅ [createPost] Location validated and parsed');
+      } else {
+        console.warn('⚠️ [createPost] Location coordinates invalid, will post without location');
       }
+    } else {
+      console.log('ℹ️ [createPost] No location provided, posting without location');
     }
 
+    console.log('💾 [createPost] Inserting post record into database...');
     // Insert post record - location fields can be null
     const { data: postData, error: postError } = await supabase
       .from(TABLES.POSTS)
@@ -216,28 +269,54 @@ export async function createPost(
       .single();
 
     if (postError) {
-      console.error('Post insert error:', postError);
+      console.error('❌ [createPost] Post insert error:', postError);
+      console.error('Post insert error details:', {
+        message: postError.message,
+        code: postError.code,
+        details: postError.details,
+        hint: postError.hint,
+      });
       return {
         data: null,
         error: { message: postError.message || 'Failed to create post. Please try again.' },
       };
     }
 
+    console.log('✅ [createPost] Post record created successfully!', {
+      postId: postData.id,
+      hasLocation: !!locationName,
+    });
+
     // Update user stats (non-blocking, don't fail if this errors)
+    console.log('📊 [createPost] Updating user stats...');
     try {
       const { error: statsError } = await supabase.rpc('increment_user_posts', { user_id: userId });
       if (statsError) {
-        console.warn('Failed to increment user posts count:', statsError);
+        console.warn('⚠️ [createPost] Failed to increment user posts count:', statsError);
         // Don't fail the post creation if stats update fails
+      } else {
+        console.log('✅ [createPost] User stats updated');
       }
     } catch (statsErr) {
-      console.warn('Error updating user stats:', statsErr);
+      console.warn('⚠️ [createPost] Error updating user stats:', statsErr);
       // Continue even if stats update fails
     }
 
+    console.log('🎉 [createPost] POST CREATED SUCCESSFULLY!', {
+      postId: postData.id,
+      mediaUrl: mediaUrl.substring(0, 60) + '...',
+      hasLocation: !!locationName,
+      expiresAt: expiresAt.toISOString(),
+    });
+
     return { data: postData as Post, error: null };
   } catch (err) {
-    console.error('Create post error:', err);
+    console.error('❌ [createPost] UNEXPECTED ERROR:', err);
+    console.error('Error details:', {
+      name: (err as any)?.name,
+      message: (err as any)?.message,
+      stack: (err as any)?.stack?.split('\n').slice(0, 3).join('\n'),
+    });
     return {
       data: null,
       error: { message: 'An unexpected error occurred. Please try again.' },

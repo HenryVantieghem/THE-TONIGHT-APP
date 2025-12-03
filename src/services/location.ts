@@ -33,10 +33,14 @@ export async function hasLocationPermission(): Promise<boolean> {
 export async function getCurrentLocation(
   accuracy: Location.Accuracy = Location.Accuracy.Balanced
 ): Promise<ApiResponse<{ lat: number; lng: number }>> {
+  console.log('📍 [getCurrentLocation] Starting, accuracy:', accuracy);
+  
   try {
     const hasPermission = await hasLocationPermission();
+    console.log('📍 [getCurrentLocation] Permission check:', hasPermission);
 
     if (!hasPermission) {
+      console.warn('⚠️ [getCurrentLocation] No location permission');
       return {
         data: null,
         error: { message: 'Location permission not granted.' },
@@ -45,6 +49,8 @@ export async function getCurrentLocation(
 
     // Create a timeout promise (longer timeout for highest accuracy)
     const timeout = accuracy === Location.Accuracy.Highest ? 15000 : 10000;
+    console.log(`📍 [getCurrentLocation] Fetching location with ${timeout}ms timeout...`);
+    
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => reject(new Error('Location request timed out')), timeout);
     });
@@ -57,8 +63,15 @@ export async function getCurrentLocation(
       timeoutPromise,
     ]);
 
+    console.log('✅ [getCurrentLocation] Location received:', {
+      lat: location.coords.latitude,
+      lng: location.coords.longitude,
+      accuracy: location.coords.accuracy,
+    });
+
     // Validate coordinates
     if (!location || !location.coords) {
+      console.error('❌ [getCurrentLocation] Invalid location data received');
       return {
         data: null,
         error: { message: 'Invalid location data received.' },
@@ -76,11 +89,14 @@ export async function getCurrentLocation(
       longitude < -180 || 
       longitude > 180
     ) {
+      console.error('❌ [getCurrentLocation] Invalid coordinates:', { latitude, longitude });
       return {
         data: null,
         error: { message: 'Invalid coordinates received.' },
       };
     }
+
+    console.log('✅ [getCurrentLocation] Valid coordinates:', { lat: latitude, lng: longitude });
 
     return {
       data: {
@@ -90,7 +106,7 @@ export async function getCurrentLocation(
       error: null,
     };
   } catch (err: any) {
-    console.error('Get location error:', err);
+    console.error('❌ [getCurrentLocation] Error:', err);
     const message = err?.message?.includes('timed out')
       ? 'Location request timed out. Please try again.'
       : 'Failed to get current location.';
@@ -103,14 +119,19 @@ export async function getCurrentLocation(
 
 // Search for locations by query string (forward geocoding)
 export async function searchLocations(query: string): Promise<ApiResponse<LocationData[]>> {
+  console.log('🔍 [searchLocations] Searching for:', query);
+  
   try {
     if (!query || query.trim().length === 0) {
+      console.log('ℹ️ [searchLocations] Empty query, returning empty results');
       return { data: [], error: null };
     }
 
     const results = await Location.geocodeAsync(query);
+    console.log('🔍 [searchLocations] Found', results.length, 'results');
 
     if (results.length === 0) {
+      console.log('ℹ️ [searchLocations] No results found');
       return { data: [], error: null };
     }
 
@@ -150,12 +171,14 @@ export async function searchLocations(query: string): Promise<ApiResponse<Locati
       };
     });
 
+    console.log('✅ [searchLocations] Processed', locations.length, 'locations');
     return { data: locations, error: null };
   } catch (err) {
-    console.error('Search locations error:', err);
+    console.error('❌ [searchLocations] Error:', err);
+    // Don't fail completely - return empty results
     return {
       data: [],
-      error: { message: 'Failed to search locations.' },
+      error: null, // Treat as no results, not an error
     };
   }
 }
@@ -165,16 +188,21 @@ export async function reverseGeocode(
   lat: number,
   lng: number
 ): Promise<ApiResponse<LocationData>> {
+  console.log('📍 [reverseGeocode] Starting reverse geocode:', { lat, lng });
+  
   try {
     const results = await Location.reverseGeocodeAsync({
       latitude: lat,
       longitude: lng,
     });
 
+    console.log('📍 [reverseGeocode] Results received:', results.length, 'locations');
+
     if (results.length === 0) {
+      console.warn('⚠️ [reverseGeocode] No results, using generic location name');
       return {
         data: {
-          name: 'Unknown Location',
+          name: 'Current Location',
           lat,
           lng,
         },
@@ -183,6 +211,7 @@ export async function reverseGeocode(
     }
 
     const result = results[0];
+    console.log('📍 [reverseGeocode] First result:', result);
 
     // Build location name from available data
     // expo-location reverseGeocodeAsync returns LocationGeocodedAddress
@@ -210,25 +239,30 @@ export async function reverseGeocode(
       name = 'Current Location';
     }
 
+    const locationData = {
+      name,
+      lat,
+      lng,
+      city: city || undefined,
+      state: region || undefined,
+    };
+
+    console.log('✅ [reverseGeocode] Location data created:', locationData);
+
     return {
-      data: {
-        name,
-        lat,
-        lng,
-        city: city || undefined,
-        state: region || undefined,
-      },
+      data: locationData,
       error: null,
     };
   } catch (err) {
-    console.error('Reverse geocode error:', err);
+    console.error('❌ [reverseGeocode] Error:', err);
+    // Return a fallback location instead of failing
     return {
       data: {
         name: 'Current Location',
         lat,
         lng,
       },
-      error: null,
+      error: null, // Don't treat this as an error - just use fallback
     };
   }
 }
@@ -237,9 +271,12 @@ export async function reverseGeocode(
 export async function getCurrentLocationWithAddress(
   accuracy: Location.Accuracy = Location.Accuracy.Balanced
 ): Promise<ApiResponse<LocationData>> {
+  console.log('📍 [getCurrentLocationWithAddress] Starting location fetch...');
+  
   const locationResult = await getCurrentLocation(accuracy);
 
   if (locationResult.error || !locationResult.data) {
+    console.error('❌ [getCurrentLocationWithAddress] Failed to get coordinates:', locationResult.error);
     return {
       data: null,
       error: locationResult.error || { message: 'Failed to get location.' },
@@ -247,7 +284,25 @@ export async function getCurrentLocationWithAddress(
   }
 
   const { lat, lng } = locationResult.data;
-  return reverseGeocode(lat, lng);
+  console.log('✅ [getCurrentLocationWithAddress] Got coordinates, reverse geocoding...');
+  
+  const geocodeResult = await reverseGeocode(lat, lng);
+  
+  // Even if reverse geocoding fails, we have coordinates, so return a basic location
+  if (!geocodeResult.data) {
+    console.warn('⚠️ [getCurrentLocationWithAddress] Geocoding failed, using basic location');
+    return {
+      data: {
+        name: 'Current Location',
+        lat,
+        lng,
+      },
+      error: null, // Don't fail - we have valid coordinates
+    };
+  }
+  
+  console.log('✅ [getCurrentLocationWithAddress] Location complete:', geocodeResult.data.name);
+  return geocodeResult;
 }
 
 // Format location display based on precision setting

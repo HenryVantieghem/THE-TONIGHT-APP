@@ -42,7 +42,7 @@ export function FloatingCameraButton({
     });
   };
 
-  // Ghost Mode: Larger, glowing yellow button
+  // Dark red glowing button
   const size = 72;
   const iconSize = 32;
 

@@ -25,14 +25,14 @@ npx expo install <pkg>    # Add package
 
 ## Colors
 ```typescript
-primary: '#6366F1'      // Indigo accent
-background: '#FFFFFF'   // White
-surface: '#F9FAFB'      // Cards
-text: '#111827'         // Primary text
-textSecondary: '#6B7280'
-timerGreen: '#10B981'   // >50% time
-timerYellow: '#F59E0B'  // 25-50%
-timerRed: '#EF4444'     // <25%
+primary: '#DC143C'      // Dark red (crimson)
+background: '#000000'   // Pure black
+surface: '#0A0A0A'      // Near black
+text: '#FFFFFF'         // White
+textSecondary: 'rgba(255,255,255,0.7)'
+timerGreen: '#00FF41'   // Matrix green
+timerYellow: '#FFD600'  // Bright yellow
+timerRed: '#DC143C'     // Crimson red
 ```
 
 ## Structure

@@ -24,12 +24,12 @@
 
 ### Design System - COMPLETE OVERHAUL ✅
 
-**Before**: Yellow Snapchat-inspired theme  
+**Before**: Light theme with various colors  
 **After**: Black/White/Dark Red liquid glass aesthetic
 
 **Stats:**
 - 🎨 **40+ files modified** with new color scheme
-- 🌈 **Primary color changed**: #FFFC00 → #DC143C
+- 🌈 **Primary color**: #DC143C (Crimson Red)
 - 🖤 **Backgrounds refined**: Pure black (#000000) with subtle grays
 - 💎 **Glass effects enhanced**: 24-64px blur with refined opacity
 - 🔴 **Red accents**: Strategic placement throughout UI
