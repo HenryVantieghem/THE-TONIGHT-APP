@@ -10,6 +10,7 @@ import {
   Linking,
   Platform,
   AppState,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -163,6 +164,18 @@ export function CameraScreen() {
   }, [checkCameraPermission]);
 
   const handleCapture = useCallback((uri: string, type: 'image' | 'video') => {
+    console.log('[CameraScreen] handleCapture called:', {
+      uri: uri ? `${uri.substring(0, 50)}...` : 'EMPTY',
+      type,
+      hasCurrentLocation: !!currentLocation,
+    });
+
+    if (!uri) {
+      console.error('[CameraScreen] No URI provided to handleCapture');
+      Alert.alert('Error', 'Failed to capture media. Please try again.');
+      return;
+    }
+
     // Pass current location if valid, otherwise pass null
     // PostPreviewScreen will handle getting location if needed
     const isValidLocation = currentLocation && 
@@ -172,6 +185,13 @@ export function CameraScreen() {
       currentLocation.name !== 'Location Unknown' &&
       currentLocation.name !== 'Current Location' &&
       currentLocation.name.trim() !== '';
+
+    console.log('[CameraScreen] Navigating to PostPreview with:', {
+      mediaUri: uri.substring(0, 50) + '...',
+      mediaType: type,
+      hasLocation: isValidLocation,
+      locationName: isValidLocation ? currentLocation?.name : null,
+    });
 
     navigation.replace('PostPreview', {
       mediaUri: uri,

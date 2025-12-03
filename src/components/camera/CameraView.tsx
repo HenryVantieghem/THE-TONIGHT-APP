@@ -8,6 +8,7 @@ import {
   Platform,
   Alert,
   Linking,
+  useEffect,
 } from 'react-native';
 import { CameraView as ExpoCameraView, CameraType, FlashMode } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
@@ -71,26 +72,40 @@ export function CameraViewComponent({
   }, []);
 
   const handleCapture = useCallback(async () => {
-    if (!cameraRef.current) return;
+    if (!cameraRef.current) {
+      console.error('[Camera] Camera ref not available');
+      return;
+    }
 
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       
+      console.log('[Camera] Taking picture...');
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.8,
         skipProcessing: Platform.OS === 'android',
       });
 
+      console.log('[Camera] Photo result:', {
+        hasUri: !!photo?.uri,
+        uri: photo?.uri ? `${photo.uri.substring(0, 50)}...` : 'NONE',
+        width: photo?.width,
+        height: photo?.height,
+      });
+
       if (photo?.uri) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        console.log('[Camera] Calling onCapture with URI:', photo.uri);
         onCapture(photo.uri, 'image');
       } else {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        console.error('No photo URI returned');
+        console.error('[Camera] No photo URI returned from camera');
+        Alert.alert('Camera Error', 'Failed to capture photo. Please try again.');
       }
     } catch (error) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      console.error('Error taking photo:', error);
+      console.error('[Camera] Error taking photo:', error);
+      Alert.alert('Camera Error', 'Failed to capture photo. Please try again.');
     }
   }, [onCapture]);
 

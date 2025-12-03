@@ -164,6 +164,16 @@ export function PostPreviewScreen() {
   const route = useRoute<PostPreviewRouteProp>();
   const { mediaUri, mediaType, location: initialLocation, isLoadingLocation: initialLoadingLocation } = route.params;
 
+  // Debug logging
+  useEffect(() => {
+    console.log('[PostPreview] Received params:', {
+      mediaUri: mediaUri ? `${mediaUri.substring(0, 50)}...` : 'UNDEFINED',
+      mediaType,
+      hasLocation: !!initialLocation,
+      locationName: initialLocation?.name,
+    });
+  }, []);
+
   const insets = useSafeAreaInsets();
   const { createPost } = usePosts();
   const { 
@@ -175,13 +185,13 @@ export function PostPreviewScreen() {
   const [caption, setCaption] = useState('');
   const [isPosting, setIsPosting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(initialLocation);
+  const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(initialLocation || null);
   const [isRefreshingLocation, setIsRefreshingLocation] = useState(initialLoadingLocation || false);
   const [hasLocationPermission, setHasLocationPermission] = useState<boolean | null>(null);
   const [locationPermissionDeclined, setLocationPermissionDeclined] = useState(false);
 
-  // Video player for video preview
-  const videoPlayer = useVideoPlayer(mediaType === 'video' ? mediaUri : '');
+  // Video player for video preview - only initialize if we have a valid URI
+  const videoPlayer = useVideoPlayer(mediaType === 'video' && mediaUri ? mediaUri : '');
   
   // Configure video player when it's created
   useEffect(() => {
