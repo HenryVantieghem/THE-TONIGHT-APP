@@ -18,16 +18,16 @@ import { useStore } from '../../stores/useStore';
 import { typography } from '../../constants/typography';
 import type { AuthStackParamList } from '../../types';
 
-// iOS auth color palette
+// Ghost mode colors
 const authColors = {
-  background: '#FFFFFF',
-  textPrimary: '#000000',
-  textSecondary: '#8E8E93',
-  primary: '#007AFF',
-  cardBackground: '#F2F2F7',
-  cardBorder: '#E5E5EA',
-  success: '#34C759',
-  successLight: '#DCFCE7',
+  background: colors.background,
+  textPrimary: colors.text,
+  textSecondary: colors.textSecondary,
+  primary: colors.primary,
+  cardBackground: colors.glass,
+  cardBorder: colors.border,
+  success: colors.accentGreen,
+  successLight: colors.glassYellow,
 };
 
 type PermissionStatus = 'granted' | 'denied' | 'undetermined';
@@ -219,9 +219,12 @@ export function PermissionsScreen() {
       <View style={styles.content}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Enable Features</Text>
+          <View style={styles.titleIcon}>
+            <Ionicons name="flash" size={48} color={colors.primary} />
+          </View>
+          <Text style={styles.title}>Unlock Tonight</Text>
           <Text style={styles.subtitle}>
-            Camera is required to share moments. Location is optional.
+            Grant access to start sharing moments
           </Text>
         </View>
 
@@ -294,11 +297,22 @@ const styles = StyleSheet.create({
   },
   permissionCard: {
     backgroundColor: authColors.cardBackground,
-    borderRadius: 12,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: authColors.cardBorder,
-    padding: 16,
+    padding: 20,
     marginBottom: 16,
+  },
+  titleIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.glassYellow,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: colors.primary,
   },
   cardContent: {
     flexDirection: 'row',

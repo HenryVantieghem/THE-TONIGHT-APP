@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   Dimensions,
   Platform,
+  Alert,
+  Linking,
 } from 'react-native';
 import { CameraView as ExpoCameraView, CameraType, FlashMode } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
@@ -153,6 +155,41 @@ export function CameraViewComponent({
 
   const handlePickImage = useCallback(async () => {
     try {
+      // Check media library permission first
+      const { status: existingStatus } = await ImagePicker.getMediaLibraryPermissionsAsync();
+      
+      let finalStatus = existingStatus;
+      
+      // Request permission if not granted
+      if (existingStatus !== 'granted') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        finalStatus = status;
+      }
+      
+      // If permission denied, show alert
+      if (finalStatus !== 'granted') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        Alert.alert(
+          'Photo Library Access Required',
+          'Please grant photo library access to select photos and videos.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Open Settings',
+              onPress: () => {
+                if (Platform.OS === 'ios') {
+                  Linking.openURL('app-settings:');
+                } else {
+                  Linking.openSettings();
+                }
+              },
+            },
+          ]
+        );
+        return;
+      }
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images', 'videos'],
         quality: 0.8,
@@ -162,10 +199,13 @@ export function CameraViewComponent({
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
         const type = asset.type === 'video' ? 'video' : 'image';
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         onCapture(asset.uri, type);
       }
     } catch (error) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to open photo library. Please try again.');
     }
   }, [onCapture]);
 

@@ -132,7 +132,8 @@ export type MainStackParamList = {
   PostPreview: {
     mediaUri: string;
     mediaType: 'image' | 'video';
-    location: LocationData;
+    location: LocationData | null;
+    isLoadingLocation?: boolean;
     selectedLocation?: LocationData; // For updates from LocationSearch
   };
   LocationSearch: {

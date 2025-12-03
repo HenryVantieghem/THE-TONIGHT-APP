@@ -15,6 +15,7 @@ import {
   Linking,
   ScrollView,
 } from 'react-native';
+import * as FileSystem from 'expo-file-system';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Image } from 'expo-image';
@@ -161,7 +162,7 @@ const successStyles = StyleSheet.create({
 export function PostPreviewScreen() {
   const navigation = useNavigation<PostPreviewNavigationProp>();
   const route = useRoute<PostPreviewRouteProp>();
-  const { mediaUri, mediaType, location: initialLocation } = route.params;
+  const { mediaUri, mediaType, location: initialLocation, isLoadingLocation: initialLoadingLocation } = route.params;
 
   const insets = useSafeAreaInsets();
   const { createPost } = usePosts();
@@ -174,17 +175,10 @@ export function PostPreviewScreen() {
   const [caption, setCaption] = useState('');
   const [isPosting, setIsPosting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(
-    initialLocation && initialLocation.name && initialLocation.name !== '' 
-      ? initialLocation 
-      : null
-  );
-  const [isRefreshingLocation, setIsRefreshingLocation] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(initialLocation);
+  const [isRefreshingLocation, setIsRefreshingLocation] = useState(initialLoadingLocation || false);
   const [hasLocationPermission, setHasLocationPermission] = useState<boolean | null>(null);
-  const [locationError, setLocationError] = useState<string | null>(null);
-
-  // Track if we've already tried to auto-fetch location
-  const hasTriedAutoFetch = useRef(false);
+  const [locationPermissionDeclined, setLocationPermissionDeclined] = useState(false);
 
   // Video player for video preview
   const videoPlayer = useVideoPlayer(mediaType === 'video' ? mediaUri : '');
@@ -222,46 +216,45 @@ export function PostPreviewScreen() {
     const params = route.params as any;
     if (params?.selectedLocation) {
       setSelectedLocation(params.selectedLocation);
-      setLocationError(null);
       // Clear the param to avoid re-applying
       navigation.setParams({ selectedLocation: undefined } as any);
     }
   }, [route.params, navigation]);
 
-  // Auto-fetch location on mount if needed
+  // Auto-fetch location ONLY if already loading or if permission is already granted and no location yet
   useEffect(() => {
     const initLocation = async () => {
-      if (hasTriedAutoFetch.current) return;
-      hasTriedAutoFetch.current = true;
+      // If we already have a location, don't auto-fetch
+      if (selectedLocation) {
+        setIsRefreshingLocation(false);
+        return;
+      }
 
       // Check permission first
       const hasPermission = await checkLocationPermission();
       setHasLocationPermission(hasPermission);
 
-      // If we don't have a valid location, try to get one
-      if (!selectedLocation && hasPermission) {
+      // Only auto-fetch if permission is already granted (don't prompt user automatically)
+      if (hasPermission && !selectedLocation && !locationPermissionDeclined) {
         setIsRefreshingLocation(true);
-        setLocationError(null);
         try {
           const newLocation = await refreshLocation();
           if (newLocation && newLocation.lat !== 0 && newLocation.lng !== 0 && newLocation.name) {
             setSelectedLocation(newLocation);
-          } else {
-            setLocationError('Could not determine your location. Please select manually.');
           }
         } catch (error) {
           console.error('Failed to get location:', error);
-          setLocationError('Could not get your location. Please select manually.');
+          // Fail silently - location is optional
         } finally {
           setIsRefreshingLocation(false);
         }
-      } else if (!selectedLocation && !hasPermission) {
-        setLocationError('Location permission required. Tap to enable.');
+      } else {
+        setIsRefreshingLocation(false);
       }
     };
 
     initLocation();
-  }, [checkLocationPermission, refreshLocation, selectedLocation]);
+  }, [checkLocationPermission, refreshLocation, selectedLocation, locationPermissionDeclined]);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -287,15 +280,21 @@ export function PostPreviewScreen() {
   const characterCount = caption.length;
   const isOverLimit = characterCount > config.MAX_CAPTION_LENGTH;
 
-  // Check if location is valid for posting
+  // Check if location is valid for posting (simpler validation)
   const isLocationValid = useCallback(() => {
     if (!selectedLocation) return false;
+    
+    // Check name exists and is not empty
     if (!selectedLocation.name || selectedLocation.name.trim() === '') return false;
-    if (selectedLocation.lat === undefined || selectedLocation.lng === undefined) return false;
-    if (isNaN(selectedLocation.lat) || isNaN(selectedLocation.lng)) return false;
-    if (selectedLocation.lat === 0 && selectedLocation.lng === 0) return false;
-    if (selectedLocation.lat < -90 || selectedLocation.lat > 90) return false;
-    if (selectedLocation.lng < -180 || selectedLocation.lng > 180) return false;
+    
+    // Check coordinates are valid numbers within range
+    const lat = selectedLocation.lat;
+    const lng = selectedLocation.lng;
+    
+    if (typeof lat !== 'number' || typeof lng !== 'number') return false;
+    if (isNaN(lat) || isNaN(lng)) return false;
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return false;
+    
     return true;
   }, [selectedLocation]);
 
@@ -310,17 +309,27 @@ export function PostPreviewScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     
     // Check permission first
-    if (hasLocationPermission === false) {
+    if (hasLocationPermission === false && !locationPermissionDeclined) {
       const granted = await requestLocationPermission();
       setHasLocationPermission(granted);
       
       if (!granted) {
-      Alert.alert(
+        // Mark that user declined, don't ask again this session
+        setLocationPermissionDeclined(true);
+        
+        Alert.alert(
           'Location Permission Required',
-          'To tag your posts with your location, please enable location access in Settings.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
+          'To tag your posts with your location, please enable location access in Settings. You can still post without a location.',
+          [
+            { 
+              text: 'Skip', 
+              style: 'cancel',
+              onPress: () => {
+                // User explicitly wants to skip location
+                setLocationPermissionDeclined(true);
+              }
+            },
+            { 
               text: 'Open Settings', 
               onPress: () => {
                 if (Platform.OS === 'ios') {
@@ -329,15 +338,34 @@ export function PostPreviewScreen() {
                   Linking.openSettings();
                 }
               }
+            }
+          ]
+        );
+        return;
+      }
+    } else if (locationPermissionDeclined) {
+      // User already declined this session, don't show alert again
+      Alert.alert(
+        'Location Access Disabled',
+        'You chose to skip location access. You can still post without a location, or enable it in Settings.',
+        [
+          { text: 'OK', style: 'cancel' },
+          {
+            text: 'Open Settings',
+            onPress: () => {
+              if (Platform.OS === 'ios') {
+                Linking.openURL('app-settings:');
+              } else {
+                Linking.openSettings();
+              }
+            }
           }
         ]
       );
       return;
     }
-    }
 
     setIsRefreshingLocation(true);
-    setLocationError(null);
     
     try {
       const newLocation = await refreshLocation();
@@ -345,17 +373,25 @@ export function PostPreviewScreen() {
         setSelectedLocation(newLocation);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
-        setLocationError('Could not get your location. Try selecting manually.');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        Alert.alert(
+          'Location Unavailable',
+          'Could not get your current location. You can search for a location manually or post without one.',
+          [{ text: 'OK' }]
+        );
       }
     } catch (error) {
       console.error('Failed to refresh location:', error);
-      setLocationError('Failed to get location. Please try again.');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        'Location Error',
+        'Failed to get location. You can search for a location manually or post without one.',
+        [{ text: 'OK' }]
+      );
     } finally {
       setIsRefreshingLocation(false);
     }
-  }, [hasLocationPermission, requestLocationPermission, refreshLocation]);
+  }, [hasLocationPermission, locationPermissionDeclined, requestLocationPermission, refreshLocation]);
 
   const handlePost = useCallback(async () => {
     // Validate caption
@@ -365,10 +401,40 @@ export function PostPreviewScreen() {
       return;
     }
 
-    // Validate media
+    // Validate media exists
     if (!mediaUri) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', 'No media to post. Please go back and capture a photo or video.');
+      return;
+    }
+
+    // Validate media file is accessible and check size
+    try {
+      const fileInfo = await FileSystem.getInfoAsync(mediaUri);
+      
+      if (!fileInfo.exists) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        Alert.alert('Media Not Found', 'The media file could not be found. Please try capturing again.');
+        return;
+      }
+
+      const fileSizeBytes = fileInfo.size || 0;
+      const fileSizeMB = fileSizeBytes / (1024 * 1024);
+      
+      // Check file size (max 10MB for images, 50MB for videos before compression)
+      const maxSize = mediaType === 'video' ? 50 : 10;
+      if (fileSizeMB > maxSize) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        Alert.alert(
+          'File Too Large',
+          `${mediaType === 'video' ? 'Video' : 'Image'} is ${fileSizeMB.toFixed(1)}MB. Maximum size is ${maxSize}MB. Please try again with a smaller file.`
+        );
+        return;
+      }
+    } catch (error) {
+      console.error('Error validating media file:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Error', 'Could not validate media file. Please try again.');
       return;
     }
 
@@ -469,27 +535,35 @@ export function PostPreviewScreen() {
     return colors.textTertiary;
   };
 
-  // Determine if we can post - location is OPTIONAL
-  const canPost = !isPosting && !isOverLimit && !isRefreshingLocation;
+  // Determine if we can post - media and caption are validated, location is OPTIONAL
+  const canPost = !isPosting && !isOverLimit;
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      {/* Header */}
+      {/* Header - Glass effect */}
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
         <TouchableOpacity
           onPress={handleCancel}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           disabled={isPosting}
+          style={styles.headerButton}
         >
-          <Text style={[styles.cancelText, isPosting && styles.disabledText]}>Cancel</Text>
+          <Ionicons name="close" size={28} color={isPosting ? colors.textTertiary : colors.text} />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>New Post</Text>
+        <Text style={styles.headerTitle}>Create</Text>
 
-        <View style={{ width: 60 }} />
+        <TouchableOpacity
+          onPress={handlePost}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          disabled={!canPost}
+          style={styles.headerButton}
+        >
+          <Ionicons name="checkmark" size={32} color={canPost ? colors.primary : colors.textTertiary} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView 
@@ -686,22 +760,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.background,
+    backgroundColor: colors.backgroundSecondary,
     zIndex: 10,
   },
-  cancelText: {
-    fontSize: typography.sizes.md,
-    color: colors.textSecondary,
-    fontWeight: typography.weights.medium,
-  },
-  disabledText: {
-    opacity: 0.5,
+  headerButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.semibold,
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
     color: colors.text,
   },
   scrollView: {

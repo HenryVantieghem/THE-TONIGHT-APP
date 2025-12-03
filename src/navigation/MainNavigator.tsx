@@ -14,38 +14,28 @@ import type { MainStackParamList, LocationData } from '../types';
 const Stack = createNativeStackNavigator<MainStackParamList>();
 
 export function MainNavigator() {
-  // State to manage camera flow
-  const [capturedMedia, setCapturedMedia] = useState<{
-    uri: string;
-    type: 'image' | 'video';
-    location: LocationData;
-  } | null>(null);
-
-  // Handlers for camera → preview flow
-  const handleMediaCaptured = useCallback(
-    (uri: string, type: 'image' | 'video', location: LocationData) => {
-      setCapturedMedia({ uri, type, location });
-    },
-    []
-  );
-
-  const handleClearMedia = useCallback(() => {
-    setCapturedMedia(null);
-  }, []);
-
   return (
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
+        animation: 'fade',
       }}
+      initialRouteName="Camera"
     >
-      <Stack.Screen name="Feed" component={FeedScreen} />
+      {/* Camera is the default/hub screen */}
       <Stack.Screen
         name="Camera"
         component={CameraScreen}
         options={{
-          presentation: 'fullScreenModal',
-          animation: 'slide_from_bottom',
+          animation: 'none',
+        }}
+      />
+      {/* Feed now accessible via swipe from Camera */}
+      <Stack.Screen
+        name="Feed"
+        component={FeedScreen}
+        options={{
+          animation: 'slide_from_right',
         }}
       />
       <Stack.Screen
@@ -53,7 +43,7 @@ export function MainNavigator() {
         component={PostPreviewScreen}
         options={{
           presentation: 'fullScreenModal',
-          animation: 'slide_from_right',
+          animation: 'slide_from_bottom',
         }}
       />
       <Stack.Screen
@@ -68,21 +58,24 @@ export function MainNavigator() {
         name="Profile"
         component={ProfileScreen}
         options={{
-          animation: 'slide_from_right',
+          presentation: 'modal',
+          animation: 'slide_from_bottom',
         }}
       />
       <Stack.Screen
         name="Settings"
         component={SettingsScreen}
         options={{
-          animation: 'slide_from_right',
+          presentation: 'modal',
+          animation: 'slide_from_bottom',
         }}
       />
       <Stack.Screen
         name="Friends"
         component={FriendsScreen}
         options={{
-          animation: 'slide_from_right',
+          presentation: 'modal',
+          animation: 'slide_from_bottom',
         }}
       />
     </Stack.Navigator>

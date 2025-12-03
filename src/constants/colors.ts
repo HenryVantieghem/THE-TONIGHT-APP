@@ -1,161 +1,327 @@
-// EXPERIENCES Design System - Color Tokens v2.0
-// Clean, minimal, iOS-native feel
+// GHOST MODE - Ultramodern Color System v4.0
+// Dark-first, gesture-driven, camera-centric aesthetic
 
 export const colors = {
-  // PRIMARY - Indigo (NO gradients on buttons per spec)
-  accent: '#6366F1',           // Indigo-500
-  accentLight: '#818CF8',      // Indigo-400
-  accentDark: '#4F46E5',       // Indigo-600
-  
-  // Legacy aliases for backward compatibility
-  primary: '#6366F1',
-  primaryDark: '#4F46E5',
-  primaryLight: '#818CF8',
+  // PRIMARY - Ghost Yellow (signature color)
+  primary: '#FFFC00',           // Snapchat-inspired yellow
+  primaryDark: '#E6E300',
+  primaryLight: '#FFFD4D',
+  primaryGlow: 'rgba(255, 252, 0, 0.3)',
 
-  // BACKGROUNDS (Light Mode)
-  backgroundPrimary: '#FFFFFF',
-  backgroundSecondary: '#F9FAFB',   // Gray-50
-  backgroundTertiary: '#F3F4F6',    // Gray-100
-  
-  // Legacy aliases
-  background: '#FFFFFF',
-  surface: '#F9FAFB',
-  surfaceSecondary: '#F3F4F6',
+  // Accent aliases
+  accent: '#FFFC00',
+  accentLight: '#FFFD4D',
+  accentDark: '#E6E300',
 
-  // BACKGROUNDS (Dark Mode)
-  darkPrimary: '#0F0F0F',
-  darkSecondary: '#1A1A1A',
-  darkTertiary: '#262626',
-  
-  // Legacy dark mode
-  dark: {
-    background: '#0F0F0F',
-    backgroundSecondary: '#1A1A1A',
-    backgroundTertiary: '#262626',
-    text: '#F9FAFB',
-    textSecondary: '#9CA3AF',
-    textTertiary: '#6B7280',
-    border: '#262626',
-  },
+  // BACKGROUNDS - Pure dark
+  background: '#000000',         // Pure black
+  backgroundPrimary: '#000000',
+  backgroundSecondary: '#1C1C1E', // iOS dark gray
+  backgroundTertiary: '#2C2C2E', // Slightly lighter
+  backgroundQuaternary: '#3C3C3E',
+
+  // Surfaces
+  surface: '#1C1C1E',
+  surfaceSecondary: '#2C2C2E',
+
+  // SURFACES (Glassmorphism)
+  glass: 'rgba(255, 255, 255, 0.1)',
+  glassStrong: 'rgba(255, 255, 255, 0.15)',
+  glassDark: 'rgba(0, 0, 0, 0.3)',
+  glassBlack: 'rgba(0, 0, 0, 0.6)',
+  glassYellow: 'rgba(255, 252, 0, 0.15)',
 
   // TEXT
-  textPrimary: '#111827',      // Gray-900
-  textSecondary: '#6B7280',    // Gray-500
-  textTertiary: '#9CA3AF',     // Gray-400
-  textInverse: '#FFFFFF',
-  
-  // Legacy aliases
-  text: '#111827',
+  text: '#FFFFFF',              // White
+  textPrimary: '#FFFFFF',
+  textSecondary: 'rgba(255, 255, 255, 0.7)',
+  textTertiary: 'rgba(255, 255, 255, 0.4)',
+  textQuaternary: 'rgba(255, 255, 255, 0.2)',
+  textInverse: '#000000',
+
+  // ACCENTS (iOS-inspired vibrant)
+  accentRed: '#FF3B30',         // iOS red
+  accentGreen: '#30D158',       // iOS green
+  accentBlue: '#0A84FF',        // iOS blue
+  accentPurple: '#BF5AF2',      // iOS purple
+  accentOrange: '#FF9F0A',      // iOS orange
+  accentPink: '#FF375F',        // iOS pink
+  accentTeal: '#64D2FF',        // iOS teal
+
+  // TIMER COLORS (vibrant, urgent)
+  timerGreen: '#30D158',
+  timerGreenDark: '#28A745',
+  timerYellow: '#FFD60A',
+  timerYellowDark: '#E6C200',
+  timerOrange: '#FF9F0A',
+  timerRed: '#FF3B30',
+  timerRedDark: '#E63428',
+  timerRedGlow: 'rgba(255, 59, 48, 0.4)',
+
+  // Legacy timer aliases
+  timerFresh: '#30D158',
+  timerMid: '#FFD60A',
+  timerUrgent: '#FF3B30',
+
+  // SEMANTIC
+  success: '#30D158',
+  successLight: 'rgba(48, 209, 88, 0.2)',
+  warning: '#FFD60A',
+  warningLight: 'rgba(255, 214, 10, 0.2)',
+  error: '#FF3B30',
+  errorLight: 'rgba(255, 59, 48, 0.2)',
+  info: '#0A84FF',
+  infoLight: 'rgba(10, 132, 255, 0.2)',
+
+  // SPECIAL
   white: '#FFFFFF',
   black: '#000000',
   transparent: 'transparent',
 
-  // SEMANTIC
-  success: '#10B981',          // Emerald-500
-  warning: '#F59E0B',          // Amber-500
-  error: '#EF4444',            // Red-500
-  info: '#3B82F6',             // Blue-500
-  
-  // Legacy semantic aliases
-  successLight: '#D1FAE5',
-  warningLight: '#FEF3C7',
-  errorLight: '#FEE2E2',
-  infoLight: '#DBEAFE',
+  // OVERLAYS
+  overlay: 'rgba(0, 0, 0, 0.6)',
+  overlayLight: 'rgba(0, 0, 0, 0.3)',
+  overlayStrong: 'rgba(0, 0, 0, 0.8)',
 
-  // TIMER COLORS (per spec)
-  timerFresh: '#10B981',       // >50% Green
-  timerMid: '#F59E0B',         // 25-50% Yellow
-  timerUrgent: '#EF4444',       // <25% Red (pulsing at <5m)
-  
-  // Legacy timer aliases
-  timerGreen: '#10B981',
-  timerGreenDark: '#059669',
-  timerYellow: '#F59E0B',
-  timerYellowDark: '#D97706',
-  timerOrange: '#F97316',
-  timerRed: '#EF4444',
-  timerRedDark: '#DC2626',
-
-  // BORDERS
-  border: '#E5E5EA',
-  borderLight: '#F2F2F7',
-  borderFocus: '#6366F1',
+  // BORDERS (subtle, glassmorphic)
+  border: 'rgba(255, 255, 255, 0.1)',
+  borderLight: 'rgba(255, 255, 255, 0.05)',
+  borderMedium: 'rgba(255, 255, 255, 0.15)',
+  borderStrong: 'rgba(255, 255, 255, 0.2)',
+  borderFocus: 'rgba(255, 252, 0, 0.5)',
+  borderYellow: 'rgba(255, 252, 0, 0.3)',
 
   // REACTIONS
-  reactionBackground: '#F3F4F6',
-  reactionActive: '#E0E7FF',
+  reactionBackground: 'rgba(255, 255, 255, 0.15)',
+  reactionActive: '#FFFC00',
+  reactionText: '#FFFFFF',
+  reactionTextActive: '#000000',
+
+  // POLAROID (legacy compatibility - now dark themed)
+  polaroidFrame: '#1C1C1E',
+  polaroidShadow: 'rgba(0, 0, 0, 0.5)',
+
+  // GRADIENTS (minimal use)
+  primaryGradient: ['#FFFC00', '#FFD60A'] as const,
+  darkGradient: ['#000000', '#1C1C1E'] as const,
 
   // SHADOWS
   shadowColor: '#000000',
-
-  // OVERLAYS
-  overlay: 'rgba(0, 0, 0, 0.5)',
-  overlayLight: 'rgba(0, 0, 0, 0.3)',
-
-  // GRADIENTS (for legacy compatibility)
-  primaryGradient: ['#6366F1', '#818CF8'] as const,
 } as const;
 
-// Shadow presets (4 levels per spec + accent glow)
+// Shadow presets - Subtle depth for dark mode
 export const shadows = {
+  none: {
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+  },
+  sm: {
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  md: {
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  lg: {
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  xl: {
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.4,
+    shadowRadius: 24,
+    elevation: 12,
+  },
   level1: {
-    shadowColor: colors.shadowColor,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 2,
   },
   level2: {
-    shadowColor: colors.shadowColor,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 3,
+    elevation: 4,
   },
   level3: {
-    shadowColor: colors.shadowColor,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
     shadowRadius: 16,
-    elevation: 6,
+    elevation: 8,
   },
   level4: {
-    shadowColor: colors.shadowColor,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.4,
     shadowRadius: 24,
+    elevation: 12,
+  },
+  glow: {
+    shadowColor: '#FFFC00',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  glowRed: {
+    shadowColor: '#FF3B30',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 20,
     elevation: 8,
   },
   accentGlow: {
-    shadowColor: colors.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
+    shadowColor: '#FFFC00',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 20,
     elevation: 8,
   },
-  // Legacy aliases
-  sm: {
-    shadowColor: colors.shadowColor,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
+} as const;
+
+// Glassmorphism border styles
+export const borders = {
+  none: {
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
-  md: {
-    shadowColor: colors.shadowColor,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+  light: {
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
-  lg: {
-    shadowColor: colors.shadowColor,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 6,
+  medium: {
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  heavy: {
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  yellow: {
+    borderWidth: 1,
+    borderColor: 'rgba(255, 252, 0, 0.3)',
+  },
+  extraHeavy: {
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
   },
 } as const;
 
 export type ColorKey = keyof typeof colors;
 export type ShadowKey = keyof typeof shadows;
+export type BorderKey = keyof typeof borders;
+
+// Shadow presets - All set to NONE for brutalist flat design
+// Keeping structure for backward compatibility
+export const shadows = {
+  none: {
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+  },
+  level1: {
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+  },
+  level2: {
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+  },
+  level3: {
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+  },
+  level4: {
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+  },
+  accentGlow: {
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+  },
+  // Legacy aliases
+  sm: {
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+  },
+  md: {
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+  },
+  lg: {
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+  },
+} as const;
+
+// Brutalist border styles (new)
+export const borders = {
+  none: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  light: {
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  medium: {
+    borderWidth: 1,
+    borderColor: colors.borderMedium,
+  },
+  heavy: {
+    borderWidth: 2,
+    borderColor: colors.border,
+  },
+  extraHeavy: {
+    borderWidth: 3,
+    borderColor: colors.border,
+  },
+} as const;
+
+export type ColorKey = keyof typeof colors;
+export type ShadowKey = keyof typeof shadows;
+export type BorderKey = keyof typeof borders;

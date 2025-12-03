@@ -7,6 +7,7 @@ import {
   RefreshControl,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -87,17 +88,17 @@ export function FeedScreen() {
   const navigation = useNavigation<FeedNavigationProp>();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { activePosts, loadPosts, toggleReaction, deletePost } = usePosts();
+  const { activePosts, loadPosts, loadMorePosts, refreshPosts, toggleReaction, deletePost, isRefreshing } = usePosts();
   const { friendIds, loadFriends } = useFriends();
 
   const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   // Initial load
   useEffect(() => {
     const initialLoad = async () => {
       setIsLoading(true);
-      await Promise.all([loadPosts(), loadFriends()]);
+      await Promise.all([loadPosts(true), loadFriends()]);
       setIsLoading(false);
     };
 
@@ -107,18 +108,27 @@ export function FeedScreen() {
   // Refresh posts when screen comes into focus
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      loadPosts();
+      refreshPosts();
     });
 
     return unsubscribe;
-  }, [navigation, loadPosts]);
+  }, [navigation, refreshPosts]);
 
   const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true);
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    await loadPosts();
-    setIsRefreshing(false);
-  }, [loadPosts]);
+    await refreshPosts();
+  }, [refreshPosts]);
+
+  const handleLoadMore = useCallback(async () => {
+    if (isLoadingMore || isRefreshing) return;
+    
+    setIsLoadingMore(true);
+    try {
+      await loadMorePosts();
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [isLoadingMore, isRefreshing, loadMorePosts]);
 
   const handleReact = useCallback(
     async (postId: string, emoji: ReactionEmoji) => {
@@ -249,6 +259,15 @@ export function FeedScreen() {
           }
           ListEmptyComponent={renderEmptyState}
           showsVerticalScrollIndicator={false}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={
+            isLoadingMore ? (
+              <View style={styles.loadingMore}>
+                <ActivityIndicator size="small" color={colors.accent} />
+              </View>
+            ) : null
+          }
         />
       )}
 
@@ -263,7 +282,7 @@ export function FeedScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.backgroundPrimary,
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -271,8 +290,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.sm,
-    backgroundColor: colors.backgroundPrimary,
-    ...shadows.level1,
+    backgroundColor: colors.backgroundSecondary,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   title: {
     color: colors.textPrimary,
@@ -288,5 +308,9 @@ const styles = StyleSheet.create({
   fabContainer: {
     position: 'absolute',
     alignSelf: 'center',
+  },
+  loadingMore: {
+    paddingVertical: spacing.md,
+    alignItems: 'center',
   },
 });

@@ -42,9 +42,9 @@ export function FloatingCameraButton({
     });
   };
 
-  // Per spec: 64px diameter, solid accent, shadow level4
-  const size = 64;
-  const iconSize = 28; // Per spec
+  // Ghost Mode: Larger, glowing yellow button
+  const size = 72;
+  const iconSize = 32;
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pressScale.value }],
@@ -63,8 +63,8 @@ export function FloatingCameraButton({
           width: size,
           height: size,
           borderRadius: size / 2,
-          backgroundColor: colors.accent, // Solid accent, NO gradient per spec
-          ...shadows.level4,
+          backgroundColor: colors.primary,
+          ...shadows.glow,
         },
         animatedStyle,
         style,

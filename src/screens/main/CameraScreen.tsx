@@ -9,6 +9,7 @@ import {
   Dimensions,
   Linking,
   Platform,
+  AppState,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -104,44 +105,62 @@ export function CameraScreen() {
     })
   ).current;
 
+  // Check camera permission on mount and when app becomes active
+  const checkCameraPermission = useCallback(async () => {
+    const { status } = await Camera.getCameraPermissionsAsync();
+    const granted = status === 'granted';
+    setHasPermission(granted);
+    
+    // Reset permission denied flag if permission is now granted
+    if (granted && permissionDenied) {
+      setPermissionDenied(false);
+    }
+    
+    return granted;
+  }, [permissionDenied]);
+
   // Check camera permission and get location on mount
   useEffect(() => {
     const init = async () => {
-      const { status } = await Camera.getCameraPermissionsAsync();
-      setHasPermission(status === 'granted');
+      await checkCameraPermission();
 
-      // Check location permission first, then get location
+      // Try to get location if permission is granted, but don't block
       setIsLoadingLocation(true);
       try {
-        // Check if location permission is granted
         const hasLocationPermission = await locationService.hasLocationPermission();
         
         if (hasLocationPermission) {
-          // Get location - try to get current location automatically
-          const location = await getCurrentLocation();
-          // If location fetch failed, try refreshing once
-          if (!location) {
-            // Wait a bit and try again
-            setTimeout(async () => {
-              await getCurrentLocation();
-              setIsLoadingLocation(false);
-            }, 1000);
-          } else {
-            setIsLoadingLocation(false);
-          }
-        } else {
-          // Permission not granted, but don't block camera usage
-          // Location can be set later in PostPreview
-          setIsLoadingLocation(false);
+          // Attempt to get current location (non-blocking)
+          await getCurrentLocation();
         }
       } catch (error) {
         console.error('Location fetch error:', error);
+      } finally {
+        // Always clear loading state after attempt
         setIsLoadingLocation(false);
       }
     };
 
     init();
-  }, [getCurrentLocation]);
+  }, [getCurrentLocation, checkCameraPermission]);
+
+  // Listen for app state changes to re-check permission when returning from Settings
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', async (nextAppState) => {
+      // When app comes to foreground, re-check camera permission
+      if (nextAppState === 'active') {
+        const granted = await checkCameraPermission();
+        if (granted) {
+          console.log('Camera permission granted after returning from Settings');
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [checkCameraPermission]);
 
   const handleCapture = useCallback((uri: string, type: 'image' | 'video') => {
     // Pass current location if valid, otherwise pass null
@@ -149,23 +168,18 @@ export function CameraScreen() {
     const isValidLocation = currentLocation && 
       currentLocation.lat !== 0 && 
       currentLocation.lng !== 0 &&
+      currentLocation.name &&
       currentLocation.name !== 'Location Unknown' &&
-      currentLocation.name !== '';
-
-    const location: LocationData = isValidLocation
-      ? currentLocation
-      : {
-          name: '', // Empty name signals to PostPreview that location needs to be fetched
-          lat: 0,
-          lng: 0,
-        };
+      currentLocation.name !== 'Current Location' &&
+      currentLocation.name.trim() !== '';
 
     navigation.replace('PostPreview', {
       mediaUri: uri,
       mediaType: type,
-      location,
+      location: isValidLocation ? currentLocation : null,
+      isLoadingLocation,
     });
-  }, [currentLocation, navigation]);
+  }, [currentLocation, isLoadingLocation, navigation]);
 
   const handleClose = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

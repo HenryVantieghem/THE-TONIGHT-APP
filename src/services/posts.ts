@@ -40,9 +40,10 @@ export async function createPost(
       const fileInfo = await FileSystem.getInfoAsync(processedUri);
 
       if (!fileInfo.exists) {
+        console.error('File does not exist after preparation:', processedUri);
         return {
           data: null,
-          error: { message: 'Media file not found. Please try capturing again.' },
+          error: { message: 'Media file not found after processing. Please try capturing again.' },
         };
       }
 
@@ -50,10 +51,11 @@ export async function createPost(
 
       // Check file size (max 10MB) - after compression
       if (isFileTooLarge(fileSize, config.MAX_MEDIA_SIZE_MB)) {
+        console.error(`File too large: ${fileSize} bytes (${(fileSize / 1024 / 1024).toFixed(1)}MB)`);
         return {
           data: null,
           error: {
-            message: `File is too large (${(fileSize / 1024 / 1024).toFixed(1)}MB). Maximum size is ${config.MAX_MEDIA_SIZE_MB}MB.`
+            message: `${mediaType === 'video' ? 'Video' : 'Photo'} is too large (${(fileSize / 1024 / 1024).toFixed(1)}MB). Maximum size is ${config.MAX_MEDIA_SIZE_MB}MB. Try capturing again.`
           },
         };
       }
@@ -64,35 +66,49 @@ export async function createPost(
       });
 
       if (!base64Data || base64Data.length === 0) {
+        console.error('File read resulted in empty data');
         return {
           data: null,
-          error: { message: 'Media file is empty. Please try capturing again.' },
+          error: { message: 'Media file is empty or corrupted. Please try capturing again.' },
         };
       }
 
       // Convert base64 to ArrayBuffer
       fileData = decode(base64Data);
 
-      console.log(`File read successfully: ${fileSize} bytes`);
+      console.log(`File prepared successfully: ${(fileSize / 1024).toFixed(1)}KB, type: ${mediaType}`);
     } catch (fileError: any) {
-      console.error('File read error:', fileError);
-      console.error('Media URI:', mediaUri);
+      console.error('File preparation error:', fileError);
+      console.error('Original media URI:', mediaUri);
+      console.error('Processed URI:', processedUri);
+      console.error('Error details:', {
+        name: fileError.name,
+        message: fileError.message,
+        stack: fileError.stack?.split('\n')[0],
+      });
       
-      // More specific error messages
-      let errorMessage = 'Failed to read media file. Please try capturing again.';
+      // More specific error messages based on error type
+      let errorMessage = 'Failed to prepare media file. Please try capturing again.';
+      
       if (fileError.message?.includes('ENOENT') || fileError.message?.includes('not found')) {
-        errorMessage = 'Media file not found. Please try capturing again.';
-      } else if (fileError.message?.includes('permission') || fileError.message?.includes('Permission')) {
-        errorMessage = 'Permission denied. Please grant media access and try again.';
+        errorMessage = 'Media file not found on device. Please try capturing again.';
+      } else if (fileError.message?.includes('EACCES') || fileError.message?.includes('permission') || fileError.message?.includes('Permission')) {
+        errorMessage = 'Cannot access media file. Please check app permissions and try again.';
+      } else if (fileError.message?.includes('ENOMEM') || fileError.message?.includes('memory')) {
+        errorMessage = 'Not enough memory to process media. Please close other apps and try again.';
+      } else if (fileError.message?.includes('decode') || fileError.message?.includes('base64')) {
+        errorMessage = 'Media file is corrupted. Please try capturing again.';
+      } else if (fileError.message?.includes('compress') || fileError.message?.includes('manipulate')) {
+        errorMessage = 'Failed to compress media. Please try capturing again with a different photo.';
       } else if (mediaType === 'video') {
-        errorMessage = 'Failed to read video file. Please try recording again.';
+        errorMessage = 'Failed to process video file. Try recording a shorter video or capturing a photo instead.';
       } else if (mediaType === 'image') {
-        errorMessage = 'Failed to read image file. Please try capturing again.';
+        errorMessage = 'Failed to process photo. Please try capturing again.';
       }
       
       return {
         data: null,
-        error: { message: errorMessage },
+        error: { message: errorMessage, code: fileError.code || 'MEDIA_PREPARATION_ERROR' },
       };
     }
 
@@ -106,15 +122,34 @@ export async function createPost(
       });
 
     if (uploadError) {
-      console.error('Upload error:', uploadError);
-      const errorMessage = uploadError.message?.includes('duplicate') 
-        ? 'A file with this name already exists. Please try again.'
-        : mediaType === 'video'
-        ? 'Failed to upload video. The file may be too large. Please try again.'
-        : 'Failed to upload image. Please try again.';
+      console.error('Storage upload error:', uploadError);
+      console.error('Upload error details:', {
+        message: uploadError.message,
+        statusCode: (uploadError as any).statusCode,
+        error: (uploadError as any).error,
+      });
+      
+      let errorMessage = 'Failed to upload media. Please try again.';
+      
+      if (uploadError.message?.includes('duplicate') || uploadError.message?.includes('already exists')) {
+        errorMessage = 'Upload conflict. Please try again.';
+      } else if (uploadError.message?.includes('size') || uploadError.message?.includes('too large')) {
+        errorMessage = `${mediaType === 'video' ? 'Video' : 'Photo'} file is too large. Please try again with a smaller file.`;
+      } else if (uploadError.message?.includes('network') || uploadError.message?.includes('timeout')) {
+        errorMessage = 'Network error. Please check your connection and try again.';
+      } else if (uploadError.message?.includes('unauthorized') || uploadError.message?.includes('authentication')) {
+        errorMessage = 'Authentication error. Please log in again.';
+      } else if (uploadError.message?.includes('quota') || uploadError.message?.includes('storage')) {
+        errorMessage = 'Storage quota exceeded. Please contact support.';
+      } else if (mediaType === 'video') {
+        errorMessage = 'Failed to upload video. Please check your connection and try again.';
+      } else {
+        errorMessage = 'Failed to upload photo. Please check your connection and try again.';
+      }
+      
       return {
         data: null,
-        error: { message: errorMessage },
+        error: { message: errorMessage, code: (uploadError as any).code || 'STORAGE_UPLOAD_ERROR' },
       };
     }
 
@@ -210,11 +245,18 @@ export async function createPost(
   }
 }
 
-// Get friends' posts (non-expired)
+// Get friends' posts (non-expired) with pagination
 export async function getFriendsPosts(
-  userId: string
+  userId: string,
+  options?: {
+    limit?: number;
+    offset?: number;
+  }
 ): Promise<ApiResponse<Post[]>> {
   try {
+    const limit = options?.limit || 20;
+    const offset = options?.offset || 0;
+
     // First get list of friend IDs
     const { data: friendships, error: friendsError } = await supabase
       .from(TABLES.FRIENDSHIPS)
@@ -242,7 +284,7 @@ export async function getFriendsPosts(
       return { data: [], error: null };
     }
 
-    // Get non-expired posts from friends
+    // Get non-expired posts from friends with pagination
     const { data: posts, error: postsError } = await supabase
       .from(TABLES.POSTS)
       .select(`
@@ -252,7 +294,8 @@ export async function getFriendsPosts(
       `)
       .in('user_id', friendIds)
       .gt('expires_at', new Date().toISOString())
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (postsError) {
       console.error('Posts fetch error:', postsError);

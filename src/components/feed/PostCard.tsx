@@ -220,11 +220,13 @@ export function PostCard({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.backgroundSecondary, // #F9FAFB per spec
-    borderRadius: borderRadius.lg, // 16px per spec
-    padding: spacing.md, // 16px per spec
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
     marginBottom: spacing.md,
-    ...shadows.level2, // Level 2 shadow per spec
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.md,
   },
   header: {
     flexDirection: 'row',

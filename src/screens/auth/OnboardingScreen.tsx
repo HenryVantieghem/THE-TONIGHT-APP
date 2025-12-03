@@ -29,25 +29,31 @@ interface OnboardingSlide {
   subtitle: string;
 }
 
-// 3 screens per spec
+// 4 slides - Interactive story style
 const slides: OnboardingSlide[] = [
   {
     id: '1',
-    icon: 'camera',
-    title: "Share What You're Doing Now",
-    subtitle: 'Post a photo with your location',
+    icon: 'flash',
+    title: "Tonight",
+    subtitle: 'What are you doing right now?',
   },
   {
     id: '2',
-    icon: 'people',
-    title: 'See Where Your Friends Are',
-    subtitle: 'Discover what your friends are up to right now',
+    icon: 'time',
+    title: '1 Hour',
+    subtitle: "Then it's gone forever",
   },
   {
     id: '3',
-    icon: 'time',
-    title: 'Posts Vanish After 1 Hour',
-    subtitle: 'Live in the now. No pressure, just authentic moments.',
+    icon: 'people',
+    title: 'Your Circle',
+    subtitle: 'Share with friends, not the world',
+  },
+  {
+    id: '4',
+    icon: 'camera',
+    title: 'Capture the Moment',
+    subtitle: 'Tap below to start your journey',
   },
 ];
 
@@ -104,7 +110,7 @@ export function OnboardingScreen() {
           ]}
         >
           <View style={styles.iconCircle}>
-            <Ionicons name={item.icon} size={48} color={colors.accent} />
+            <Ionicons name={item.icon} size={64} color={colors.primary} />
           </View>
         </Animated.View>
 
@@ -188,7 +194,7 @@ export function OnboardingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.backgroundPrimary,
+    backgroundColor: colors.background,
   },
   slide: {
     width: SCREEN_WIDTH,
@@ -201,12 +207,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing['3xl'],
   },
   iconCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: `${colors.accent}1A`, // 10% opacity
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: colors.glassYellow,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.borderYellow,
   },
   textContainer: {
     alignItems: 'center',
@@ -237,8 +245,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.backgroundTertiary,
   },
   dotActive: {
-    backgroundColor: colors.accent,
-    width: 24,
+    backgroundColor: colors.primary,
+    width: 32,
   },
   button: {
     marginTop: spacing.md,

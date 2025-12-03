@@ -23,15 +23,19 @@ export function usePosts() {
   const deletionSubRef = useRef<{ unsubscribe: () => void } | null>(null);
   const reactionsSubRef = useRef<{ unsubscribe: () => void } | null>(null);
 
-  // Load posts
-  const loadPosts = useCallback(async () => {
+  // Load posts with pagination
+  const loadPosts = useCallback(async (reset: boolean = false) => {
     if (!user) return;
 
     setIsLoading(true);
     setError(null);
 
     try {
-      const { data, error } = await postsService.getFriendsPosts(user.id);
+      const currentLength = reset ? 0 : posts.length;
+      const { data, error } = await postsService.getFriendsPosts(user.id, {
+        limit: 20,
+        offset: currentLength,
+      });
 
       if (error) {
         setError(error.message);
@@ -39,7 +43,16 @@ export function usePosts() {
       }
 
       if (data) {
-        setPosts(data);
+        if (reset) {
+          setPosts(data);
+        } else {
+          // Append new posts, avoiding duplicates
+          setPosts(prev => {
+            const existingIds = new Set(prev.map(p => p.id));
+            const newPosts = data.filter(p => !existingIds.has(p.id));
+            return [...prev, ...newPosts];
+          });
+        }
       }
     } catch (err) {
       console.error('Load posts error:', err);
@@ -47,59 +60,120 @@ export function usePosts() {
     } finally {
       setIsLoading(false);
     }
-  }, [user, setPosts, setIsLoading, setError]);
+  }, [user, posts.length, setPosts, setIsLoading, setError]);
 
-  // Subscribe to new posts
+  // Load more posts for pagination
+  const loadMorePosts = useCallback(async () => {
+    if (!user || isRefreshing) return;
+    
+    setIsRefreshing(true);
+    try {
+      await loadPosts(false);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [user, isRefreshing, loadPosts]);
+
+  // Subscribe to new posts with error handling
   const subscribeToNewPosts = useCallback(() => {
     if (!user) return;
 
-    // Unsubscribe from previous subscription
-    if (newPostsSubRef.current) {
-      newPostsSubRef.current.unsubscribe();
-    }
-
-    // Subscribe to new posts from friends
-    newPostsSubRef.current = postsService.subscribeToNewPosts(
-      user.id,
-      friendIds,
-      (newPost) => {
-        addPost(newPost);
+    try {
+      // Unsubscribe from previous subscription
+      if (newPostsSubRef.current) {
+        try {
+          newPostsSubRef.current.unsubscribe();
+        } catch (unsubError) {
+          console.error('Error unsubscribing from previous new posts subscription:', unsubError);
+        }
+        newPostsSubRef.current = null;
       }
-    );
+
+      // Subscribe to new posts from friends
+      const subscription = postsService.subscribeToNewPosts(
+        user.id,
+        friendIds,
+        (newPost) => {
+          try {
+            addPost(newPost);
+            console.log('New post added via realtime subscription:', newPost.id);
+          } catch (err) {
+            console.error('Error processing new post:', err);
+          }
+        }
+      );
+      
+      newPostsSubRef.current = subscription;
+      console.log('Subscribed to new posts realtime updates');
+    } catch (err) {
+      console.error('Error subscribing to new posts:', err);
+    }
   }, [user, friendIds, addPost]);
 
-  // Subscribe to post deletions
+  // Subscribe to post deletions with error handling
   const subscribeToPostDeletions = useCallback(() => {
     if (!user) return;
 
-    if (deletionSubRef.current) {
-      deletionSubRef.current.unsubscribe();
-    }
+    try {
+      if (deletionSubRef.current) {
+        try {
+          deletionSubRef.current.unsubscribe();
+        } catch (unsubError) {
+          console.error('Error unsubscribing from previous deletions subscription:', unsubError);
+        }
+        deletionSubRef.current = null;
+      }
 
-    deletionSubRef.current = postsService.subscribeToPostDeletions((postId) => {
-      removePost(postId);
-    });
+      const subscription = postsService.subscribeToPostDeletions((postId) => {
+        try {
+          removePost(postId);
+          console.log('Post deleted via realtime subscription:', postId);
+        } catch (err) {
+          console.error('Error processing post deletion:', err);
+        }
+      });
+      
+      deletionSubRef.current = subscription;
+      console.log('Subscribed to post deletions realtime updates');
+    } catch (err) {
+      console.error('Error subscribing to post deletions:', err);
+    }
   }, [user, removePost]);
 
-  // Subscribe to reactions on current posts
+  // Subscribe to reactions on current posts with error handling
   const subscribeToReactions = useCallback(() => {
     if (!user || posts.length === 0) return;
 
-    if (reactionsSubRef.current) {
-      reactionsSubRef.current.unsubscribe();
-    }
-
-    const postIds = posts.map((p) => p.id);
-    const sub = postsService.subscribeToReactions(
-      postIds,
-      (postId: string, reactions: Reaction[]) => {
-        const myReaction = reactions.find((r) => r.user_id === user.id);
-        updatePost(postId, { reactions, my_reaction: myReaction });
+    try {
+      if (reactionsSubRef.current) {
+        try {
+          reactionsSubRef.current.unsubscribe();
+        } catch (unsubError) {
+          console.error('Error unsubscribing from previous reactions subscription:', unsubError);
+        }
+        reactionsSubRef.current = null;
       }
-    );
 
-    if (sub) {
-      reactionsSubRef.current = sub;
+      const postIds = posts.map((p) => p.id);
+      const sub = postsService.subscribeToReactions(
+        postIds,
+        (postId: string, reactions: Reaction[]) => {
+          try {
+            const myReaction = reactions.find((r) => r.user_id === user.id);
+            updatePost(postId, { reactions, my_reaction: myReaction });
+            console.log('Reactions updated via realtime for post:', postId);
+          } catch (err) {
+            console.error('Error processing reaction update:', err);
+          }
+        }
+      );
+
+      if (sub) {
+        reactionsSubRef.current = sub;
+        console.log(`Subscribed to reactions for ${postIds.length} posts`);
+      }
+    } catch (err) {
+      console.error('Error subscribing to reactions:', err);
     }
   }, [user, posts, updatePost]);
 
@@ -245,28 +319,47 @@ export function usePosts() {
     return () => clearInterval(interval);
   }, [removeExpiredPosts]);
 
-  // Subscribe to new posts when friendIds change
+  // Subscribe to new posts when friendIds change with proper cleanup
   useEffect(() => {
     subscribeToNewPosts();
     subscribeToPostDeletions();
 
     return () => {
+      // Cleanup subscriptions with error handling
       if (newPostsSubRef.current) {
-        newPostsSubRef.current.unsubscribe();
+        try {
+          newPostsSubRef.current.unsubscribe();
+          console.log('Unsubscribed from new posts');
+        } catch (err) {
+          console.error('Error during new posts cleanup:', err);
+        }
+        newPostsSubRef.current = null;
       }
       if (deletionSubRef.current) {
-        deletionSubRef.current.unsubscribe();
+        try {
+          deletionSubRef.current.unsubscribe();
+          console.log('Unsubscribed from post deletions');
+        } catch (err) {
+          console.error('Error during deletions cleanup:', err);
+        }
+        deletionSubRef.current = null;
       }
     };
   }, [subscribeToNewPosts, subscribeToPostDeletions]);
 
-  // Subscribe to reactions when posts change
+  // Subscribe to reactions when posts change with proper cleanup
   useEffect(() => {
     subscribeToReactions();
 
     return () => {
       if (reactionsSubRef.current) {
-        reactionsSubRef.current.unsubscribe();
+        try {
+          reactionsSubRef.current.unsubscribe();
+          console.log('Unsubscribed from reactions');
+        } catch (err) {
+          console.error('Error during reactions cleanup:', err);
+        }
+        reactionsSubRef.current = null;
       }
     };
   }, [subscribeToReactions]);
@@ -275,7 +368,7 @@ export function usePosts() {
   const refreshPosts = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      await loadPosts();
+      await loadPosts(true); // Reset to load from start
     } finally {
       setIsRefreshing(false);
     }
@@ -287,6 +380,7 @@ export function usePosts() {
     isRefreshing,
     isCreating,
     loadPosts,
+    loadMorePosts,
     refreshPosts,
     createPost,
     deletePost,
