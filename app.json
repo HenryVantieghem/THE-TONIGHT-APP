@@ -1,17 +1,17 @@
 {
   "expo": {
-    "name": "Experiences",
-    "slug": "experiences-app",
-    "version": "1.0.0",
+    "name": "Tonight",
+    "slug": "tonight-app",
+    "version": "2.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
-    "scheme": "experiences",
+    "scheme": "tonight",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#FFFFFF"
+      "backgroundColor": "#000000"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -19,12 +19,12 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.henryvantieghem.experiences",
-      "buildNumber": "2",
+      "buildNumber": "3",
       "infoPlist": {
-        "NSCameraUsageDescription": "Experiences needs camera access to capture and share moments with friends.",
-        "NSPhotoLibraryUsageDescription": "Experiences needs photo library access to share photos with friends.",
-        "NSLocationWhenInUseUsageDescription": "Experiences shows your location on posts so friends know where you are.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "Experiences shows your location on posts so friends know where you are."
+        "NSCameraUsageDescription": "Tonight needs camera access to capture and share what you're doing right now.",
+        "NSPhotoLibraryUsageDescription": "Tonight needs photo library access to share photos with friends.",
+        "NSLocationWhenInUseUsageDescription": "Tonight uses your location to show friends where you are.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Tonight uses your location to show friends where you are."
       },
       "config": {
         "usesNonExemptEncryption": false
@@ -33,10 +33,10 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#6366F1"
+        "backgroundColor": "#FFFC00"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.henryvantieghem.experiences",
+      "package": "com.henryvantieghem.tonight",
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",
@@ -52,22 +52,22 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Experiences needs camera access to take photos and videos to share with friends.",
-          "microphonePermission": "Experiences needs microphone access to record videos with audio.",
+          "cameraPermission": "Tonight needs camera access to capture what you're doing right now.",
+          "microphonePermission": "Tonight needs microphone access to record videos with audio.",
           "recordAudioAndroid": true
         }
       ],
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Experiences uses your location to show where your posts are from."
+          "locationWhenInUsePermission": "Tonight uses your location to show friends where you are."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Experiences needs access to your photos to let you share them.",
-          "cameraPermission": "Experiences needs camera access to take photos."
+          "photosPermission": "Tonight needs access to your photos to share with friends.",
+          "cameraPermission": "Tonight needs camera access to take photos."
         }
       ],
       "expo-video"
