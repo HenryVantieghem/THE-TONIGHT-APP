@@ -70,7 +70,8 @@
           "cameraPermission": "Experiences needs camera access to take photos."
         }
       ],
-      "expo-video"
+      "expo-video",
+      "@sentry/react-native/expo"
     ],
     "extra": {
       "eas": {

@@ -5,14 +5,18 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthNavigator } from './AuthNavigator';
 import { MainNavigator } from './MainNavigator';
 import { useStore } from '../stores/useStore';
+import { useSessionTimeout } from '../hooks/useSessionTimeout';
 import { supabase } from '../services/supabase';
 import type { RootStackParamList } from '../types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function RootNavigator() {
-  const { isAuthenticated, setUser, setIsAuthenticated } = useStore();
+  const { isAuthenticated, setUser, setIsAuthenticated, reset } = useStore();
   const [isLoading, setIsLoading] = useState(true);
+
+  // Session timeout management
+  useSessionTimeout();
 
   useEffect(() => {
     // Check current session
@@ -61,8 +65,8 @@ export function RootNavigator() {
             setUser(profile);
           }
         } else if (event === 'SIGNED_OUT') {
-          setIsAuthenticated(false);
-          setUser(null);
+          // Reset entire store to clear all user data
+          reset();
         }
       }
     );
@@ -70,7 +74,7 @@ export function RootNavigator() {
     return () => {
       subscription.unsubscribe();
     };
-  }, [setIsAuthenticated, setUser]);
+  }, [setIsAuthenticated, setUser, reset]);
 
   // Show loading screen while checking auth
   if (isLoading) {

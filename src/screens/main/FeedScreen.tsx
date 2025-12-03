@@ -6,6 +6,7 @@ import {
   FlatList,
   RefreshControl,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -128,9 +129,26 @@ export function FeedScreen() {
   );
 
   const handleDelete = useCallback(
-    async (postId: string) => {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      await deletePost(postId);
+    (postId: string) => {
+      Alert.alert(
+        'Delete Post',
+        'Are you sure you want to delete this post? This action cannot be undone.',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              await deletePost(postId);
+            },
+          },
+        ],
+        { cancelable: true }
+      );
     },
     [deletePost]
   );

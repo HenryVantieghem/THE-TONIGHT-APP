@@ -7,11 +7,14 @@ import {
   Animated,
   PanResponder,
   Dimensions,
+  Linking,
+  Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Camera } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
 import { CameraViewComponent } from '../../components/camera/CameraView';
 import { Button } from '../../components/ui/Button';
 import { useLocation } from '../../hooks/useLocation';
@@ -32,6 +35,7 @@ export function CameraScreen() {
   const { currentLocation, getCurrentLocation } = useLocation();
 
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [permissionDenied, setPermissionDenied] = useState(false);
   const [isLoadingLocation, setIsLoadingLocation] = useState(true);
 
   // Swipe-to-close animation
@@ -188,6 +192,18 @@ export function CameraScreen() {
   const requestPermission = useCallback(async () => {
     const { status } = await Camera.requestCameraPermissionsAsync();
     setHasPermission(status === 'granted');
+    if (status !== 'granted') {
+      setPermissionDenied(true);
+    }
+  }, []);
+
+  const openSettings = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS === 'ios') {
+      Linking.openURL('app-settings:');
+    } else {
+      Linking.openSettings();
+    }
   }, []);
 
   if (hasPermission === null) {
@@ -214,17 +230,30 @@ export function CameraScreen() {
         {/* Swipe indicator */}
         <View style={styles.swipeIndicator} />
 
-        <Text style={styles.permissionIcon}>📷</Text>
+        <View style={styles.permissionIconContainer}>
+          <Ionicons name="camera" size={64} color={colors.white} />
+        </View>
         <Text style={styles.permissionTitle}>Camera Access Required</Text>
         <Text style={styles.permissionText}>
-          We need access to your camera to take photos and videos. Your moments won't be shared without your permission.
+          {permissionDenied
+            ? 'Camera access was denied. Please enable it in Settings to take photos and videos.'
+            : 'We need access to your camera to take photos and videos. Your moments won\'t be shared without your permission.'}
         </Text>
-        <Button
-          title="Enable Camera"
-          onPress={requestPermission}
-          variant="primary"
-          style={styles.permissionButton}
-        />
+        {permissionDenied ? (
+          <Button
+            title="Open Settings"
+            onPress={openSettings}
+            variant="primary"
+            style={styles.permissionButton}
+          />
+        ) : (
+          <Button
+            title="Enable Camera"
+            onPress={requestPermission}
+            variant="primary"
+            style={styles.permissionButton}
+          />
+        )}
         <Button
           title="Maybe Later"
           onPress={handleClose}
@@ -278,8 +307,13 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
   },
-  permissionIcon: {
-    fontSize: 72,
+  permissionIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: spacing.lg,
   },
   permissionTitle: {

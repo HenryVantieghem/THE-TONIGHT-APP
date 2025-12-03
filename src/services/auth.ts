@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase, TABLES, BUCKETS } from './supabase';
 import type { User, ApiResponse } from '../types';
 
@@ -130,16 +131,33 @@ export async function signIn(
   }
 }
 
-// Sign out
+// Sign out with full cleanup
 export async function signOut(): Promise<ApiResponse<null>> {
   try {
+    // 1. Remove all Supabase realtime subscriptions
+    const channels = supabase.getChannels();
+    for (const channel of channels) {
+      await supabase.removeChannel(channel);
+    }
+
+    // 2. Sign out from Supabase (clears session)
     const { error } = await supabase.auth.signOut();
 
     if (error) {
-      return {
-        data: null,
-        error: { message: 'Failed to sign out. Please try again.' },
-      };
+      console.error('Supabase signOut error:', error);
+    }
+
+    // 3. Clear all AsyncStorage data (except device preferences)
+    try {
+      const keys = await AsyncStorage.getAllKeys();
+      const keysToRemove = keys.filter(
+        (key) => !key.startsWith('device_') && !key.startsWith('@preferences')
+      );
+      if (keysToRemove.length > 0) {
+        await AsyncStorage.multiRemove(keysToRemove);
+      }
+    } catch (storageError) {
+      console.error('AsyncStorage clear error:', storageError);
     }
 
     return { data: null, error: null };

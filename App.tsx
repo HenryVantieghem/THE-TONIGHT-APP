@@ -3,7 +3,16 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Sentry from '@sentry/react-native';
 import { RootNavigator } from './src/navigation';
+import { ErrorBoundary } from './src/components/ErrorBoundary';
+
+// Initialize Sentry for crash reporting
+Sentry.init({
+  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN || '',
+  enabled: !__DEV__, // Only enable in production
+  debug: false,
+});
 
 // Keep splash screen visible while loading
 SplashScreen.preventAutoHideAsync();
@@ -33,10 +42,12 @@ export default function App() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <StatusBar style="auto" />
-        <RootNavigator />
-      </SafeAreaProvider>
+      <ErrorBoundary>
+        <SafeAreaProvider>
+          <StatusBar style="auto" />
+          <RootNavigator />
+        </SafeAreaProvider>
+      </ErrorBoundary>
     </GestureHandlerRootView>
   );
 }

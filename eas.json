@@ -6,17 +6,30 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "ios": {
+        "simulator": true
+      },
+      "android": {
+        "buildType": "apk"
+      }
     },
     "preview": {
       "distribution": "internal",
       "ios": {
         "simulator": false
+      },
+      "android": {
+        "buildType": "apk"
       }
     },
     "production": {
       "ios": {
         "distribution": "store",
+        "autoIncrement": true
+      },
+      "android": {
+        "buildType": "app-bundle",
         "autoIncrement": true
       }
     }
@@ -25,6 +38,10 @@
     "production": {
       "ios": {
         "appleId": "hvantieghem@icloud.com"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./google-services.json",
+        "track": "production"
       }
     }
   }

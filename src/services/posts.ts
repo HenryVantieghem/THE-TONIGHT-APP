@@ -2,6 +2,7 @@ import { supabase, TABLES, BUCKETS } from './supabase';
 import { config } from '../constants/config';
 import * as FileSystem from 'expo-file-system';
 import { decode } from 'base64-arraybuffer';
+import { prepareMediaForUpload, isFileTooLarge } from '../utils/media';
 import type { Post, Reaction, ReactionEmoji, CreatePostPayload, ApiResponse } from '../types';
 
 // Create a new post
@@ -28,10 +29,15 @@ export async function createPost(
     // Read file using expo-file-system (most reliable in React Native)
     let fileData: ArrayBuffer;
     let fileSize: number;
-    
+    let processedUri = mediaUri;
+
     try {
-      // Get file info first to check size
-      const fileInfo = await FileSystem.getInfoAsync(mediaUri);
+      // Compress/prepare media for upload (images get compressed, videos pass through)
+      const preparedMedia = await prepareMediaForUpload(mediaUri, mediaType);
+      processedUri = preparedMedia.uri;
+
+      // Get file info after compression
+      const fileInfo = await FileSystem.getInfoAsync(processedUri);
 
       if (!fileInfo.exists) {
         return {
@@ -40,21 +46,20 @@ export async function createPost(
         };
       }
 
-      fileSize = fileInfo.size || 0;
+      fileSize = fileInfo.size || preparedMedia.size || 0;
 
-      // Check file size (max 10MB)
-      const maxSize = config.MAX_MEDIA_SIZE_MB * 1024 * 1024;
-      if (fileSize > maxSize) {
+      // Check file size (max 10MB) - after compression
+      if (isFileTooLarge(fileSize, config.MAX_MEDIA_SIZE_MB)) {
         return {
           data: null,
-          error: { 
-            message: `File is too large (${(fileSize / 1024 / 1024).toFixed(1)}MB). Maximum size is ${config.MAX_MEDIA_SIZE_MB}MB.` 
+          error: {
+            message: `File is too large (${(fileSize / 1024 / 1024).toFixed(1)}MB). Maximum size is ${config.MAX_MEDIA_SIZE_MB}MB.`
           },
         };
       }
 
       // Read file as base64
-      const base64Data = await FileSystem.readAsStringAsync(mediaUri, {
+      const base64Data = await FileSystem.readAsStringAsync(processedUri, {
         encoding: 'base64',
       });
 
