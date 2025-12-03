@@ -36,7 +36,7 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ErrorBoundary>
         <SafeAreaProvider>
-          <StatusBar style="auto" />
+          <StatusBar style="light" />
           <RootNavigator />
         </SafeAreaProvider>
       </ErrorBoundary>

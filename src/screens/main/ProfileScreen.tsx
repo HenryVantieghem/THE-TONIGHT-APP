@@ -17,7 +17,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
+// BlurView removed - not compatible with Expo Go
 import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   useSharedValue,
@@ -106,13 +106,6 @@ function AnimatedStat({
     <Animated.View style={[styles.statItem, animatedStyle]}>
       {/* Glass background */}
       <View style={styles.statGlassBackground}>
-        {Platform.OS === 'ios' && (
-          <BlurView
-            intensity={liquidGlass.blur.light}
-            tint="light"
-            style={StyleSheet.absoluteFill}
-          />
-        )}
         <View style={styles.statGlassBg} />
         <LinearGradient
           colors={['rgba(255, 255, 255, 0.3)', 'transparent']}
@@ -435,13 +428,6 @@ export function ProfileScreen() {
       />
       {item.media_type === 'video' && (
         <View style={styles.videoOverlay}>
-          {Platform.OS === 'ios' && (
-            <BlurView
-              intensity={liquidGlass.blur.subtle}
-              tint="dark"
-              style={StyleSheet.absoluteFill}
-            />
-          )}
           <View style={styles.videoOverlayBg} />
           <Ionicons name="play" size={12} color={colors.white} style={{ zIndex: 1 }} />
         </View>
@@ -458,13 +444,6 @@ export function ProfileScreen() {
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
         {/* Glass Background */}
         <Animated.View style={[StyleSheet.absoluteFill, headerBackgroundStyle]}>
-          {Platform.OS === 'ios' ? (
-            <BlurView
-              intensity={liquidGlass.blur.regular}
-              tint="light"
-              style={StyleSheet.absoluteFill}
-            />
-          ) : null}
           <View style={styles.headerGlassBg} />
           <LinearGradient
             colors={['rgba(255, 255, 255, 0.4)', 'transparent']}
@@ -480,13 +459,6 @@ export function ProfileScreen() {
           style={styles.headerBackButton}
         >
           <View style={styles.glassIconButton}>
-            {Platform.OS === 'ios' && (
-              <BlurView
-                intensity={liquidGlass.blur.light}
-                tint="light"
-                style={StyleSheet.absoluteFill}
-              />
-            )}
             <View style={styles.glassIconBg} />
             <Ionicons name="chevron-back" size={20} color={glassColors.text.primary} style={{ zIndex: 1 }} />
           </View>
@@ -503,13 +475,6 @@ export function ProfileScreen() {
             style={styles.headerSettingsButton}
           >
             <View style={styles.glassIconButton}>
-              {Platform.OS === 'ios' && (
-                <BlurView
-                  intensity={liquidGlass.blur.light}
-                  tint="light"
-                  style={StyleSheet.absoluteFill}
-                />
-              )}
               <View style={styles.glassIconBg} />
               <Ionicons name="settings-outline" size={20} color={glassColors.text.primary} style={{ zIndex: 1 }} />
             </View>
@@ -547,13 +512,6 @@ export function ProfileScreen() {
               <View style={styles.avatarContainer}>
                 {/* Glass ring */}
                 <View style={styles.avatarGlassRing}>
-                  {Platform.OS === 'ios' && (
-                    <BlurView
-                      intensity={liquidGlass.blur.light}
-                      tint="light"
-                      style={StyleSheet.absoluteFill}
-                    />
-                  )}
                   <LinearGradient
                     colors={colors.primaryGradient}
                     start={{ x: 0, y: 0 }}
@@ -634,13 +592,6 @@ export function ProfileScreen() {
           {/* Section header with glass background */}
           <View style={styles.sectionHeader}>
             <View style={styles.sectionHeaderGlass}>
-              {Platform.OS === 'ios' && (
-                <BlurView
-                  intensity={liquidGlass.blur.subtle}
-                  tint="light"
-                  style={StyleSheet.absoluteFill}
-                />
-              )}
               <View style={styles.sectionHeaderBg} />
             </View>
             <Text style={styles.sectionTitle}>Posts</Text>
@@ -660,13 +611,6 @@ export function ProfileScreen() {
           ) : (
             <View style={styles.emptyPosts}>
               <View style={styles.emptyGlassContainer}>
-                {Platform.OS === 'ios' && (
-                  <BlurView
-                    intensity={liquidGlass.blur.light}
-                    tint="light"
-                    style={StyleSheet.absoluteFill}
-                  />
-                )}
                 <View style={styles.emptyGlassBg} />
                 <LinearGradient
                   colors={['rgba(255, 255, 255, 0.3)', 'transparent']}

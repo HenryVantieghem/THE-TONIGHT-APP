@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
-import { BlurView } from 'expo-blur';
+// BlurView removed - not compatible with Expo Go
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useSharedValue,
