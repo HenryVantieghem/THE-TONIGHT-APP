@@ -5,6 +5,13 @@ export interface User {
   avatar_url: string | null;
   created_at: string;
   updated_at?: string;
+  // Stats fields from profiles table
+  post_count?: number;
+  friend_count?: number;
+  total_views?: number;
+  // Settings fields from profiles table
+  location_precision?: 'exact' | 'neighborhood' | 'city';
+  notifications_enabled?: boolean;
 }
 
 // Post with 1-hour expiry

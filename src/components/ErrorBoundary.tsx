@@ -24,15 +24,8 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Log to crash reporting service (Sentry)
+    // Log error for debugging
     console.error('ErrorBoundary caught:', error, errorInfo);
-
-    // If Sentry is configured, it will be called here
-    if (typeof global !== 'undefined' && (global as any).Sentry) {
-      (global as any).Sentry.captureException(error, {
-        extra: { componentStack: errorInfo.componentStack },
-      });
-    }
   }
 
   handleRetry = () => {
