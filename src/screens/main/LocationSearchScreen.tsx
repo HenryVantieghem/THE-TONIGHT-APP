@@ -109,11 +109,24 @@ export function LocationSearchScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     
+    console.log('[LocationSearch] Selecting location:', location.name);
+    
     // Navigate back with the selected location
-    // React Navigation will merge the params automatically
-    navigation.navigate('PostPreview', {
-      selectedLocation: location,
-    } as any);
+    // Use goBack and setParams to preserve existing params
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      // Set params after going back
+      setTimeout(() => {
+        navigation.setParams({
+          selectedLocation: location,
+        } as any);
+      }, 100);
+    } else {
+      // Fallback to navigate
+      navigation.navigate('PostPreview', {
+        selectedLocation: location,
+      } as any);
+    }
   }, [navigation]);
 
   const handleUseCurrentLocation = useCallback(async () => {

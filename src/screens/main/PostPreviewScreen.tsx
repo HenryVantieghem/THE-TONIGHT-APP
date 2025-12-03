@@ -162,16 +162,29 @@ const successStyles = StyleSheet.create({
 export function PostPreviewScreen() {
   const navigation = useNavigation<PostPreviewNavigationProp>();
   const route = useRoute<PostPreviewRouteProp>();
-  const { mediaUri, mediaType, location: initialLocation, isLoadingLocation: initialLoadingLocation } = route.params;
+  
+  // Safely extract params with defaults
+  const params = route.params || {};
+  const mediaUri = params.mediaUri || '';
+  const mediaType = params.mediaType || 'image';
+  const initialLocation = params.location || null;
+  const initialLoadingLocation = params.isLoadingLocation || false;
 
   // Debug logging
   useEffect(() => {
     console.log('[PostPreview] Received params:', {
-      mediaUri: mediaUri ? `${mediaUri.substring(0, 50)}...` : 'UNDEFINED',
+      hasParams: !!route.params,
+      mediaUri: mediaUri ? `${mediaUri.substring(0, 50)}...` : 'UNDEFINED/EMPTY',
       mediaType,
       hasLocation: !!initialLocation,
       locationName: initialLocation?.name,
+      allParams: Object.keys(params),
     });
+    
+    if (!mediaUri) {
+      console.error('[PostPreview] ⚠️ mediaUri is missing or empty!');
+      console.error('[PostPreview] Route params:', JSON.stringify(params, null, 2));
+    }
   }, []);
 
   const insets = useSafeAreaInsets();
