@@ -209,11 +209,11 @@ const styles = StyleSheet.create({
     width: 160,
     height: 160,
     borderRadius: 80,
-    backgroundColor: colors.glassYellow,
+    backgroundColor: colors.glassRed,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: colors.borderYellow,
+    borderColor: colors.borderRed,
   },
   textContainer: {
     alignItems: 'center',

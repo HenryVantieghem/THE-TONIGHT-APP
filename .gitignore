@@ -1,26 +1,39 @@
+# Dependencies
+node_modules/
+
 # Expo
 .expo/
 .expo-shared/
 dist/
 web-build/
-ios/
-android/
 
-# Node
-node_modules/
-npm-debug.log
-yarn-error.log
+# Native
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig
+*.ipa
+*.apk
 
-# macOS
-.DS_Store
+# Metro
+.metro-health-check*
+
+# Debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+**/ios/Pods/
 
 # Environment variables
 .env
 .env.local
 .env.*.local
 
-# TypeScript
-*.tsbuildinfo
+# macOS
+.DS_Store
 
 # IDE
 .vscode/
@@ -29,13 +42,8 @@ yarn-error.log
 *.swo
 *~
 
-# Testing
-coverage/
-
-# Build
-build/
+# Temporary files
 *.log
-
-# Misc
-*.pem
+tmp/
+temp/
 

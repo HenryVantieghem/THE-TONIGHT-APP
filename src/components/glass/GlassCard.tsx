@@ -4,7 +4,7 @@ import { colors, shadows, spacing, radius } from '../../constants/theme';
 
 interface GlassCardProps {
   children: React.ReactNode;
-  variant?: 'light' | 'medium' | 'strong' | 'dark' | 'yellow';
+  variant?: 'light' | 'medium' | 'strong' | 'dark' | 'red';
   padding?: keyof typeof spacing;
   style?: ViewStyle;
 }
@@ -32,9 +32,9 @@ export function GlassCard({
       backgroundColor: colors.glassDark,
       borderColor: colors.border,
     },
-    yellow: {
-      backgroundColor: colors.glassYellow,
-      borderColor: colors.borderYellow,
+    red: {
+      backgroundColor: colors.glassRed,
+      borderColor: colors.borderRed,
     },
   };
 

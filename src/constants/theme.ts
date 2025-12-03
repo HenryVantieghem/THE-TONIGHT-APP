@@ -1,27 +1,27 @@
-// GHOST MODE - Ultramodern Theme System
-// Inspired by Snapchat's ephemeral design philosophy
+// LIQUID GLASS MODE - Ultra-Modern Theme System
+// Black/White/Dark Red aesthetic with liquid glass effects
 // Dark-first, gesture-driven, camera-centric
 
 export const theme = {
-  // PRIMARY - Ghost Yellow (signature color)
+  // PRIMARY - Dark Red (signature color)
   colors: {
-    primary: '#FFFC00',           // Snapchat-inspired yellow
-    primaryDark: '#E6E300',
-    primaryLight: '#FFFD4D',
-    primaryGlow: 'rgba(255, 252, 0, 0.3)',
+    primary: '#DC143C',           // Crimson red
+    primaryDark: '#8B0000',       // Dark red
+    primaryLight: '#FF1744',      // Bright red
+    primaryGlow: 'rgba(220, 20, 60, 0.4)',
 
-    // BACKGROUNDS - Pure dark
+    // BACKGROUNDS - Deep blacks
     background: '#000000',         // Pure black
-    backgroundSecondary: '#1C1C1E', // iOS dark gray
-    backgroundTertiary: '#2C2C2E', // Slightly lighter
-    backgroundQuaternary: '#3C3C3E',
+    backgroundSecondary: '#0A0A0A', // Near black
+    backgroundTertiary: '#1A1A1A', // Dark charcoal
+    backgroundQuaternary: '#2A2A2A',
 
     // SURFACES (Glassmorphism)
-    glass: 'rgba(255, 255, 255, 0.1)',
-    glassStrong: 'rgba(255, 255, 255, 0.15)',
-    glassDark: 'rgba(0, 0, 0, 0.3)',
-    glassBlack: 'rgba(0, 0, 0, 0.6)',
-    glassYellow: 'rgba(255, 252, 0, 0.15)',
+    glass: 'rgba(255, 255, 255, 0.08)',
+    glassStrong: 'rgba(255, 255, 255, 0.12)',
+    glassDark: 'rgba(0, 0, 0, 0.4)',
+    glassBlack: 'rgba(0, 0, 0, 0.7)',
+    glassRed: 'rgba(220, 20, 60, 0.15)',
 
     // TEXT
     text: '#FFFFFF',              // White
@@ -30,28 +30,28 @@ export const theme = {
     textQuaternary: 'rgba(255, 255, 255, 0.2)',
     textInverse: '#000000',
 
-    // ACCENTS (iOS-inspired vibrant)
-    accent: '#FFFC00',            // Yellow
-    accentRed: '#FF3B30',         // iOS red
-    accentGreen: '#30D158',       // iOS green
-    accentBlue: '#0A84FF',        // iOS blue
-    accentPurple: '#BF5AF2',      // iOS purple
-    accentOrange: '#FF9F0A',      // iOS orange
-    accentPink: '#FF375F',        // iOS pink
-    accentTeal: '#64D2FF',        // iOS teal
+    // ACCENTS (Minimal vibrant)
+    accent: '#DC143C',            // Crimson red
+    accentRed: '#DC143C',         // Crimson
+    accentGreen: '#00FF41',       // Matrix green
+    accentBlue: '#00D4FF',        // Cyan
+    accentPurple: '#C724B1',      // Magenta
+    accentOrange: '#FF6B00',      // Bright orange
+    accentPink: '#FF0080',        // Hot pink
+    accentTeal: '#00FFC8',        // Bright teal
 
     // TIMER COLORS (vibrant, urgent)
-    timerGreen: '#30D158',
-    timerYellow: '#FFD60A',
-    timerOrange: '#FF9F0A',
-    timerRed: '#FF3B30',
-    timerRedGlow: 'rgba(255, 59, 48, 0.4)',
+    timerGreen: '#00FF41',
+    timerYellow: '#FFD600',
+    timerOrange: '#FF6B00',
+    timerRed: '#DC143C',
+    timerRedGlow: 'rgba(220, 20, 60, 0.5)',
 
     // SEMANTIC
-    success: '#30D158',
-    warning: '#FFD60A',
-    error: '#FF3B30',
-    info: '#0A84FF',
+    success: '#00FF41',
+    warning: '#FFD600',
+    error: '#DC143C',
+    info: '#00D4FF',
 
     // SPECIAL
     white: '#FFFFFF',
@@ -62,9 +62,9 @@ export const theme = {
     overlayStrong: 'rgba(0, 0, 0, 0.8)',
 
     // BORDERS (subtle)
-    border: 'rgba(255, 255, 255, 0.1)',
-    borderStrong: 'rgba(255, 255, 255, 0.2)',
-    borderYellow: 'rgba(255, 252, 0, 0.3)',
+    border: 'rgba(255, 255, 255, 0.08)',
+    borderStrong: 'rgba(255, 255, 255, 0.16)',
+    borderRed: 'rgba(220, 20, 60, 0.4)',
   },
 
   // TYPOGRAPHY - System fonts
@@ -175,52 +175,52 @@ export const theme = {
       elevation: 12,
     },
     glow: {
-      shadowColor: '#FFFC00',
+      shadowColor: '#DC143C',
       shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.6,
-      shadowRadius: 20,
-      elevation: 8,
+      shadowOpacity: 0.7,
+      shadowRadius: 24,
+      elevation: 10,
     },
     glowRed: {
-      shadowColor: '#FF3B30',
+      shadowColor: '#DC143C',
       shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.6,
-      shadowRadius: 20,
-      elevation: 8,
+      shadowOpacity: 0.7,
+      shadowRadius: 24,
+      elevation: 10,
     },
   },
 
   // GLASSMORPHISM - Preset glass styles
   glass: {
     light: {
-      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-      backdropBlur: 20,
+      backgroundColor: 'rgba(255, 255, 255, 0.08)',
+      backdropBlur: 24,
       borderWidth: 1,
-      borderColor: 'rgba(255, 255, 255, 0.15)',
+      borderColor: 'rgba(255, 255, 255, 0.12)',
     },
     medium: {
-      backgroundColor: 'rgba(255, 255, 255, 0.15)',
-      backdropBlur: 30,
+      backgroundColor: 'rgba(255, 255, 255, 0.12)',
+      backdropBlur: 32,
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.16)',
+    },
+    strong: {
+      backgroundColor: 'rgba(255, 255, 255, 0.16)',
+      backdropBlur: 40,
       borderWidth: 1,
       borderColor: 'rgba(255, 255, 255, 0.2)',
     },
-    strong: {
-      backgroundColor: 'rgba(255, 255, 255, 0.2)',
-      backdropBlur: 40,
-      borderWidth: 1,
-      borderColor: 'rgba(255, 255, 255, 0.25)',
-    },
     dark: {
-      backgroundColor: 'rgba(0, 0, 0, 0.3)',
-      backdropBlur: 30,
+      backgroundColor: 'rgba(0, 0, 0, 0.4)',
+      backdropBlur: 32,
       borderWidth: 1,
-      borderColor: 'rgba(255, 255, 255, 0.1)',
+      borderColor: 'rgba(255, 255, 255, 0.08)',
     },
-    yellow: {
-      backgroundColor: 'rgba(255, 252, 0, 0.15)',
-      backdropBlur: 20,
+    red: {
+      backgroundColor: 'rgba(220, 20, 60, 0.15)',
+      backdropBlur: 24,
       borderWidth: 1,
-      borderColor: 'rgba(255, 252, 0, 0.3)',
+      borderColor: 'rgba(220, 20, 60, 0.4)',
     },
   },
 

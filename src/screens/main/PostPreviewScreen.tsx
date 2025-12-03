@@ -531,7 +531,7 @@ export function PostPreviewScreen() {
     const ratio = characterCount / config.MAX_CAPTION_LENGTH;
     if (ratio > 1) return colors.error;
     if (ratio > 0.9) return colors.timerOrange;
-    if (ratio > 0.8) return colors.timerYellow;
+    if (ratio > 0.8) return colors.warning;
     return colors.textTertiary;
   };
 

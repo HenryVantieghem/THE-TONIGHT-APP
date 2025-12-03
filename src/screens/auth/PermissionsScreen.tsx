@@ -19,7 +19,7 @@ import { colors } from '../../constants/colors';
 import { typography } from '../../constants/typography';
 import type { AuthStackParamList } from '../../types';
 
-// Ghost mode colors
+// Dark theme colors
 const authColors = {
   background: colors.background,
   textPrimary: colors.text,
@@ -28,7 +28,7 @@ const authColors = {
   cardBackground: colors.glass,
   cardBorder: colors.border,
   success: colors.accentGreen,
-  successLight: colors.glassYellow,
+  successLight: colors.glassRed,
 };
 
 type PermissionStatus = 'granted' | 'denied' | 'undetermined';
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: colors.glassYellow,
+    backgroundColor: colors.glassRed,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,

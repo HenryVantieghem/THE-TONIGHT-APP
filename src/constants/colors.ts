@@ -1,35 +1,35 @@
-// GHOST MODE - Ultramodern Color System v4.0
-// Dark-first, gesture-driven, camera-centric aesthetic
+// LIQUID GLASS MODE - Ultra-Modern Color System v5.0
+// Black/White/Dark Red aesthetic with liquid glass effects
 
 export const colors = {
-  // PRIMARY - Ghost Yellow (signature color)
-  primary: '#FFFC00',           // Snapchat-inspired yellow
-  primaryDark: '#E6E300',
-  primaryLight: '#FFFD4D',
-  primaryGlow: 'rgba(255, 252, 0, 0.3)',
+  // PRIMARY - Dark Red (signature color)
+  primary: '#DC143C',           // Crimson red
+  primaryDark: '#8B0000',       // Dark red
+  primaryLight: '#FF1744',      // Bright red
+  primaryGlow: 'rgba(220, 20, 60, 0.4)',
 
   // Accent aliases
-  accent: '#FFFC00',
-  accentLight: '#FFFD4D',
-  accentDark: '#E6E300',
+  accent: '#DC143C',
+  accentLight: '#FF1744',
+  accentDark: '#8B0000',
 
-  // BACKGROUNDS - Pure dark
+  // BACKGROUNDS - Deep blacks
   background: '#000000',         // Pure black
   backgroundPrimary: '#000000',
-  backgroundSecondary: '#1C1C1E', // iOS dark gray
-  backgroundTertiary: '#2C2C2E', // Slightly lighter
-  backgroundQuaternary: '#3C3C3E',
+  backgroundSecondary: '#0A0A0A', // Near black
+  backgroundTertiary: '#1A1A1A', // Dark charcoal
+  backgroundQuaternary: '#2A2A2A', // Lighter charcoal
 
   // Surfaces
-  surface: '#1C1C1E',
-  surfaceSecondary: '#2C2C2E',
+  surface: '#0A0A0A',
+  surfaceSecondary: '#1A1A1A',
 
   // SURFACES (Glassmorphism)
-  glass: 'rgba(255, 255, 255, 0.1)',
-  glassStrong: 'rgba(255, 255, 255, 0.15)',
-  glassDark: 'rgba(0, 0, 0, 0.3)',
-  glassBlack: 'rgba(0, 0, 0, 0.6)',
-  glassYellow: 'rgba(255, 252, 0, 0.15)',
+  glass: 'rgba(255, 255, 255, 0.08)',
+  glassStrong: 'rgba(255, 255, 255, 0.12)',
+  glassDark: 'rgba(0, 0, 0, 0.4)',
+  glassBlack: 'rgba(0, 0, 0, 0.7)',
+  glassRed: 'rgba(220, 20, 60, 0.15)',
 
   // TEXT
   text: '#FFFFFF',              // White
@@ -39,39 +39,39 @@ export const colors = {
   textQuaternary: 'rgba(255, 255, 255, 0.2)',
   textInverse: '#000000',
 
-  // ACCENTS (iOS-inspired vibrant)
-  accentRed: '#FF3B30',         // iOS red
-  accentGreen: '#30D158',       // iOS green
-  accentBlue: '#0A84FF',        // iOS blue
-  accentPurple: '#BF5AF2',      // iOS purple
-  accentOrange: '#FF9F0A',      // iOS orange
-  accentPink: '#FF375F',        // iOS pink
-  accentTeal: '#64D2FF',        // iOS teal
+  // ACCENTS (Minimal vibrant)
+  accentRed: '#DC143C',         // Crimson (matches primary)
+  accentGreen: '#00FF41',       // Matrix green
+  accentBlue: '#00D4FF',        // Cyan
+  accentPurple: '#C724B1',      // Magenta
+  accentOrange: '#FF6B00',      // Bright orange
+  accentPink: '#FF0080',        // Hot pink
+  accentTeal: '#00FFC8',        // Bright teal
 
   // TIMER COLORS (vibrant, urgent)
-  timerGreen: '#30D158',
-  timerGreenDark: '#28A745',
-  timerYellow: '#FFD60A',
+  timerGreen: '#00FF41',
+  timerGreenDark: '#00CC33',
+  timerYellow: '#FFD600',
   timerYellowDark: '#E6C200',
-  timerOrange: '#FF9F0A',
-  timerRed: '#FF3B30',
-  timerRedDark: '#E63428',
-  timerRedGlow: 'rgba(255, 59, 48, 0.4)',
+  timerOrange: '#FF6B00',
+  timerRed: '#DC143C',
+  timerRedDark: '#8B0000',
+  timerRedGlow: 'rgba(220, 20, 60, 0.5)',
 
   // Legacy timer aliases
-  timerFresh: '#30D158',
-  timerMid: '#FFD60A',
-  timerUrgent: '#FF3B30',
+  timerFresh: '#00FF41',
+  timerMid: '#FFD600',
+  timerUrgent: '#DC143C',
 
   // SEMANTIC
-  success: '#30D158',
-  successLight: 'rgba(48, 209, 88, 0.2)',
-  warning: '#FFD60A',
-  warningLight: 'rgba(255, 214, 10, 0.2)',
-  error: '#FF3B30',
-  errorLight: 'rgba(255, 59, 48, 0.2)',
-  info: '#0A84FF',
-  infoLight: 'rgba(10, 132, 255, 0.2)',
+  success: '#00FF41',
+  successLight: 'rgba(0, 255, 65, 0.2)',
+  warning: '#FFD600',
+  warningLight: 'rgba(255, 214, 0, 0.2)',
+  error: '#DC143C',
+  errorLight: 'rgba(220, 20, 60, 0.2)',
+  info: '#00D4FF',
+  infoLight: 'rgba(0, 212, 255, 0.2)',
 
   // SPECIAL
   white: '#FFFFFF',
@@ -84,26 +84,26 @@ export const colors = {
   overlayStrong: 'rgba(0, 0, 0, 0.8)',
 
   // BORDERS (subtle, glassmorphic)
-  border: 'rgba(255, 255, 255, 0.1)',
-  borderLight: 'rgba(255, 255, 255, 0.05)',
-  borderMedium: 'rgba(255, 255, 255, 0.15)',
-  borderStrong: 'rgba(255, 255, 255, 0.2)',
-  borderFocus: 'rgba(255, 252, 0, 0.5)',
-  borderYellow: 'rgba(255, 252, 0, 0.3)',
+  border: 'rgba(255, 255, 255, 0.08)',
+  borderLight: 'rgba(255, 255, 255, 0.04)',
+  borderMedium: 'rgba(255, 255, 255, 0.12)',
+  borderStrong: 'rgba(255, 255, 255, 0.16)',
+  borderFocus: 'rgba(220, 20, 60, 0.6)',
+  borderRed: 'rgba(220, 20, 60, 0.4)',
 
   // REACTIONS
-  reactionBackground: 'rgba(255, 255, 255, 0.15)',
-  reactionActive: '#FFFC00',
+  reactionBackground: 'rgba(255, 255, 255, 0.12)',
+  reactionActive: '#DC143C',
   reactionText: '#FFFFFF',
-  reactionTextActive: '#000000',
+  reactionTextActive: '#FFFFFF',
 
   // POLAROID (legacy compatibility - now dark themed)
-  polaroidFrame: '#1C1C1E',
-  polaroidShadow: 'rgba(0, 0, 0, 0.5)',
+  polaroidFrame: '#0A0A0A',
+  polaroidShadow: 'rgba(0, 0, 0, 0.7)',
 
   // GRADIENTS (minimal use)
-  primaryGradient: ['#FFFC00', '#FFD60A'] as const,
-  darkGradient: ['#000000', '#1C1C1E'] as const,
+  primaryGradient: ['#DC143C', '#8B0000'] as const,
+  darkGradient: ['#000000', '#0A0A0A'] as const,
 
   // SHADOWS
   shadowColor: '#000000',
@@ -175,25 +175,25 @@ export const shadows = {
     elevation: 12,
   },
   glow: {
-    shadowColor: '#FFFC00',
+    shadowColor: '#DC143C',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 20,
-    elevation: 8,
+    shadowOpacity: 0.7,
+    shadowRadius: 24,
+    elevation: 10,
   },
   glowRed: {
-    shadowColor: '#FF3B30',
+    shadowColor: '#DC143C',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 20,
-    elevation: 8,
+    shadowOpacity: 0.7,
+    shadowRadius: 24,
+    elevation: 10,
   },
   accentGlow: {
-    shadowColor: '#FFFC00',
+    shadowColor: '#DC143C',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 20,
-    elevation: 8,
+    shadowOpacity: 0.7,
+    shadowRadius: 24,
+    elevation: 10,
   },
 } as const;
 
@@ -215,9 +215,9 @@ export const borders = {
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
-  yellow: {
+  red: {
     borderWidth: 1,
-    borderColor: 'rgba(255, 252, 0, 0.3)',
+    borderColor: 'rgba(220, 20, 60, 0.4)',
   },
   extraHeavy: {
     borderWidth: 2,

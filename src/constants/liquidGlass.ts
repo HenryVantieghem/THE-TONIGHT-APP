@@ -3,23 +3,23 @@ import { colors, shadows as baseShadows } from './colors';
 
 export const liquidGlass = {
   blur: {
-    subtle: 10,
-    light: 20,
-    regular: 30,
-    strong: 50,
-    prominent: 60,
+    subtle: 12,
+    light: 24,
+    regular: 32,
+    strong: 48,
+    prominent: 64,
   },
   material: {
-    primary: { backgroundColor: colors.backgroundSecondary, backdropBlur: 20 },
-    subtle: { backgroundColor: colors.backgroundTertiary, backdropBlur: 10 },
-    elevated: { backgroundColor: colors.white, backdropBlur: 30 },
-    dark: { backgroundColor: 'rgba(0,0,0,0.6)', backdropBlur: 30 },
+    primary: { backgroundColor: colors.backgroundSecondary, backdropBlur: 24 },
+    subtle: { backgroundColor: colors.backgroundTertiary, backdropBlur: 16 },
+    elevated: { backgroundColor: colors.glassStrong, backdropBlur: 32 },
+    dark: { backgroundColor: 'rgba(0,0,0,0.7)', backdropBlur: 32 },
   },
   border: {
     width: 1,
     color: colors.border,
-    colorStrong: colors.border,
-    colorDark: 'rgba(255,255,255,0.2)',
+    colorStrong: colors.borderStrong,
+    colorDark: 'rgba(255,255,255,0.12)',
   },
 } as const;
 
@@ -30,10 +30,10 @@ export const glassShadows = {
   floating: baseShadows.level4,
   glow: (color: string, _opacity?: number) => ({
     shadowColor: color,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.7,
+    shadowRadius: 24,
+    elevation: 10,
   }),
 } as const;
 
