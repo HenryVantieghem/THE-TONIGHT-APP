@@ -149,13 +149,6 @@ function EmojiButton({
       >
         {/* Glass Background */}
         <View style={styles.glassBackground}>
-          {Platform.OS === 'ios' && (
-            <BlurView
-              intensity={isSelected ? liquidGlass.blur.light : liquidGlass.blur.subtle}
-              tint="light"
-              style={StyleSheet.absoluteFill}
-            />
-          )}
           <View
             style={[
               styles.glassBg,
@@ -208,13 +201,6 @@ export function EmojiReactionsCompact({
     <View style={styles.compactContainer}>
       {/* Glass pill background */}
       <View style={styles.compactGlass}>
-        {Platform.OS === 'ios' && (
-          <BlurView
-            intensity={liquidGlass.blur.subtle}
-            tint="light"
-            style={StyleSheet.absoluteFill}
-          />
-        )}
         <View style={styles.compactGlassBg} />
       </View>
       {uniqueEmojis.slice(0, 3).map((emoji, index) => (
