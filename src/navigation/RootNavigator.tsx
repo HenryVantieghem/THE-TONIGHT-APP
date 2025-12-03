@@ -11,7 +11,7 @@ import type { RootStackParamList } from '../types';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function RootNavigator() {
-  const { user, setUser, setIsAuthenticated } = useStore();
+  const { isAuthenticated, setUser, setIsAuthenticated } = useStore();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -23,16 +23,17 @@ export function RootNavigator() {
         if (session) {
           setIsAuthenticated(true);
 
-          // Fetch user profile
-          const { data: profile } = await supabase
+          // Fetch user profile (non-blocking)
+          supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
-            .single();
-
-          if (profile) {
-            setUser(profile);
-          }
+            .single()
+            .then(({ data: profile }) => {
+              if (profile) {
+                setUser(profile);
+              }
+            });
         }
       } catch (error) {
         console.error('Session check error:', error);
@@ -83,7 +84,7 @@ export function RootNavigator() {
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {user ? (
+        {isAuthenticated ? (
           <Stack.Screen name="Main" component={MainNavigator} />
         ) : (
           <Stack.Screen name="Auth" component={AuthNavigator} />

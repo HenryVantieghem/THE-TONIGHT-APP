@@ -37,17 +37,9 @@ export function SplashScreen() {
       }).start();
     });
 
-    // Check auth state and navigate after 1-1.5 seconds (per spec)
-    const timer = setTimeout(async () => {
-      const { supabase } = await import('../../services/supabase');
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session) {
-        // User is authenticated, RootNavigator will handle navigation
-        return;
-      } else {
-        navigation.replace('Onboarding');
-      }
+    // Navigate to Onboarding after animation (auth is handled by RootNavigator)
+    const timer = setTimeout(() => {
+      navigation.replace('Onboarding');
     }, 1500);
 
     return () => clearTimeout(timer);
