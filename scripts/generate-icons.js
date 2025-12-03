@@ -1,3 +1,5 @@
+/* eslint-env node */
+/* global __dirname, Buffer */
 const sharp = require('sharp');
 const fs = require('fs');
 const path = require('path');

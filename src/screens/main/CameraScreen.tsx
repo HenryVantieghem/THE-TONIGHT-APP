@@ -251,7 +251,7 @@ export function CameraScreen() {
         <Text style={styles.permissionText}>
           {permissionDenied
             ? 'Camera access was denied. Please enable it in Settings to take photos and videos.'
-            : 'We need access to your camera to take photos and videos. Your moments won\'t be shared without your permission.'}
+            : 'We need access to your camera to take photos and videos. Your moments won&apos;t be shared without your permission.'}
         </Text>
         {permissionDenied ? (
           <Button

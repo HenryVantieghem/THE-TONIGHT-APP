@@ -1,10 +1,9 @@
-import React, { useState, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -12,7 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { GlassCard } from '../../components/glass/GlassCard';
-import { colors, typography, spacing, radius } from '../../constants/theme';
+import { colors, typography, spacing } from '../../constants/theme';
 import type { MainStackParamList } from '../../types';
 
 type MapNavigationProp = NativeStackNavigationProp<MainStackParamList, 'Feed'>;

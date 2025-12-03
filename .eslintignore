@@ -1,0 +1,6 @@
+node_modules/
+scripts/
+*.config.js
+babel.config.js
+metro.config.js
+

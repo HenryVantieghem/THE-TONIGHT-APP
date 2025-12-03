@@ -16,10 +16,9 @@ import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../hooks/useAuth';
 import { validateUsername } from '../../utils/validation';
-import { config } from '../../constants/config';
+import { config , spacing } from '../../constants/config';
 import { colors } from '../../constants/colors';
 import { textStyles } from '../../constants/typography';
-import { spacing } from '../../constants/config';
 import type { AuthStackParamList } from '../../types';
 
 type UsernameSetupNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'UsernameSetup'>;

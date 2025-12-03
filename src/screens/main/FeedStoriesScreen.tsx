@@ -268,7 +268,7 @@ export function FeedStoriesScreen() {
         <Text style={styles.emptyIcon}>👻</Text>
         <Text style={styles.emptyTitle}>No Posts Yet</Text>
         <Text style={styles.emptyText}>
-          Be the first to share what you're doing tonight!
+          Be the first to share what you&apos;re doing tonight!
         </Text>
         <TouchableOpacity
           style={styles.cameraButton}

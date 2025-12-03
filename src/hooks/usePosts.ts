@@ -47,11 +47,9 @@ export function usePosts() {
           setPosts(data);
         } else {
           // Append new posts, avoiding duplicates
-          setPosts(prev => {
-            const existingIds = new Set(prev.map(p => p.id));
-            const newPosts = data.filter(p => !existingIds.has(p.id));
-            return [...prev, ...newPosts];
-          });
+          const existingIds = new Set(posts.map((p) => p.id));
+          const newPosts = data.filter((p) => !existingIds.has(p.id));
+          setPosts([...posts, ...newPosts]);
         }
       }
     } catch (err) {

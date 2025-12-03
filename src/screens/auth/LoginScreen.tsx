@@ -154,7 +154,7 @@ export function LoginScreen() {
           {/* Footer */}
           <View style={styles.footer}>
             <Text style={[textStyles.body, styles.footerText]}>
-              Don't have an account?{' '}
+              Don&apos;t have an account?{' '}
             </Text>
             <TouchableOpacity onPress={handleSignUp}>
               <Text style={[textStyles.body, styles.footerLink]}>Sign Up</Text>

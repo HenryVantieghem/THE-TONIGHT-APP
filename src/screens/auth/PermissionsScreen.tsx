@@ -15,6 +15,7 @@ import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components/ui/Button';
 import { useStore } from '../../stores/useStore';
+import { colors } from '../../constants/colors';
 import { typography } from '../../constants/typography';
 import type { AuthStackParamList } from '../../types';
 

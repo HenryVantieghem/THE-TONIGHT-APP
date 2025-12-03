@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { colors, shadows, spacing, radius } from '../../constants/theme';
 
 interface GlassCardProps {
@@ -27,7 +26,7 @@ export function GlassCard({
     medium: {
       backgroundColor: colors.glassStrong,
       blurIntensity: intensity || 30,
-      borderColor: colors.borderMedium,
+      borderColor: colors.border,
     },
     strong: {
       backgroundColor: colors.glassStrong,
