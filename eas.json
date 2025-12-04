@@ -1,7 +1,6 @@
 {
   "cli": {
-    "version": ">= 5.0.0",
-    "appVersionSource": "local"
+    "version": ">= 13.2.0"
   },
   "build": {
     "development": {
@@ -9,40 +8,22 @@
       "distribution": "internal",
       "ios": {
         "simulator": true
-      },
-      "android": {
-        "buildType": "apk"
       }
     },
     "preview": {
       "distribution": "internal",
       "ios": {
         "simulator": false
-      },
-      "android": {
-        "buildType": "apk"
       }
     },
     "production": {
       "ios": {
-        "distribution": "store",
-        "autoIncrement": true
-      },
-      "android": {
-        "buildType": "app-bundle",
-        "autoIncrement": true
+        "simulator": false
       }
     }
   },
   "submit": {
-    "production": {
-      "ios": {
-        "appleId": "hvantieghem@icloud.com"
-      },
-      "android": {
-        "serviceAccountKeyPath": "./google-services.json",
-        "track": "production"
-      }
-    }
+    "production": {}
   }
 }
+

@@ -1,45 +1,33 @@
-import React, { useEffect } from 'react';
+/**
+ * Scena - Main App Entry
+ * A calm, pressure-free moment sharing app
+ * Built with Reality Transurfing principles + Liquid Glass design
+ */
+
+import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import * as SplashScreen from 'expo-splash-screen';
-import { RootNavigator } from './src/navigation';
-import { ErrorBoundary } from './src/components/ErrorBoundary';
+import { StyleSheet } from 'react-native';
 
-// Keep splash screen visible while loading
-SplashScreen.preventAutoHideAsync();
+import { AppProvider } from './src/context/AppContext';
+import { RootNavigator } from './src/navigation';
 
 export default function App() {
-  const [appIsReady, setAppIsReady] = React.useState(false);
-
-  useEffect(() => {
-    async function prepare() {
-      try {
-        // Brief delay for smooth transition
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      } catch (e) {
-        console.warn(e);
-      } finally {
-        setAppIsReady(true);
-        await SplashScreen.hideAsync();
-      }
-    }
-
-    prepare();
-  }, []);
-
-  if (!appIsReady) {
-    return null;
-  }
-
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <ErrorBoundary>
-        <SafeAreaProvider>
-          <StatusBar style="light" />
+    <GestureHandlerRootView style={styles.container}>
+      <SafeAreaProvider>
+        <AppProvider>
+          <StatusBar style="dark" />
           <RootNavigator />
-        </SafeAreaProvider>
-      </ErrorBoundary>
+        </AppProvider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+});

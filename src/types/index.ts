@@ -1,165 +1,72 @@
-// User Profile
+/**
+ * Scena - Type Definitions
+ */
+
+// User profile
 export interface User {
   id: string;
-  username: string | null;
-  avatar_url: string | null;
-  created_at: string;
-  updated_at?: string;
-  // Stats fields from profiles table
-  post_count?: number;
-  friend_count?: number;
-  total_views?: number;
-  // Settings fields from profiles table
-  location_precision?: 'exact' | 'neighborhood' | 'city';
-  notifications_enabled?: boolean;
+  username: string;
+  avatarUrl?: string;
 }
 
-// Post with 1-hour expiry
-export interface Post {
+// A moment (what we call posts)
+export interface Moment {
   id: string;
-  user_id: string;
-  media_url: string;
-  media_type: 'image' | 'video';
-  thumbnail_url: string | null;
-  caption: string | null;
-  location_name: string | null; // Now optional
-  location_lat: number | null;  // Now optional
-  location_lng: number | null;  // Now optional
-  location_city: string | null;
-  location_state: string | null;
-  created_at: string;
-  expires_at: string;
-  view_count: number;
-  user?: User;
-  reactions?: Reaction[];
-  my_reaction?: Reaction;
+  user: User;
+  imageUri: string;
+  frontCameraUri?: string; // For dual camera
+  location?: string;
+  caption?: string;
+  createdAt: Date;
+  expiresAt: Date;
+  reactions: Reaction[];
 }
 
-// Friendship relationship
-export interface Friendship {
-  id: string;
-  requester_id: string;
-  addressee_id: string;
-  status: 'pending' | 'accepted' | 'declined' | 'blocked';
-  created_at: string;
-  updated_at?: string;
-  friend?: User;
-  user?: User;
-}
-
-// Emoji reaction to post
-export type ReactionEmoji = '😊' | '❤️' | '🔥' | '💯';
-
+// Emoji reaction
 export interface Reaction {
   id: string;
-  post_id: string;
-  user_id: string;
-  emoji: ReactionEmoji;
-  created_at: string;
-  user?: User;
-}
-
-// User statistics
-export interface UserStats {
-  id: string;
-  user_id: string;
-  total_posts: number;
-  total_friends: number;
-  total_views: number;
-}
-
-// Blocked user
-export interface BlockedUser {
-  id: string;
-  blocker_id: string;
-  blocked_id: string;
-  created_at: string;
-}
-
-// Location data
-export interface LocationData {
-  name: string;
-  lat: number;
-  lng: number;
-  city?: string;
-  state?: string;
-}
-
-// Location precision setting
-export type LocationPrecision = 'exact' | 'neighborhood' | 'city';
-
-// Auth state
-export interface AuthState {
-  user: User | null;
-  session: Session | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-}
-
-export interface Session {
-  access_token: string;
-  refresh_token: string;
-  expires_at?: number;
-  user: {
-    id: string;
-    email?: string;
-  };
+  userId: string;
+  emoji: string;
+  createdAt: Date;
 }
 
 // Navigation types
 export type RootStackParamList = {
-  Auth: undefined;
-  Main: undefined;
-};
-
-export type AuthStackParamList = {
-  Splash: undefined;
-  Login: undefined;
+  Welcome: undefined;
   SignUp: undefined;
-  UsernameSetup: undefined;
+  SignIn: undefined;
+  ForgotPassword: undefined;
+  Permissions: undefined;
+  MainTabs: undefined;
+  Camera: undefined;
+  PostEditor: { imageUri: string; frontCameraUri?: string };
+  LocationSearch: { currentLocation?: string };
+  FullscreenMoment: { momentId: string };
+  ReactionsDetail: { momentId: string };
+  Profile: { userId?: string };
+  EditProfile: undefined;
+  Settings: undefined;
+  Help: undefined;
+  SharedSuccess: undefined;
 };
 
 export type MainTabParamList = {
-  FeedTab: undefined;
+  Feed: undefined;
+  Camera: undefined;
   ProfileTab: undefined;
 };
 
-export type MainStackParamList = {
-  Feed: undefined;
-  Camera: undefined;
-  PostPreview: {
-    mediaUri: string;
-    mediaType: 'image' | 'video';
-    location: LocationData | null;
-    isLoadingLocation?: boolean;
-  };
-  Profile: { userId?: string };
-  Settings: undefined;
-  Friends: undefined;
-};
-
-// API Response types
-export interface ApiResponse<T> {
-  data: T | null;
-  error: ApiError | null;
+// App state
+export interface AppState {
+  user: User | null;
+  isAuthenticated: boolean;
+  hasCompletedOnboarding: boolean;
+  moments: Moment[];
 }
 
-export interface ApiError {
-  message: string;
-  code?: string;
-}
-
-// Create post payload
-export interface CreatePostPayload {
-  userId: string;
-  mediaUri: string;
-  mediaType: 'image' | 'video';
-  caption?: string;
-  location?: LocationData; // Location is now OPTIONAL
-}
-
-// Permission status
-export interface PermissionStatus {
+// Permission states
+export interface Permissions {
   camera: 'granted' | 'denied' | 'undetermined';
   location: 'granted' | 'denied' | 'undetermined';
+  photos: 'granted' | 'denied' | 'undetermined';
 }
