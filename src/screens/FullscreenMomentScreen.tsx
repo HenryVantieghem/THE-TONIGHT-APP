@@ -3,7 +3,7 @@
  * Immersive view - tap to toggle front camera if dual
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -27,6 +27,8 @@ import { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../types';
 import { useApp } from '../context/AppContext';
+import { momentsService } from '../services/moments.service';
+import { reactionsService } from '../services/reactions.service';
 import { TimerDots, EmojiPicker } from '../components';
 import { colors, typography, spacing, hitSlop, durations } from '../theme';
 
@@ -42,8 +44,9 @@ export const FullscreenMomentScreen: React.FC<FullscreenMomentScreenProps> = ({
   route,
 }) => {
   const { momentId } = route.params;
-  const { getMomentById, addReaction } = useApp();
-  const moment = getMomentById(momentId);
+  const { state } = useApp();
+  const [moment, setMoment] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   const [showFrontCamera, setShowFrontCamera] = useState(false);
   const [showInfo, setShowInfo] = useState(true);
@@ -51,8 +54,50 @@ export const FullscreenMomentScreen: React.FC<FullscreenMomentScreenProps> = ({
 
   const infoOpacity = useSharedValue(1);
 
-  if (!moment) {
-    navigation.goBack();
+  useEffect(() => {
+    const fetchMoment = async () => {
+      try {
+        const data = await momentsService.getMoment(momentId);
+        if (data) {
+          // Convert MomentRow to Moment type
+          const convertedMoment = {
+            id: data.id,
+            user: {
+              id: data.profiles?.id || '',
+              username: data.profiles?.username || 'user',
+              avatarUrl: data.profiles?.avatar_url,
+            },
+            imageUri: data.image_url,
+            frontCameraUri: data.front_camera_url,
+            location: data.location,
+            caption: data.caption,
+            createdAt: new Date(data.created_at),
+            expiresAt: new Date(data.expires_at),
+            reactions: (data.reactions || []).map((r: any) => ({
+              id: r.id,
+              userId: r.user_id,
+              emoji: r.emoji,
+              createdAt: new Date(r.created_at),
+            })),
+          };
+          setMoment(convertedMoment);
+        } else {
+          navigation.goBack();
+        }
+      } catch (error) {
+        if (__DEV__) {
+          console.error('Failed to fetch moment:', error);
+        }
+        navigation.goBack();
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMoment();
+  }, [momentId, navigation]);
+
+  if (loading || !moment) {
     return null;
   }
 
@@ -77,15 +122,46 @@ export const FullscreenMomentScreen: React.FC<FullscreenMomentScreenProps> = ({
     setShowEmojiPicker(true);
   };
 
-  const handleEmojiSelect = (emoji: string) => {
-    addReaction(momentId, emoji);
+  const handleEmojiSelect = async (emoji: string) => {
+    try {
+      await reactionsService.addReaction(momentId, emoji);
+      // Refresh moment to get updated reactions
+      const data = await momentsService.getMoment(momentId);
+      if (data) {
+        const convertedMoment = {
+          id: data.id,
+          user: {
+            id: data.profiles?.id || '',
+            username: data.profiles?.username || 'user',
+            avatarUrl: data.profiles?.avatar_url,
+          },
+          imageUri: data.image_url,
+          frontCameraUri: data.front_camera_url,
+          location: data.location,
+          caption: data.caption,
+          createdAt: new Date(data.created_at),
+          expiresAt: new Date(data.expires_at),
+          reactions: (data.reactions || []).map((r: any) => ({
+            id: r.id,
+            userId: r.user_id,
+            emoji: r.emoji,
+            createdAt: new Date(r.created_at),
+          })),
+        };
+        setMoment(convertedMoment);
+      }
+    } catch (error) {
+      if (__DEV__) {
+        console.error('Failed to add reaction:', error);
+      }
+    }
   };
 
   const animatedInfoStyle = useAnimatedStyle(() => ({
     opacity: infoOpacity.value,
   }));
 
-  const uniqueEmojis = [...new Set(moment.reactions.map(r => r.emoji))].slice(0, 5);
+  const uniqueEmojis = [...new Set(moment.reactions.map((r: any) => r.emoji))].slice(0, 5);
 
   return (
     <View style={styles.container}>
@@ -131,7 +207,7 @@ export const FullscreenMomentScreen: React.FC<FullscreenMomentScreenProps> = ({
             {/* Reaction emojis */}
             <Pressable onPress={handleReact} style={styles.reactions}>
               {uniqueEmojis.length > 0 ? (
-                uniqueEmojis.map((emoji, index) => (
+                (uniqueEmojis as string[]).map((emoji: string, index: number) => (
                   <Text key={index} style={styles.emoji}>{emoji}</Text>
                 ))
               ) : (

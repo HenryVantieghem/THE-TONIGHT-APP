@@ -22,25 +22,28 @@ import { RootStackParamList } from '../types';
 import { useApp } from '../context/AppContext';
 import { GlassButton, GlassInput } from '../components';
 import { colors, typography, spacing, gradients, hitSlop } from '../theme';
+import { useAuth } from '../hooks/useAuth';
 
 type SignInScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'SignIn'>;
 };
 
 export const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
-  const { setUser, setAuthenticated, setOnboardingComplete } = useApp();
+  const { refreshUser } = useApp();
+  const { signIn, loading, error: authError } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
 
-  const handleSignIn = () => {
-    // Mock auth - just set user and proceed
-    setUser({
-      id: Date.now().toString(),
-      username: email.split('@')[0] || 'you',
-    });
-    setAuthenticated(true);
-    setOnboardingComplete(true);
-    navigation.replace('MainTabs');
+  const handleSignIn = async () => {
+    setError('');
+    
+    const success = await signIn({ email, password });
+    
+    if (success) {
+      await refreshUser();
+      navigation.replace('MainTabs');
+    }
   };
 
   const handleBack = () => {
@@ -49,6 +52,10 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
 
   const handleSignUp = () => {
     navigation.navigate('SignUp');
+  };
+
+  const handleForgotPassword = () => {
+    navigation.navigate('ForgotPassword');
   };
 
   const isValid = email.length > 0 && password.length > 0;
@@ -106,6 +113,10 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
                 placeholder="your password"
                 secureTextEntry
               />
+
+              {(error || authError) && (
+                <Text style={styles.errorText}>{error || authError}</Text>
+              )}
             </Animated.View>
 
             {/* Submit */}
@@ -114,13 +125,17 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
               style={styles.actions}
             >
               <GlassButton
-                title="sign in"
+                title={loading ? "signing in..." : "sign in"}
                 onPress={handleSignIn}
                 variant="primary"
                 size="large"
                 fullWidth
-                disabled={!isValid}
+                disabled={!isValid || loading}
               />
+
+              <Pressable onPress={handleForgotPassword} style={styles.forgotPasswordButton}>
+                <Text style={styles.forgotPasswordText}>forgot password?</Text>
+              </Pressable>
 
               <View style={styles.signUpContainer}>
                 <Text style={styles.signUpText}>need an account? </Text>
@@ -190,6 +205,21 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     textTransform: 'lowercase',
     textDecorationLine: 'underline',
+  },
+  forgotPasswordButton: {
+    alignItems: 'center',
+    marginTop: spacing.md,
+  },
+  forgotPasswordText: {
+    fontSize: typography.sizes.sm,
+    color: colors.text.tertiary,
+    textTransform: 'lowercase',
+  },
+  errorText: {
+    fontSize: typography.sizes.sm,
+    color: colors.timer.urgent,
+    textTransform: 'lowercase',
+    marginTop: spacing.md,
   },
 });
 

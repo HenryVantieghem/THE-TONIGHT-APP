@@ -22,25 +22,29 @@ import { RootStackParamList } from '../types';
 import { useApp } from '../context/AppContext';
 import { GlassButton, GlassInput } from '../components';
 import { colors, typography, spacing, gradients, hitSlop } from '../theme';
+import { useAuth } from '../hooks/useAuth';
 
 type SignUpScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'SignUp'>;
 };
 
 export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
-  const { setUser, setAuthenticated } = useApp();
+  const { refreshUser } = useApp();
+  const { signUp, loading, error: authError } = useAuth();
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
 
-  const handleJoin = () => {
-    // Mock auth - just set user and proceed
-    setUser({
-      id: Date.now().toString(),
-      username: username || 'you',
-    });
-    setAuthenticated(true);
-    navigation.replace('Permissions');
+  const handleJoin = async () => {
+    setError('');
+    
+    const success = await signUp({ email, password, username });
+    
+    if (success) {
+      await refreshUser();
+      navigation.replace('Permissions');
+    }
   };
 
   const handleBack = () => {
@@ -106,6 +110,10 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
                 placeholder="something memorable"
                 secureTextEntry
               />
+
+              {(error || authError) && (
+                <Text style={styles.errorText}>{error || authError}</Text>
+              )}
             </Animated.View>
 
             {/* Submit */}
@@ -114,12 +122,12 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
               style={styles.actions}
             >
               <GlassButton
-                title="join"
+                title={loading ? "creating account..." : "join"}
                 onPress={handleJoin}
                 variant="primary"
                 size="large"
                 fullWidth
-                disabled={!isValid}
+                disabled={!isValid || loading}
               />
 
               <View style={styles.signInContainer}>
@@ -180,6 +188,12 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     textTransform: 'lowercase',
     textDecorationLine: 'underline',
+  },
+  errorText: {
+    fontSize: typography.sizes.sm,
+    color: colors.timer.urgent,
+    textTransform: 'lowercase',
+    marginTop: spacing.md,
   },
 });
 

@@ -24,7 +24,8 @@ import { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../types';
 import { useApp } from '../context/AppContext';
-import { GlassButton, GlassInput, GlassCard } from '../components';
+import { useImageUpload } from '../hooks/useImageUpload';
+import { GlassButton, GlassInput, GlassCard, ImageUploadProgress } from '../components';
 import { colors, typography, spacing, borderRadius, gradients, hitSlop } from '../theme';
 
 type PostEditorScreenProps = {
@@ -36,22 +37,40 @@ export const PostEditorScreen: React.FC<PostEditorScreenProps> = ({
   navigation,
   route,
 }) => {
-  const { imageUri, frontCameraUri } = route.params;
-  const { state, addMoment } = useApp();
+  const { imageUri, frontCameraUri, location: routeLocation } = route.params;
+  const { state } = useApp();
+  const { uploadMoment, uploading, progress } = useImageUpload();
 
-  const [location, setLocation] = useState<string>('');
+  const [location, setLocation] = useState<string>(routeLocation || '');
   const [caption, setCaption] = useState<string>('');
   const [isLoadingLocation, setIsLoadingLocation] = useState(true);
 
   useEffect(() => {
-    detectLocation();
-  }, []);
+    // If location was passed from LocationSearch, use it
+    if (routeLocation) {
+      setLocation(routeLocation);
+      setIsLoadingLocation(false);
+    } else {
+      detectLocation();
+    }
+  }, [routeLocation]);
 
   const detectLocation = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
+      
       if (status === 'granted') {
-        const loc = await Location.getCurrentPositionAsync({});
+        // Set timeout for location request (10 seconds)
+        const locationPromise = Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Location timeout')), 10000)
+        );
+
+        const loc = await Promise.race([locationPromise, timeoutPromise]) as Location.LocationObject;
+        
         const [place] = await Location.reverseGeocodeAsync({
           latitude: loc.coords.latitude,
           longitude: loc.coords.longitude,
@@ -61,10 +80,21 @@ export const PostEditorScreen: React.FC<PostEditorScreenProps> = ({
           // Create a simple, friendly location name
           const locationName = place.name || place.street || place.city || 'somewhere nice';
           setLocation(locationName.toLowerCase());
+        } else {
+          setLocation(''); // Clear location if geocoding fails
+        }
+      } else {
+        // Permission denied
+        if (__DEV__) {
+          console.log('Location permission denied');
         }
       }
     } catch (e) {
       // Location not available - that's okay
+      if (__DEV__) {
+        console.log('Location detection failed:', e);
+      }
+      setLocation(''); // Clear location on error
     } finally {
       setIsLoadingLocation(false);
     }
@@ -75,30 +105,30 @@ export const PostEditorScreen: React.FC<PostEditorScreenProps> = ({
   };
 
   const handleLocationEdit = () => {
-    navigation.navigate('LocationSearch', { currentLocation: location });
+    navigation.navigate('LocationSearch', { 
+      currentLocation: location,
+      imageUri,
+      frontCameraUri,
+    });
   };
 
-  const handleShare = () => {
+  const handleShare = async () => {
+    if (uploading) return;
+
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-    const now = new Date();
-    const expiresAt = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour
-
-    addMoment({
-      id: Date.now().toString(),
-      user: state.user || { id: 'guest', username: 'you' },
+    const moment = await uploadMoment({
       imageUri,
       frontCameraUri,
       location: location || undefined,
       caption: caption || undefined,
-      createdAt: now,
-      expiresAt,
-      reactions: [],
     });
 
-    // Navigate back to feed
-    navigation.popToTop();
-    navigation.navigate('MainTabs');
+    if (moment) {
+      // Navigate back to feed
+      navigation.popToTop();
+      navigation.navigate('MainTabs');
+    }
   };
 
   return (
@@ -180,14 +210,18 @@ export const PostEditorScreen: React.FC<PostEditorScreenProps> = ({
             </Animated.View>
           </ScrollView>
 
+          {/* Upload Progress - shown as overlay */}
+          <ImageUploadProgress progress={progress} visible={uploading} />
+
           {/* Share button */}
           <Animated.View entering={FadeInUp.duration(400).delay(300)} style={styles.shareContainer}>
             <GlassButton
-              title="share"
+              title={uploading ? "sharing..." : "share"}
               onPress={handleShare}
               variant="primary"
               size="large"
               fullWidth
+              disabled={uploading}
             />
           </Animated.View>
         </KeyboardAvoidingView>
@@ -278,6 +312,11 @@ const styles = StyleSheet.create({
   shareContainer: {
     paddingHorizontal: spacing.screenHorizontal,
     paddingBottom: spacing.xl,
+  },
+  progressContainer: {
+    paddingHorizontal: spacing.screenHorizontal,
+    paddingBottom: spacing.md,
+    alignItems: 'center',
   },
 });
 

@@ -23,15 +23,19 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../types';
 import { useApp } from '../context/AppContext';
+import { profileService } from '../services/profile.service';
 import { GlassButton, GlassInput, Avatar, Header, Toast } from '../components';
 import { colors, typography, spacing, gradients, hitSlop } from '../theme';
+import { toast } from '../utils/toast';
 
 export const EditProfileScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { state, setUser } = useApp();
+  const { state, setUser, refreshUser } = useApp();
 
   const [username, setUsername] = useState(state.user?.username || '');
-  const [avatarUri, setAvatarUri] = useState(state.user?.avatarUrl || '');
+  const [bio, setBio] = useState(state.user?.bio || '');
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
@@ -50,26 +54,34 @@ export const EditProfileScreen: React.FC = () => {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (saving) return;
+
+    setSaving(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-    if (state.user) {
-      setUser({
-        ...state.user,
-        username: username || state.user.username,
-        avatarUrl: avatarUri || state.user.avatarUrl,
+    try {
+      await profileService.updateProfile({
+        username: username || undefined,
+        bio: bio || undefined,
+        avatarUri: avatarUri || undefined,
       });
-    }
 
-    setToastMessage('saved');
-    setShowToast(true);
-
-    setTimeout(() => {
+      await refreshUser();
+      
+      toast.success('profile updated');
       navigation.goBack();
-    }, 1000);
+    } catch (error: any) {
+      toast.error(error.message || 'failed to update profile');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const hasChanges = username !== state.user?.username || avatarUri !== state.user?.avatarUrl;
+  const hasChanges = 
+    username !== state.user?.username || 
+    bio !== state.user?.bio ||
+    (avatarUri !== null && avatarUri !== state.user?.avatarUrl);
 
   return (
     <View style={styles.container}>
@@ -94,9 +106,9 @@ export const EditProfileScreen: React.FC = () => {
             <Animated.View entering={FadeInUp.duration(400)} style={styles.avatarSection}>
               <Pressable onPress={handlePickImage}>
                 <Avatar
-                  uri={avatarUri}
-                  name={username}
-                  size="xlarge"
+                  uri={avatarUri || state.user?.avatarUrl}
+                  username={username || state.user?.username}
+                  size={100}
                 />
                 <View style={styles.editBadge}>
                   <Ionicons name="camera" size={14} color={colors.white} />
@@ -116,6 +128,18 @@ export const EditProfileScreen: React.FC = () => {
               />
             </Animated.View>
 
+            {/* Bio */}
+            <Animated.View entering={FadeInUp.duration(400).delay(150)}>
+              <GlassInput
+                value={bio}
+                onChangeText={setBio}
+                label="bio"
+                placeholder="tell us about yourself (optional)"
+                multiline
+                maxLength={100}
+              />
+            </Animated.View>
+
             {/* Info */}
             <Animated.View entering={FadeIn.duration(400).delay(200)} style={styles.infoContainer}>
               <Text style={styles.infoText}>
@@ -127,12 +151,12 @@ export const EditProfileScreen: React.FC = () => {
           {/* Save button */}
           <Animated.View entering={FadeInUp.duration(400).delay(300)} style={styles.saveContainer}>
             <GlassButton
-              title="save"
+              title={saving ? "saving..." : "save"}
               onPress={handleSave}
               variant="primary"
               size="large"
               fullWidth
-              disabled={!hasChanges}
+              disabled={!hasChanges || saving}
             />
           </Animated.View>
         </KeyboardAvoidingView>

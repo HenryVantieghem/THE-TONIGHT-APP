@@ -4,7 +4,7 @@
  * Just gentle dots that fill as time passes
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -27,13 +27,28 @@ export const TimerDots: React.FC<TimerDotsProps> = ({
   totalDots = 6,
   size = 'small',
 }) => {
-  const now = new Date();
-  const totalDuration = expiresAt.getTime() - createdAt.getTime();
-  const elapsed = now.getTime() - createdAt.getTime();
-  const progress = Math.min(Math.max(elapsed / totalDuration, 0), 1);
+  const [filledCount, setFilledCount] = useState(() => {
+    const now = new Date();
+    const totalDuration = expiresAt.getTime() - createdAt.getTime();
+    const elapsed = now.getTime() - createdAt.getTime();
+    const progress = Math.min(Math.max(elapsed / totalDuration, 0), 1);
+    return Math.round((1 - progress) * totalDots);
+  });
 
-  // Calculate how many dots should be filled (inverse - more time gone = more dots empty)
-  const filledCount = Math.round((1 - progress) * totalDots);
+  useEffect(() => {
+    // Update timer every 10 seconds
+    const interval = setInterval(() => {
+      const now = new Date();
+      const totalDuration = expiresAt.getTime() - createdAt.getTime();
+      const elapsed = now.getTime() - createdAt.getTime();
+      const progress = Math.min(Math.max(elapsed / totalDuration, 0), 1);
+      const newFilledCount = Math.round((1 - progress) * totalDots);
+      
+      setFilledCount(newFilledCount);
+    }, 10000); // Update every 10 seconds
+
+    return () => clearInterval(interval);
+  }, [createdAt, expiresAt, totalDots]);
 
   const dotSize = size === 'small' ? 6 : 8;
   const dotSpacing = size === 'small' ? 6 : 8;

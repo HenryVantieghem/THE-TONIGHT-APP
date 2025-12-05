@@ -39,8 +39,8 @@ export type RootStackParamList = {
   Permissions: undefined;
   MainTabs: undefined;
   Camera: undefined;
-  PostEditor: { imageUri: string; frontCameraUri?: string };
-  LocationSearch: { currentLocation?: string };
+  PostEditor: { imageUri: string; frontCameraUri?: string; location?: string };
+  LocationSearch: { currentLocation?: string; imageUri?: string; frontCameraUri?: string };
   FullscreenMoment: { momentId: string };
   ReactionsDetail: { momentId: string };
   Profile: { userId?: string };
@@ -48,6 +48,9 @@ export type RootStackParamList = {
   Settings: undefined;
   Help: undefined;
   SharedSuccess: undefined;
+  Friends: undefined;
+  UserSearch: undefined;
+  FriendRequests: undefined;
 };
 
 export type MainTabParamList = {

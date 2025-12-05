@@ -18,3 +18,6 @@ export { EditProfileScreen } from './EditProfileScreen';
 export { SettingsScreen } from './SettingsScreen';
 export { HelpScreen } from './HelpScreen';
 export { SharedSuccessScreen } from './SharedSuccessScreen';
+export { FriendsScreen } from './FriendsScreen';
+export { UserSearchScreen } from './UserSearchScreen';
+export { FriendRequestsScreen } from './FriendRequestsScreen';

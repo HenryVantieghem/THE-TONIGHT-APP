@@ -1,119 +1,156 @@
 /**
  * Scena - App Context
- * Mock data and state management (UI only, no backend)
+ * Main application state with Supabase integration
  */
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { User, Moment, AppState } from '../types';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { authService } from '../services/auth.service';
+import { profileService, Profile } from '../services/profile.service';
+import { User as SupabaseUser } from '@supabase/supabase-js';
 
-// Mock users
-const mockUsers: User[] = [
-  { id: '1', username: 'emma' },
-  { id: '2', username: 'jack' },
-  { id: '3', username: 'sophia' },
-  { id: '4', username: 'noah' },
-  { id: '5', username: 'olivia' },
-];
+export interface User {
+  id: string;
+  username: string;
+  avatarUrl?: string;
+  bio?: string;
+}
 
-// Calculate expiry time (1 hour from creation)
-const getExpiryTime = (createdAt: Date): Date => {
-  const expiry = new Date(createdAt);
-  expiry.setHours(expiry.getHours() + 1);
-  return expiry;
-};
-
-// Mock moments with realistic timing
-const createMockMoments = (): Moment[] => {
-  const now = new Date();
-
-  return [
-    {
-      id: '1',
-      user: mockUsers[0],
-      imageUri: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800',
-      frontCameraUri: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200',
-      location: 'the park',
-      caption: 'just walking',
-      createdAt: new Date(now.getTime() - 20 * 60000), // 20 mins ago
-      expiresAt: getExpiryTime(new Date(now.getTime() - 20 * 60000)),
-      reactions: [
-        { id: 'r1', userId: '2', emoji: '❤️', createdAt: now },
-        { id: 'r2', userId: '3', emoji: '✨', createdAt: now },
-      ],
-    },
-    {
-      id: '2',
-      user: mockUsers[1],
-      imageUri: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800',
-      location: 'coffee shop',
-      caption: 'monday',
-      createdAt: new Date(now.getTime() - 35 * 60000), // 35 mins ago
-      expiresAt: getExpiryTime(new Date(now.getTime() - 35 * 60000)),
-      reactions: [
-        { id: 'r3', userId: '1', emoji: '👋', createdAt: now },
-        { id: 'r4', userId: '4', emoji: '☕', createdAt: now },
-      ],
-    },
-    {
-      id: '3',
-      user: mockUsers[2],
-      imageUri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800',
-      frontCameraUri: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200',
-      location: 'downtown',
-      caption: 'evening light',
-      createdAt: new Date(now.getTime() - 45 * 60000), // 45 mins ago
-      expiresAt: getExpiryTime(new Date(now.getTime() - 45 * 60000)),
-      reactions: [
-        { id: 'r5', userId: '1', emoji: '🌟', createdAt: now },
-      ],
-    },
-    {
-      id: '4',
-      user: mockUsers[3],
-      imageUri: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=800',
-      location: 'mountains',
-      caption: 'breathe',
-      createdAt: new Date(now.getTime() - 50 * 60000), // 50 mins ago
-      expiresAt: getExpiryTime(new Date(now.getTime() - 50 * 60000)),
-      reactions: [],
-    },
-    {
-      id: '5',
-      user: mockUsers[4],
-      imageUri: 'https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=800',
-      location: 'beach',
-      caption: 'waves',
-      createdAt: new Date(now.getTime() - 55 * 60000), // 55 mins ago
-      expiresAt: getExpiryTime(new Date(now.getTime() - 55 * 60000)),
-      reactions: [
-        { id: 'r6', userId: '2', emoji: '🌊', createdAt: now },
-        { id: 'r7', userId: '3', emoji: '💙', createdAt: now },
-      ],
-    },
-  ];
-};
+interface AppState {
+  user: User | null;
+  isAuthenticated: boolean;
+  hasCompletedOnboarding: boolean;
+  loading: boolean;
+}
 
 interface AppContextType {
   state: AppState;
   setUser: (user: User | null) => void;
   setAuthenticated: (value: boolean) => void;
   setOnboardingComplete: (value: boolean) => void;
-  addMoment: (moment: Moment) => void;
-  addReaction: (momentId: string, emoji: string) => void;
-  getMomentById: (id: string) => Moment | undefined;
+  refreshUser: () => Promise<void>;
 }
 
 const defaultState: AppState = {
   user: null,
   isAuthenticated: false,
   hasCompletedOnboarding: false,
-  moments: createMockMoments(),
+  loading: true,
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, setState] = useState<AppState>(defaultState);
+
+  // Convert Supabase User + Profile to our User type
+  const convertToUser = (supabaseUser: SupabaseUser, profile: Profile | null): User | null => {
+    if (!supabaseUser || !profile) return null;
+    
+    return {
+      id: supabaseUser.id,
+      username: profile.username || 'user',
+      avatarUrl: profile.avatar_url || undefined,
+      bio: profile.bio || undefined,
+    };
+  };
+
+  // Refresh user data from database
+  const refreshUser = async () => {
+    try {
+      const supabaseUser = await authService.getCurrentUser();
+      
+      if (supabaseUser) {
+        const profile = await profileService.getProfile(supabaseUser.id);
+        const user = convertToUser(supabaseUser, profile);
+        
+        setState(prev => ({
+          ...prev,
+          user,
+          isAuthenticated: true,
+          loading: false,
+        }));
+      } else {
+        setState(prev => ({
+          ...prev,
+          user: null,
+          isAuthenticated: false,
+          loading: false,
+        }));
+      }
+    } catch (error) {
+      if (__DEV__) {
+        console.error('Error refreshing user:', error);
+      }
+      setState(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  // Initialize auth state on mount
+  useEffect(() => {
+    let subscription: { unsubscribe: () => void } | null = null;
+
+    const initialize = async () => {
+      try {
+        if (__DEV__) {
+          console.log('[AppContext] Initializing...');
+        }
+        await refreshUser();
+
+        // Listen to auth state changes
+        try {
+          subscription = authService.onAuthStateChange(async (event, session) => {
+            try {
+              if (event === 'SIGNED_IN' && session?.user) {
+                const profile = await profileService.getProfile(session.user.id);
+                const user = convertToUser(session.user, profile);
+                
+                setState(prev => ({
+                  ...prev,
+                  user,
+                  isAuthenticated: true,
+                  hasCompletedOnboarding: true, // Auto-complete onboarding on sign in
+                }));
+              } else if (event === 'SIGNED_OUT') {
+                setState({
+                  user: null,
+                  isAuthenticated: false,
+                  hasCompletedOnboarding: false,
+                  loading: false,
+                });
+              }
+            } catch (error) {
+              if (__DEV__) {
+                console.error('[AppContext] Error in auth state change handler:', error);
+              }
+            }
+          });
+        } catch (error) {
+          if (__DEV__) {
+            console.error('[AppContext] Error setting up auth listener:', error);
+          }
+        }
+      } catch (error) {
+        if (__DEV__) {
+          console.error('[AppContext] Error initializing:', error);
+        }
+        setState(prev => ({ ...prev, loading: false }));
+      }
+    };
+
+    initialize();
+
+    return () => {
+      if (subscription) {
+        try {
+          subscription.unsubscribe();
+        } catch (error) {
+          if (__DEV__) {
+            console.error('[AppContext] Error unsubscribing:', error);
+          }
+        }
+      }
+    };
+  }, []);
 
   const setUser = (user: User | null) => {
     setState(prev => ({ ...prev, user }));
@@ -127,39 +164,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setState(prev => ({ ...prev, hasCompletedOnboarding: value }));
   };
 
-  const addMoment = (moment: Moment) => {
-    setState(prev => ({
-      ...prev,
-      moments: [moment, ...prev.moments],
-    }));
-  };
-
-  const addReaction = (momentId: string, emoji: string) => {
-    setState(prev => ({
-      ...prev,
-      moments: prev.moments.map(m =>
-        m.id === momentId
-          ? {
-              ...m,
-              reactions: [
-                ...m.reactions,
-                {
-                  id: `r${Date.now()}`,
-                  userId: state.user?.id || 'guest',
-                  emoji,
-                  createdAt: new Date(),
-                },
-              ],
-            }
-          : m
-      ),
-    }));
-  };
-
-  const getMomentById = (id: string) => {
-    return state.moments.find(m => m.id === id);
-  };
-
   return (
     <AppContext.Provider
       value={{
@@ -167,9 +171,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setUser,
         setAuthenticated,
         setOnboardingComplete,
-        addMoment,
-        addReaction,
-        getMomentById,
+        refreshUser,
       }}
     >
       {children}

@@ -7,17 +7,19 @@ import React from 'react';
 import {
   View,
   Text,
-  Image,
   StyleSheet,
   ViewStyle,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, typography, borderRadius } from '../theme';
+import { storageService } from '../services/storage.service';
 
 interface AvatarProps {
-  uri?: string;
+  uri?: string | null;
+  username?: string;
   name?: string;
-  size?: 'small' | 'medium' | 'large' | 'xlarge';
+  size?: 'small' | 'medium' | 'large' | 'xlarge' | number;
   style?: ViewStyle;
 }
 
@@ -37,12 +39,18 @@ const fontSizes = {
 
 export const Avatar: React.FC<AvatarProps> = ({
   uri,
+  username,
   name = '',
   size = 'medium',
   style,
 }) => {
-  const dimension = sizes[size];
-  const fontSize = fontSizes[size];
+  const dimension = typeof size === 'number' ? size : sizes[size];
+  const fontSize = typeof size === 'number' 
+    ? size * 0.4 
+    : fontSizes[size];
+  
+  // Use username if name not provided
+  const displayName = name || username || '';
 
   // Get initials from name (max 2 characters)
   const getInitials = (name: string): string => {
@@ -53,7 +61,7 @@ export const Avatar: React.FC<AvatarProps> = ({
     return name.substring(0, 2).toUpperCase();
   };
 
-  const initials = getInitials(name);
+  const initials = getInitials(displayName);
 
   const containerStyle = {
     width: dimension,
@@ -61,13 +69,30 @@ export const Avatar: React.FC<AvatarProps> = ({
     borderRadius: dimension / 2,
   };
 
-  if (uri) {
+  // Get avatar URL (handle Supabase Storage URLs)
+  const getAvatarUrl = () => {
+    if (!uri) return null;
+    
+    // If it's already a full URL, use it
+    if (uri.startsWith('http://') || uri.startsWith('https://')) {
+      return uri;
+    }
+    
+    // If it's a storage path, get public URL
+    return storageService.getPublicUrl('avatars', uri);
+  };
+
+  const avatarUrl = getAvatarUrl();
+
+  if (avatarUrl) {
     return (
       <View style={[styles.container, containerStyle, style]}>
         <Image
-          source={{ uri }}
+          source={{ uri: avatarUrl }}
           style={[styles.image, containerStyle]}
-          resizeMode="cover"
+          contentFit="cover"
+          transition={200}
+          placeholder={{ blurhash: 'LGF5]+Yk^6#M@-5c,1J5@[or[Q6.' }}
         />
       </View>
     );

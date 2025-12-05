@@ -20,18 +20,27 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { GlassButton, GlassInput, Header, Toast } from '../components';
 import { colors, typography, spacing, gradients } from '../theme';
+import { useAuth } from '../hooks/useAuth';
 
 export const ForgotPasswordScreen: React.FC = () => {
   const navigation = useNavigation();
+  const { resetPassword, loading, error: authError } = useAuth();
 
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [showToast, setShowToast] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSend = () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setSent(true);
-    setShowToast(true);
+  const handleSend = async () => {
+    setError('');
+    
+    const success = await resetPassword(email);
+    
+    if (success) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setSent(true);
+      setShowToast(true);
+    }
   };
 
   const handleBackToSignIn = () => {
@@ -118,18 +127,22 @@ export const ForgotPasswordScreen: React.FC = () => {
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
+
+              {(error || authError) && (
+                <Text style={styles.errorText}>{error || authError}</Text>
+              )}
             </Animated.View>
           </ScrollView>
 
           {/* Send button */}
           <Animated.View entering={FadeInUp.duration(400).delay(200)} style={styles.sendContainer}>
             <GlassButton
-              title="send reset link"
+              title={loading ? "sending..." : "send reset link"}
               onPress={handleSend}
               variant="primary"
               size="large"
               fullWidth
-              disabled={!email.includes('@')}
+              disabled={!email.includes('@') || loading}
             />
           </Animated.View>
         </KeyboardAvoidingView>
@@ -209,6 +222,12 @@ const styles = StyleSheet.create({
   },
   sentAction: {
     marginTop: spacing.lg,
+  },
+  errorText: {
+    fontSize: typography.sizes.sm,
+    color: colors.text.secondary,
+    marginTop: spacing.xs,
+    textTransform: 'lowercase',
   },
 });
 

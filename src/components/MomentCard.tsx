@@ -3,15 +3,15 @@
  * A single moment in the feed - peaceful, floating, unimportant
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  Image,
   StyleSheet,
   Dimensions,
   Pressable,
 } from 'react-native';
+import { Image } from 'expo-image';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -22,6 +22,7 @@ import * as Haptics from 'expo-haptics';
 import { Moment } from '../types';
 import { GlassCard } from './GlassCard';
 import { TimerDots } from './TimerDots';
+import { storageService } from '../services/storage.service';
 import { colors, typography, spacing, borderRadius, durations } from '../theme';
 
 interface MomentCardProps {
@@ -42,6 +43,45 @@ export const MomentCard: React.FC<MomentCardProps> = ({
   onReact,
 }) => {
   const pressed = useSharedValue(0);
+  const [imageUrl, setImageUrl] = useState<string>(moment.imageUri);
+  const [frontCameraUrl, setFrontCameraUrl] = useState<string | undefined>(moment.frontCameraUri);
+
+  // Get signed URL for moment image (if it's a storage path)
+  useEffect(() => {
+    const loadImageUrl = async () => {
+      // If imageUri is already a full URL, use it directly
+      if (moment.imageUri.startsWith('http://') || moment.imageUri.startsWith('https://') || moment.imageUri.startsWith('file://')) {
+        setImageUrl(moment.imageUri);
+      } else {
+        // It's a storage path, get signed URL
+        try {
+          const url = await storageService.getMomentUrl(moment.imageUri);
+          setImageUrl(url);
+        } catch (error) {
+          if (__DEV__) {
+            console.error('Failed to load moment image:', error);
+          }
+        }
+      }
+
+      if (moment.frontCameraUri) {
+        if (moment.frontCameraUri.startsWith('http://') || moment.frontCameraUri.startsWith('https://') || moment.frontCameraUri.startsWith('file://')) {
+          setFrontCameraUrl(moment.frontCameraUri);
+        } else {
+          try {
+            const url = await storageService.getMomentUrl(moment.frontCameraUri);
+            setFrontCameraUrl(url);
+          } catch (error) {
+            if (__DEV__) {
+              console.error('Failed to load front camera image:', error);
+            }
+          }
+        }
+      }
+    };
+
+    loadImageUrl();
+  }, [moment.imageUri, moment.frontCameraUri]);
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
@@ -88,18 +128,21 @@ export const MomentCard: React.FC<MomentCardProps> = ({
         {/* Main image */}
         <View style={styles.imageContainer}>
           <Image
-            source={{ uri: moment.imageUri }}
+            source={{ uri: imageUrl }}
             style={styles.image}
-            resizeMode="cover"
+            contentFit="cover"
+            transition={200}
+            placeholder={{ blurhash: 'LGF5]+Yk^6#M@-5c,1J5@[or[Q6.' }}
           />
 
           {/* Front camera overlay (small, corner) */}
-          {moment.frontCameraUri && (
+          {frontCameraUrl && (
             <View style={styles.frontCameraContainer}>
               <Image
-                source={{ uri: moment.frontCameraUri }}
+                source={{ uri: frontCameraUrl }}
                 style={styles.frontCamera}
-                resizeMode="cover"
+                contentFit="cover"
+                transition={200}
               />
             </View>
           )}

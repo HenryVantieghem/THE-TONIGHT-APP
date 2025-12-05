@@ -13,7 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { CameraView, useCameraPermissions, FlashMode as FlashModeType } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import Animated, {
@@ -39,7 +39,7 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 export const CameraScreen: React.FC<CameraScreenProps> = ({ navigation }) => {
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<'front' | 'back'>('back');
-  const [flash, setFlash] = useState<'off' | 'on'>('off');
+  const [flash, setFlash] = useState<FlashModeType>('off');
   const [dualCamera, setDualCamera] = useState(false);
   const cameraRef = useRef<CameraView>(null);
 
@@ -90,7 +90,9 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({ navigation }) => {
           });
         }
       } catch (e) {
-        console.log('Capture error:', e);
+        if (__DEV__) {
+          console.log('Capture error:', e);
+        }
       }
     }
   };
@@ -110,7 +112,9 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({ navigation }) => {
         });
       }
     } catch (e) {
-      console.log('Gallery error:', e);
+      if (__DEV__) {
+        console.log('Gallery error:', e);
+      }
     }
   };
 

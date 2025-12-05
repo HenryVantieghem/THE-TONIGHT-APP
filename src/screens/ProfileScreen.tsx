@@ -3,7 +3,7 @@
  * Minimal - no follower counts, no pressure, just basic info
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -19,7 +19,9 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { RootStackParamList } from '../types';
 import { useApp } from '../context/AppContext';
-import { GlassCard } from '../components';
+import { useAuth } from '../hooks/useAuth';
+import { profileService } from '../services/profile.service';
+import { GlassCard, Avatar } from '../components';
 import { colors, typography, spacing, gradients, hitSlop } from '../theme';
 
 type ProfileScreenProps = {
@@ -27,21 +29,35 @@ type ProfileScreenProps = {
   route?: any;
 };
 
-export const ProfileScreen: React.FC<ProfileScreenProps> = () => {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { state, setAuthenticated, setUser } = useApp();
+export const ProfileScreen: React.FC<ProfileScreenProps> = (props) => {
+  const navigation = props.navigation || useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { state, setAuthenticated, setUser, refreshUser } = useApp();
+  const { signOut } = useAuth();
   const user = state.user;
+  const [momentCount, setMomentCount] = useState(0);
+  const [loading, setLoading] = useState(true);
 
-  // Count today's moments (from current user)
-  const todayMoments = state.moments.filter(m => {
-    if (!user) return false;
-    const today = new Date();
-    const momentDate = new Date(m.createdAt);
-    return (
-      m.user.id === user.id &&
-      momentDate.toDateString() === today.toDateString()
-    );
-  }).length;
+  // Fetch profile with stats
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!user) return;
+      
+      try {
+        const profileWithStats = await profileService.getProfileWithStats(user.id);
+        if (profileWithStats) {
+          setMomentCount(profileWithStats.momentCount || 0);
+        }
+      } catch (error) {
+        if (__DEV__) {
+          console.error('Failed to fetch profile stats:', error);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, [user]);
 
   const handleBack = () => {
     navigation.goBack();
@@ -57,8 +73,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = () => {
     navigation.navigate('Help');
   };
 
-  const handleSignOut = () => {
+  const handleFriends = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    navigation.navigate('Friends');
+  };
+
+  const handleSignOut = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    await signOut();
     setUser(null);
     setAuthenticated(false);
     navigation.reset({
@@ -85,13 +107,18 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = () => {
         <View style={styles.content}>
           {/* Profile info */}
           <Animated.View entering={FadeInUp.duration(400)} style={styles.profileInfo}>
-            {/* Avatar placeholder */}
-            <View style={styles.avatar}>
-              <Ionicons name="person" size={48} color={colors.text.tertiary} />
-            </View>
+            {/* Avatar */}
+            <Avatar
+              uri={user?.avatarUrl}
+              username={user?.username}
+              size={100}
+            />
 
             {/* Username */}
             <Text style={styles.username}>{user?.username || 'you'}</Text>
+            {user?.bio && (
+              <Text style={styles.bio}>{user.bio}</Text>
+            )}
           </Animated.View>
 
           {/* Today's moments */}
@@ -99,13 +126,18 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = () => {
             <GlassCard style={styles.statsCard}>
               <Text style={styles.statsLabel}>today</Text>
               <Text style={styles.statsValue}>
-                {todayMoments} {todayMoments === 1 ? 'moment' : 'moments'} shared
+                {loading ? '...' : `${momentCount} ${momentCount === 1 ? 'moment' : 'moments'} shared`}
               </Text>
             </GlassCard>
           </Animated.View>
 
           {/* Menu items */}
           <Animated.View entering={FadeInUp.duration(400).delay(200)} style={styles.menu}>
+            <MenuItem
+              icon="people-outline"
+              label="friends"
+              onPress={handleFriends}
+            />
             <MenuItem
               icon="settings-outline"
               label="settings"
@@ -196,6 +228,14 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.medium,
     color: colors.text.primary,
     textTransform: 'lowercase',
+    marginTop: spacing.md,
+  },
+  bio: {
+    fontSize: typography.sizes.sm,
+    color: colors.text.secondary,
+    textTransform: 'lowercase',
+    marginTop: spacing.xs,
+    textAlign: 'center',
   },
   statsCard: {
     marginBottom: spacing.xl,

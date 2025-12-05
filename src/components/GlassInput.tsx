@@ -32,6 +32,7 @@ interface GlassInputProps {
   multiline?: boolean;
   style?: ViewStyle;
   maxLength?: number;
+  onFocus?: () => void;
 }
 
 export const GlassInput: React.FC<GlassInputProps> = ({
@@ -46,6 +47,7 @@ export const GlassInput: React.FC<GlassInputProps> = ({
   multiline = false,
   style,
   maxLength,
+  onFocus,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const focusValue = useSharedValue(0);
@@ -53,6 +55,7 @@ export const GlassInput: React.FC<GlassInputProps> = ({
   const handleFocus = () => {
     setIsFocused(true);
     focusValue.value = withTiming(1, { duration: durations.fast });
+    onFocus?.();
   };
 
   const handleBlur = () => {

@@ -85,9 +85,24 @@ export const LocationSearchScreen: React.FC<LocationSearchScreenProps> = ({
 
   const handleSelectLocation = (location: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    // In a real app, we'd pass this back properly
-    // For now, just go back
-    navigation.goBack();
+    // Navigate back to PostEditor with selected location
+    // Get params from current route or previous route
+    const routeParams = route.params;
+    const previousRoute = navigation.getState()?.routes[navigation.getState()?.index - 1];
+    const params = (previousRoute?.name === 'PostEditor' && previousRoute.params) 
+      ? previousRoute.params 
+      : routeParams;
+    
+    if (params && 'imageUri' in params && typeof params.imageUri === 'string') {
+      navigation.navigate('PostEditor', {
+        imageUri: params.imageUri,
+        frontCameraUri: 'frontCameraUri' in params ? params.frontCameraUri : undefined,
+        location,
+      });
+    } else {
+      // Fallback: just go back
+      navigation.goBack();
+    }
   };
 
   const filteredLocations = searchText

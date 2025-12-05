@@ -23,3 +23,13 @@ export { Toast } from './Toast';
 export { LoadingDots } from './LoadingDots';
 export { ConfirmSheet } from './ConfirmSheet';
 export { SkeletonCard } from './SkeletonCard';
+export { ErrorBoundary } from './ErrorBoundary';
+
+// Friend components
+export { FriendCard } from './FriendCard';
+export { UserSearchResult, type FriendStatus } from './UserSearchResult';
+
+// Utility components
+export { PlaceAutocomplete } from './PlaceAutocomplete';
+export { ImageUploadProgress } from './ImageUploadProgress';
+export { RealtimeIndicator } from './RealtimeIndicator';

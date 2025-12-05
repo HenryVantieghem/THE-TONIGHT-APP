@@ -19,10 +19,13 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { RootStackParamList, MainTabParamList, Moment } from '../types';
+import { RootStackParamList, MainTabParamList } from '../types';
 import { useApp } from '../context/AppContext';
+import { useMoments } from '../hooks/useMoments';
+import { reactionsService } from '../services/reactions.service';
 import { MomentCard, EmojiPicker } from '../components';
 import { colors, typography, spacing, gradients, hitSlop } from '../theme';
+import { SkeletonCard } from '../components';
 
 type FeedScreenNavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabParamList, 'Feed'>,
@@ -34,16 +37,14 @@ type FeedScreenProps = {
 };
 
 export const FeedScreen: React.FC<FeedScreenProps> = ({ navigation }) => {
-  const { state, addReaction } = useApp();
-  const [refreshing, setRefreshing] = useState(false);
+  const { state } = useApp();
+  const { moments, loading, refreshing, refresh } = useMoments();
   const [selectedMomentId, setSelectedMomentId] = useState<string | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
-  const handleRefresh = useCallback(() => {
-    setRefreshing(true);
-    // Simulate refresh
-    setTimeout(() => setRefreshing(false), 1000);
-  }, []);
+  const handleRefresh = useCallback(async () => {
+    await refresh();
+  }, [refresh]);
 
   const handleMomentPress = (momentId: string) => {
     navigation.navigate('FullscreenMoment', { momentId });
@@ -54,9 +55,11 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ navigation }) => {
     setShowEmojiPicker(true);
   };
 
-  const handleEmojiSelect = (emoji: string) => {
+  const handleEmojiSelect = async (emoji: string) => {
     if (selectedMomentId) {
-      addReaction(selectedMomentId, emoji);
+      await reactionsService.addReaction(selectedMomentId, emoji);
+      setShowEmojiPicker(false);
+      setSelectedMomentId(null);
     }
   };
 
@@ -68,22 +71,63 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ navigation }) => {
     navigation.navigate('Camera');
   };
 
-  const renderMoment = ({ item, index }: { item: Moment; index: number }) => (
-    <Animated.View entering={FadeInUp.duration(400).delay(index * 100)}>
-      <MomentCard
-        moment={item}
-        onPress={() => handleMomentPress(item.id)}
-        onReact={() => handleReactPress(item.id)}
-      />
-    </Animated.View>
-  );
+  // Convert MomentRow to Moment type for MomentCard
+  const convertMoment = (momentRow: any) => {
+    return {
+      id: momentRow.id,
+      user: {
+        id: momentRow.profiles?.id || momentRow.user_id,
+        username: momentRow.profiles?.username || 'user',
+        avatarUrl: momentRow.profiles?.avatar_url || undefined,
+      },
+      imageUri: momentRow.image_url,
+      frontCameraUri: momentRow.front_camera_url || undefined,
+      location: momentRow.location || undefined,
+      caption: momentRow.caption || undefined,
+      createdAt: new Date(momentRow.created_at),
+      expiresAt: new Date(momentRow.expires_at),
+      reactions: (momentRow.reactions || []).map((r: any) => ({
+        id: r.id,
+        userId: r.user_id,
+        emoji: r.emoji,
+        createdAt: new Date(r.created_at),
+      })),
+    };
+  };
 
-  const renderEmpty = () => (
-    <Animated.View entering={FadeIn.duration(600)} style={styles.emptyContainer}>
-      <Text style={styles.emptyText}>nothing yet</Text>
-      <Text style={styles.emptySubtext}>be the first to share</Text>
-    </Animated.View>
-  );
+  const renderMoment = ({ item, index }: { item: any; index: number }) => {
+    const moment = convertMoment(item);
+    return (
+      <Animated.View entering={FadeInUp.duration(400).delay(index * 100)}>
+        <MomentCard
+          moment={moment}
+          onPress={() => handleMomentPress(moment.id)}
+          onReact={() => handleReactPress(moment.id)}
+        />
+      </Animated.View>
+    );
+  };
+
+  const renderEmpty = () => {
+    if (loading) {
+      return (
+        <View style={styles.emptyContainer}>
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </View>
+      );
+    }
+    
+    return (
+      <Animated.View entering={FadeIn.duration(600)} style={styles.emptyContainer}>
+        <Text style={styles.emptyText}>nothing yet</Text>
+        <Text style={styles.emptySubtext}>
+          {state.user ? 'add friends to see their moments' : 'be the first to share'}
+        </Text>
+      </Animated.View>
+    );
+  };
 
   const renderHeader = () => (
     <View style={styles.listHeader}>
@@ -109,7 +153,7 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ navigation }) => {
 
         {/* Feed */}
         <FlatList
-          data={state.moments}
+          data={moments}
           renderItem={renderMoment}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}

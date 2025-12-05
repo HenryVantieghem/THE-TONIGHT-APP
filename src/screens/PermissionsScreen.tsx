@@ -63,8 +63,13 @@ export const PermissionsScreen: React.FC<PermissionsScreenProps> = ({
   const handleOkay = async () => {
     // Request all permissions gently
     try {
+      // Request camera permission
       const cameraResult = await requestCameraPermission();
+      
+      // Request location permission
       const locationResult = await Location.requestForegroundPermissionsAsync();
+      
+      // Request media library permission
       const mediaResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       // Log results for debugging (graceful - we proceed either way)
@@ -75,6 +80,17 @@ export const PermissionsScreen: React.FC<PermissionsScreenProps> = ({
           media: mediaResult?.granted,
         });
       }
+
+      // If any critical permission was denied, we still proceed but log it
+      const deniedPermissions = [];
+      if (!cameraResult?.granted) deniedPermissions.push('camera');
+      if (!locationResult?.granted) deniedPermissions.push('location');
+      if (!mediaResult?.granted) deniedPermissions.push('media');
+
+      if (deniedPermissions.length > 0 && __DEV__) {
+        console.log('Some permissions were denied:', deniedPermissions);
+        console.log('User can still use the app, but some features may be limited');
+      }
     } catch (e) {
       // It's okay if they deny - we'll handle it gracefully
       if (__DEV__) {
@@ -82,6 +98,7 @@ export const PermissionsScreen: React.FC<PermissionsScreenProps> = ({
       }
     }
 
+    // Always proceed to main app - permissions can be granted later
     setOnboardingComplete(true);
     navigation.replace('MainTabs');
   };

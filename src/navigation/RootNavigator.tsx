@@ -30,6 +30,9 @@ import {
   SettingsScreen,
   HelpScreen,
   SharedSuccessScreen,
+  FriendsScreen,
+  UserSearchScreen,
+  FriendRequestsScreen,
 } from '../screens';
 import { colors, typography, spacing } from '../theme';
 
@@ -251,6 +254,21 @@ export const RootNavigator: React.FC = () => {
                 animation: 'fade',
                 presentation: 'transparentModal',
               }}
+            />
+            <Stack.Screen
+              name="Friends"
+              component={FriendsScreen}
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="UserSearch"
+              component={UserSearchScreen}
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="FriendRequests"
+              component={FriendRequestsScreen}
+              options={{ animation: 'slide_from_right' }}
             />
           </>
         )}
